@@ -92,15 +92,35 @@
         background: #1a2030;
       }
 
-      /* B — gradient ink → indigo */
-      .b-btn {
+      /* B1 — original (indigo-950 endpoint) */
+      .b1-btn {
         background: linear-gradient(135deg, #0b0f19 0%, #1e1b4b 100%);
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.08),
           0 1px 2px rgba(11, 15, 25, 0.3);
       }
-      .b-btn:hover {
+      .b1-btn:hover {
         background: linear-gradient(135deg, #1a2030 0%, #312e81 100%);
+      }
+      /* B2 — medium (indigo-800 endpoint) */
+      .b2-btn {
+        background: linear-gradient(135deg, #0b0f19 0%, #3730a3 100%);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.1),
+          0 1px 2px rgba(11, 15, 25, 0.3);
+      }
+      .b2-btn:hover {
+        background: linear-gradient(135deg, #1a2030 0%, #4338ca 100%);
+      }
+      /* B3 — strong (indigo-600 endpoint, balanced start) */
+      .b3-btn {
+        background: linear-gradient(135deg, #1f2937 0%, #4f46e5 100%);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.12),
+          0 1px 2px rgba(11, 15, 25, 0.3);
+      }
+      .b3-btn:hover {
+        background: linear-gradient(135deg, #374151 0%, #6366f1 100%);
       }
 
       /* C — solid indigo brand */
@@ -183,17 +203,47 @@
         </div>
       </div>
 
-      <!-- B -->
+      <!-- B1 -->
       <div class="col">
-        <h2>B · Recommended</h2>
-        <h3>Subtle ink → indigo gradient</h3>
+        <h2>B1</h2>
+        <h3>Subtle (current B)</h3>
         <p>
-          <code>linear-gradient(135deg, #0b0f19, #1e1b4b)</code> with a 1px inner highlight. Reads
-          black at a glance; ink-with-personality up close.
+          <code>#0b0f19 → #1e1b4b</code> (indigo-950). Reads almost black — what you said feels too
+          subtle.
         </p>
         <div class="demo">
-          <button class="btn b-btn">+ New report</button>
-          <button class="btn b-btn">Generate report →</button>
+          <button class="btn b1-btn">+ New report</button>
+          <button class="btn b1-btn">Generate report →</button>
+          <button class="btn-sec">Add coverage</button>
+        </div>
+      </div>
+
+      <!-- B2 -->
+      <div class="col">
+        <h2>B2 · Recommended</h2>
+        <h3>Medium ink → indigo</h3>
+        <p>
+          <code>#0b0f19 → #3730a3</code> (indigo-800). Visible indigo wash on the lower-right while
+          keeping the dark side anchored.
+        </p>
+        <div class="demo">
+          <button class="btn b2-btn">+ New report</button>
+          <button class="btn b2-btn">Generate report →</button>
+          <button class="btn-sec">Add coverage</button>
+        </div>
+      </div>
+
+      <!-- B3 -->
+      <div class="col">
+        <h2>B3</h2>
+        <h3>Strong graphite → indigo</h3>
+        <p>
+          <code>#1f2937 → #4f46e5</code> (indigo-600). Clearly a colored button. Goes the furthest
+          while still being grounded by graphite on the left.
+        </p>
+        <div class="demo">
+          <button class="btn b3-btn">+ New report</button>
+          <button class="btn b3-btn">Generate report →</button>
           <button class="btn-sec">Add coverage</button>
         </div>
       </div>
