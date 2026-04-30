@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { Eyebrow, Pill, PrimaryButton, type PillTone } from '../components/ui';
@@ -74,10 +75,26 @@ type CalendarView = 'week' | 'month';
 export function Calendar() {
   const { workspace } = useAuth();
   const slug = workspace?.slug ?? 'workspace';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialClientFilter = searchParams.get('client_id') ?? undefined;
   const [view, setView] = useState<CalendarView>('week');
   const [anchor, setAnchor] = useState(() => new Date());
-  const [clientFilter, setClientFilter] = useState<string | undefined>(undefined);
+  const [clientFilter, setClientFilterState] = useState<string | undefined>(initialClientFilter);
   const [needsReview, setNeedsReview] = useState(false);
+
+  // Keep ?client_id=… in sync with the filter so the URL is shareable / bookmarkable.
+  function setClientFilter(id: string | undefined) {
+    setClientFilterState(id);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id) next.set('client_id', id);
+        else next.delete('client_id');
+        return next;
+      },
+      { replace: true },
+    );
+  }
   const [composer, setComposer] = useState<ComposerState>({ open: false });
 
   const clientsQ = useQuery({ queryKey: ['clients'], queryFn: api.listClients });

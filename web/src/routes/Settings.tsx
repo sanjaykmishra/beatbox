@@ -7,13 +7,23 @@ import { api, ApiError, uploadLogo, type Billing, type Member } from '../lib/api
 import { useAuth } from '../lib/useAuth';
 
 export function Settings() {
-  const { workspace } = useAuth();
+  const { workspace, refreshWorkspace } = useAuth();
   const slug = workspace?.slug ?? 'workspace';
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-
+  // Branding-only updates (logo) reload the page so the avatar in the header refreshes.
+  // Inline edits like the workspace name use update.mutate directly + refreshWorkspace.
   const update = useMutation({
+    mutationFn: (b: Parameters<typeof api.updateWorkspace>[0]) => api.updateWorkspace(b),
+    onSuccess: async () => {
+      await refreshWorkspace();
+      void qc.invalidateQueries({ queryKey: ['workspace'] });
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : 'Update failed'),
+  });
+
+  const updateThenReload = useMutation({
     mutationFn: (b: Parameters<typeof api.updateWorkspace>[0]) => api.updateWorkspace(b),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['workspace'] });
@@ -33,7 +43,7 @@ export function Settings() {
     setUploading(true);
     try {
       const url = await uploadLogo(file, 'logo');
-      update.mutate({ logo_url: url });
+      updateThenReload.mutate({ logo_url: url });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
@@ -64,7 +74,17 @@ export function Settings() {
         </div>
 
         <Section title="Workspace">
-          <Row label="Name" value={workspace.name} />
+          <EditableRow
+            label="Name"
+            value={workspace.name}
+            placeholder="Workspace name"
+            saving={update.isPending}
+            onSave={(v) => {
+              const trimmed = v.trim();
+              if (!trimmed || trimmed === workspace.name) return;
+              update.mutate({ name: trimmed });
+            }}
+          />
           <Row label="Slug" value={workspace.slug} />
           <Row label="Plan" value={workspace.plan} />
           {workspace.trial_ends_at && (
@@ -309,6 +329,64 @@ function Row({ label, value }: { label: string; value: string | number }) {
     <div className="flex items-center gap-3 text-sm">
       <span className="w-32 text-gray-500">{label}</span>
       <span className="text-ink capitalize">{value}</span>
+    </div>
+  );
+}
+
+function EditableRow({
+  label,
+  value,
+  placeholder,
+  saving,
+  onSave,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  saving: boolean;
+  onSave: (v: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  // Re-sync draft when the upstream value changes (e.g. after refreshWorkspace).
+  // useEffect would loop with editing===true, so only sync when not editing.
+  if (!editing && draft !== value) setDraft(value);
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <span className="w-32 text-gray-500">{label}</span>
+      {editing ? (
+        <input
+          autoFocus
+          className="flex-1 max-w-sm rounded-md border border-gray-300 px-2 py-1 text-sm outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
+          value={draft}
+          placeholder={placeholder}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            setEditing(false);
+            onSave(draft);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+            if (e.key === 'Escape') {
+              setDraft(value);
+              setEditing(false);
+            }
+          }}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(value);
+            setEditing(true);
+          }}
+          className="text-ink hover:bg-gray-50 rounded px-1.5 -mx-1.5 py-0.5 transition-colors text-left"
+          title="Click to edit"
+        >
+          {value || <span className="text-gray-400 italic">{placeholder ?? '—'}</span>}
+        </button>
+      )}
+      {saving && <span className="text-xs text-gray-400">Saving…</span>}
     </div>
   );
 }
