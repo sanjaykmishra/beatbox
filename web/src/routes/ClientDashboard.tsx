@@ -377,10 +377,12 @@ function ComingUpItemView({
 }
 
 function UpcomingPosts({ clientId }: { clientId: string }) {
-  // Window: now → +30d. Fetched independently of the main dashboard payload because
-  // posts come from a different endpoint and PostStatus filtering is client-side.
-  const fromIso = new Date().toISOString();
-  const toIso = new Date(Date.now() + 30 * 86_400_000).toISOString();
+  // Window: start of today (local) → +30d. Using start-of-today rather than `now` so that a
+  // post scheduled earlier today still appears in 'upcoming' until the day rolls over.
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const fromIso = start.toISOString();
+  const toIso = new Date(start.getTime() + 30 * 86_400_000).toISOString();
   const postsQ = useQuery({
     queryKey: ['client-upcoming-posts', clientId],
     queryFn: () =>
