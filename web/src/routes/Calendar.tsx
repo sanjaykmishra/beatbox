@@ -229,7 +229,14 @@ export function Calendar() {
             loading={postsQ.isLoading}
             onSelect={(p) => setComposer({ open: true, mode: 'edit', postId: p.id })}
             onEmptyDay={(day) =>
-              setComposer({ open: true, mode: 'new', clientId: clientFilter, scheduledFor: day })
+              setComposer({
+                open: true,
+                mode: 'new',
+                clientId: clientFilter,
+                // Don't pre-fill a past date — let the user pick. The composer's min={today}
+                // would otherwise reject the pre-filled value silently.
+                scheduledFor: isPastDay(day) ? undefined : day,
+              })
             }
           />
         ) : (
@@ -240,7 +247,14 @@ export function Calendar() {
             loading={postsQ.isLoading}
             onSelect={(p) => setComposer({ open: true, mode: 'edit', postId: p.id })}
             onEmptyDay={(day) =>
-              setComposer({ open: true, mode: 'new', clientId: clientFilter, scheduledFor: day })
+              setComposer({
+                open: true,
+                mode: 'new',
+                clientId: clientFilter,
+                // Don't pre-fill a past date — let the user pick. The composer's min={today}
+                // would otherwise reject the pre-filled value silently.
+                scheduledFor: isPastDay(day) ? undefined : day,
+              })
             }
           />
         )}
@@ -968,8 +982,14 @@ function EditComposer({
             type="datetime-local"
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             value={scheduledFor}
+            min={isPrePublishStatus(post.status) ? startOfTodayLocalInput() : undefined}
             onChange={(e) => setScheduledFor(e.target.value)}
             onBlur={() => save.mutate()}
+            title={
+              isPrePublishStatus(post.status)
+                ? 'Pick a future date. To log a post you already shipped, use Mark posted.'
+                : 'Past dates are allowed for posts that have already been marked posted or archived.'
+            }
           />
         </Field>
         <Field label="Series tag (optional)">
@@ -1286,6 +1306,36 @@ function formatWeekRange(start: Date): string {
     year: end.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
   });
   return `${startFmt} – ${endFmt}`;
+}
+
+function isPastDay(d: Date): boolean {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const today = ymd(start);
+  return ymd(d) < today;
+}
+
+function isPrePublishStatus(status: PostStatus): boolean {
+  return (
+    status === 'draft' ||
+    status === 'internal_review' ||
+    status === 'client_review' ||
+    status === 'approved' ||
+    status === 'scheduled'
+  );
+}
+
+function startOfTodayLocalInput(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return toLocalInputFromDate(d);
+}
+
+function toLocalInputFromDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+    d.getMinutes(),
+  )}`;
 }
 
 function defaultPostingTime(day: Date): Date {
