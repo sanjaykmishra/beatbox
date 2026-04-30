@@ -294,7 +294,90 @@ export const api = {
       platforms ? { platforms } : {},
     ),
   deletePost: (id: string) => request<void>('DELETE', `/v1/posts/${id}`),
+
+  // ----- Generalized calendar (V008) -----
+  getCalendarFeed: (params?: CalendarFeedParams) =>
+    request<CalendarFeedResponse>('GET', `/v1/calendar/feed${qs(params)}`),
+  createCalendarEvent: (b: CreateCalendarEventInput) =>
+    request<CalendarEventEntry>('POST', '/v1/calendar/events', b),
+  getCalendarEvent: (id: string) =>
+    request<CalendarEventEntry>('GET', `/v1/calendar/events/${id}`),
+  updateCalendarEvent: (id: string, b: UpdateCalendarEventInput) =>
+    request<CalendarEventEntry>('PATCH', `/v1/calendar/events/${id}`, b),
+  deleteCalendarEvent: (id: string) =>
+    request<void>('DELETE', `/v1/calendar/events/${id}`),
 };
+
+/** Standalone calendar event subtype literals (mirrors backend CHECK constraint). */
+export type CalendarEventType =
+  | 'embargo'
+  | 'launch'
+  | 'earnings'
+  | 'meeting'
+  | 'blackout'
+  | 'milestone'
+  | 'other';
+
+/** Feed-item discriminator. Includes the post + report_due aggregate types. */
+export type FeedItemType = 'post' | 'report_due' | CalendarEventType;
+
+export type FeedItem = {
+  id: string;
+  type: FeedItemType;
+  source_id: string;
+  client_id: string | null;
+  title: string;
+  subtitle: string | null;
+  occurs_at: string;
+  ends_at: string | null;
+  all_day: boolean;
+  href: string | null;
+  color: string | null;
+  payload: Record<string, unknown>;
+};
+
+export type CalendarFeedResponse = {
+  items: FeedItem[];
+  available_types: FeedItemType[];
+};
+
+export type CalendarFeedParams = {
+  client_id?: string;
+  types?: string;
+  from?: string;
+  to?: string;
+};
+
+export type CalendarEventEntry = {
+  id: string;
+  workspace_id: string;
+  client_id: string | null;
+  event_type: CalendarEventType;
+  title: string;
+  description: string | null;
+  occurs_at: string;
+  ends_at: string | null;
+  all_day: boolean;
+  url: string | null;
+  color: string | null;
+  created_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateCalendarEventInput = {
+  client_id?: string;
+  event_type: CalendarEventType;
+  title: string;
+  description?: string;
+  occurs_at: string;
+  ends_at?: string;
+  all_day?: boolean;
+  url?: string;
+  color?: string;
+};
+
+export type UpdateCalendarEventInput = Partial<CreateCalendarEventInput>;
 
 export type RegenerateVariantsResponse = {
   variants: Record<string, PlatformVariant>;
