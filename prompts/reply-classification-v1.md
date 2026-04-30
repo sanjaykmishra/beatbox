@@ -1,6 +1,6 @@
 ---
 version: reply_classification_v1.0
-model: claude-sonnet-4
+model: claude-sonnet-4-6
 temperature: 0
 max_tokens: 300
 expected_output_format: json

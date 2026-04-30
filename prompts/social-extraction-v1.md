@@ -1,6 +1,6 @@
 ---
 version: social_extraction_v1.0
-model: claude-sonnet-4
+model: claude-sonnet-4-6
 temperature: 0.1
 max_tokens: 1500
 expected_output_format: json
