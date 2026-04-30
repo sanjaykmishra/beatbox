@@ -7,7 +7,7 @@ import app.beat.infra.AppException;
 import app.beat.infra.RequestContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -120,7 +120,7 @@ public class OwnedPostController {
   }
 
   public record CreatePostRequest(
-      @NotBlank UUID client_id,
+      @NotNull UUID client_id,
       @Size(max = 200) String title,
       String primary_content_text,
       List<String> target_platforms,
