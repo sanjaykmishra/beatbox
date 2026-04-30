@@ -103,6 +103,7 @@ These exist because failure here is high-cost. Don't relax them without explicit
 5. **Reports lock at generation time.** Once a report is finalized, coverage_items are frozen. Re-runs require explicit user action.
 6. **Brand-safe by default.** Every PDF carries the agency's branding (their logo, their colors), never Beat's. Beat is invisible to the agency's clients.
 7. **Activity events fire on every meaningful action.** When adding new mutations, add the corresponding `activity_events` write. The founder dashboard, customer analytics, and Phase 3+ features depend on this discipline. See `docs/15-additions.md` §15.2.
+8. **Social mentions are first-class.** When new features reason about "what's been written about a client," they include both `coverage_items` and `social_mentions`. Don't accidentally regress to article-only logic.
 
 ## Where to find things
 
@@ -116,6 +117,7 @@ These exist because failure here is high-cost. Don't relax them without explicit
 - **Phase 1 build plan, week by week:** `docs/08-build-plan.md`
 - **Customer discovery script (founder reference, not for code):** `docs/09-discovery-script.md`
 - **Roadmap overview, phase gates:** `docs/10-roadmap-overview.md`
+- **Phase 1.5 (months 3–4) — social wedge:** `docs/17-phase-1-5-social.md`
 - **Phase 2 (months 4–7) — expand the wedge:** `docs/11-phase-2-features.md`
 - **Phase 3 (months 7–12) — pitch tracker:** `docs/12-phase-3-pitch-tracker.md`
 - **Phase 4 (year 2) — platform:** `docs/13-phase-4-platform.md`
