@@ -287,7 +287,20 @@ export const api = {
     request<OwnedPost>('PATCH', `/v1/posts/${id}`, b),
   transitionPost: (id: string, transition: PostTransition, body?: { reason?: string }) =>
     request<OwnedPost>('POST', `/v1/posts/${id}/transitions/${transition}`, body ?? {}),
+  regenerateVariants: (id: string, platforms?: string[]) =>
+    request<RegenerateVariantsResponse>(
+      'POST',
+      `/v1/posts/${id}/regenerate-variants`,
+      platforms ? { platforms } : {},
+    ),
   deletePost: (id: string) => request<void>('DELETE', `/v1/posts/${id}`),
+};
+
+export type RegenerateVariantsResponse = {
+  variants: Record<string, PlatformVariant>;
+  warnings: Record<string, string[]>;
+  prompt_version: string;
+  post: OwnedPost;
 };
 
 function qs(params?: Record<string, string | number | undefined | null>): string {
