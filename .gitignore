@@ -28,8 +28,11 @@ Thumbs.db
 *.log
 logs/
 
-# Coverage
-coverage/
+# Coverage (test coverage reports — anchored so it doesn't swallow the
+# app.beat.coverage Java package)
+/coverage/
+**/web/coverage/
+**/render/coverage/
 api/build/reports/
 
 # Fly

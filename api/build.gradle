@@ -28,6 +28,7 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.springframework.security:spring-security-crypto:6.3.4'
     implementation 'software.amazon.awssdk:s3:2.28.16'
+    implementation 'org.jsoup:jsoup:1.18.1'
     runtimeOnly 'org.postgresql:postgresql'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
