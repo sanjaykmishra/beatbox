@@ -48,4 +48,11 @@ public final class EventKinds {
   public static final String LLM_CALL_COMPLETED = "llm.call_completed";
   public static final String EXTRACTION_FAILED = "extraction.failed";
   public static final String RENDER_FAILED = "render.failed";
+
+  // Phase 1.5 — owned posts (editorial calendar)
+  public static final String POST_CREATED = "post.created";
+  public static final String POST_UPDATED = "post.updated";
+  public static final String POST_VARIANTS_REGENERATED = "post.variants_regenerated";
+  public static final String POST_TRANSITION = "post.transition";
+  public static final String POST_DELETED = "post.deleted";
 }

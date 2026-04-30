@@ -32,6 +32,15 @@ beat:
   admin:
     # Comma-separated list of user emails allowed to view /v1/admin/*. Empty = nobody.
     emails: ${ADMIN_EMAILS:}
+  social:
+    # Phase 1.5 (docs/17-phase-1-5-social.md). Empty values disable the corresponding
+    # fetcher; the social pipeline falls back to a manual-entry stub. No-ops in dev.
+    scrapingbee:
+      api-key: ${SCRAPINGBEE_API_KEY:}
+    # Reddit's public JSON API requires a descriptive User-Agent per their terms.
+    reddit:
+      user-agent: ${REDDIT_USER_AGENT:beat-app/0.1 (+https://beat.app/contact)}
+    # Bluesky AT Protocol is keyless for read-only public-post fetches.
 
 logging:
   level:
