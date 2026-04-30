@@ -16,7 +16,13 @@ api/build
 api/bin
 api/out
 
-**/coverage
+# Test coverage report dirs only — anchored so they don't swallow the
+# app.beat.coverage Java package or web/render coverage source dirs.
+/coverage/
+**/web/coverage/
+**/render/coverage/
+api/build/reports/
+
 **/*.log
 .env
 .env.*
