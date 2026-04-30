@@ -44,12 +44,17 @@ export function Settings() {
   return (
     <BrowserFrame crumbs={[{ label: `${slug}.beat.app` }, { label: 'settings' }]}>
       <div className="space-y-7 max-w-3xl">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-semibold tracking-tightish text-ink">Settings</h1>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tightish text-ink">Settings</h1>
+            <p className="mt-1 text-xs text-gray-500">
+              Workspace branding, members, and billing. Changes apply to every client and report.
+            </p>
+          </div>
           {admin.data?.is_admin && (
             <Link
               to="/admin/dashboard"
-              className="text-sm font-medium text-gray-700 hover:text-ink hover:underline"
+              className="text-sm font-medium text-gray-700 hover:text-ink hover:underline mt-1 flex-none"
             >
               Founder admin →
             </Link>

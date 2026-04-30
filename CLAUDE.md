@@ -84,6 +84,8 @@ beat/
 
 **API errors.** RFC 7807 problem-details. Every response includes a `request_id` header for support.
 
+**UI page chrome.** Every protected route in `web/src/routes/` wraps its content in `BrowserFrame` with a `crumbs` array (e.g. `[{label: '${slug}.beat.app'}, {label: 'clients'}, {label: clientName}]`) — the chrome strip is the canonical breadcrumb; do not also render an in-body `<nav>` breadcrumb. Each page's `<h1>` is followed by a one-line muted help subtitle (`<p className="mt-1 text-xs text-gray-500">…</p>`) explaining what the page does and any non-obvious behavior (e.g. "Field changes save automatically when you click away.", "Click any item to edit before generating. Edits stick across re-runs."). Auth pages (`AuthShell`) and the 404 are exempt — they're outside the workspace shell.
+
 **Migrations.** Flyway. Numbered files (`V001__init.sql`). Migrations are forward-only; never edit a merged migration.
 
 **Tests.** Unit tests next to code. Integration tests in `src/test/integration/`. The LLM eval harness lives in `src/test/eval/` and runs nightly + on every PR that touches `prompts/` or LLM client code. See `docs/06-evals.md`.

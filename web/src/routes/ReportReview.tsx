@@ -65,6 +65,9 @@ export function ReportReview() {
           <div>
             <p className="text-sm text-gray-500">{r.title}</p>
             <h1 className="text-2xl font-semibold tracking-tightish text-ink mt-0.5">Coverage</h1>
+            <p className="mt-1 text-xs text-gray-500">
+              Click any item to edit before generating. Edits stick across re-runs.
+            </p>
           </div>
           <div className="flex items-baseline gap-5">
             <CounterStat n={counts.done} label="done" tone="gray" />
