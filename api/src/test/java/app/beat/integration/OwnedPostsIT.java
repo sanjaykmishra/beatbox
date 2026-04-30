@@ -205,6 +205,21 @@ class OwnedPostsIT {
                     "/v1/posts?from=2026-12-01T00:00:00Z&to=2027-01-01T00:00:00Z")
                 .header("Authorization", "Bearer " + token))
         .andExpect(MockMvcResultMatchers.status().isOk());
+
+    // PATCH with only platform_variants set — every scalar field is NULL. This is what
+    // regenerate-variants does internally. Postgres needs each :param explicitly cast
+    // inside COALESCE or it errors with "could not determine data type of parameter".
+    mvc.perform(
+            MockMvcRequestBuilders.patch("/v1/posts/" + postId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    json.writeValueAsString(
+                        Map.of(
+                            "platform_variants",
+                            Map.of(
+                                "linkedin", Map.of("content", "regenerated", "char_count", 11))))))
+        .andExpect(MockMvcResultMatchers.status().isOk());
   }
 
   @Test

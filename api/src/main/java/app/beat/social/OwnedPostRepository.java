@@ -171,13 +171,13 @@ public class OwnedPostRepository {
     return jdbc.sql(
             """
             UPDATE owned_posts SET
-              title = COALESCE(:title, title),
-              primary_content_text = COALESCE(:content, primary_content_text),
+              title = COALESCE(CAST(:title AS text), title),
+              primary_content_text = COALESCE(CAST(:content AS text), primary_content_text),
               platform_variants = COALESCE(CAST(:variants AS jsonb), platform_variants),
               target_platforms = COALESCE(CAST(:tp AS text[]), target_platforms),
-              scheduled_for = COALESCE(:sched, scheduled_for),
-              timezone = COALESCE(:tz, timezone),
-              series_tag = COALESCE(:series, series_tag),
+              scheduled_for = COALESCE(CAST(:sched AS timestamptz), scheduled_for),
+              timezone = COALESCE(CAST(:tz AS text), timezone),
+              series_tag = COALESCE(CAST(:series AS text), series_tag),
               asset_ids = COALESCE(CAST(:assets AS uuid[]), asset_ids),
               updated_at = now()
             WHERE id = :id AND deleted_at IS NULL

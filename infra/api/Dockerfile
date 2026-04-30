@@ -10,6 +10,7 @@ COPY api/settings.gradle api/build.gradle ./api/
 RUN cd api && ./gradlew --no-daemon dependencies > /dev/null 2>&1 || true
 COPY api/src api/src
 COPY migrations migrations
+COPY prompts prompts
 RUN cd api && ./gradlew --no-daemon bootJar -x test
 
 FROM eclipse-temurin:21-jre
