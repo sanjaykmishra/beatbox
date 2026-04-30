@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ChangeEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError, uploadLogo } from '../lib/api';
 
 export function ClientDetail() {
@@ -59,7 +59,13 @@ export function ClientDetail() {
             style={{ background: c.primary_color ? `#${c.primary_color}` : '#E5E7EB' }}
           />
         )}
-        <h1 className="text-2xl font-semibold tracking-tight">{c.name}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight flex-1">{c.name}</h1>
+        <Link
+          to={`/clients/${c.id}/reports/new`}
+          className="rounded bg-gray-900 text-white px-4 py-2 font-medium hover:bg-gray-800"
+        >
+          New report
+        </Link>
       </div>
 
       <section className="bg-white rounded border border-gray-200 p-6 space-y-4">

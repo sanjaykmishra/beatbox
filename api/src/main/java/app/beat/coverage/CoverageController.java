@@ -9,12 +9,19 @@ import app.beat.report.ReportRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -90,6 +97,119 @@ public class CoverageController {
     }
     coverage.delete(item.id());
     return ResponseEntity.noContent().build();
+  }
+
+  public record EditCoverageRequest(
+      String headline,
+      String subheadline,
+      String publish_date,
+      String lede,
+      String summary,
+      String key_quote,
+      @Pattern(regexp = "positive|neutral|negative|mixed") String sentiment,
+      String sentiment_rationale,
+      @Pattern(regexp = "feature|mention|passing") String subject_prominence,
+      List<String> topics) {}
+
+  public record EditedCoverageDto(
+      UUID id,
+      String headline,
+      String subheadline,
+      String publish_date,
+      String lede,
+      String summary,
+      String key_quote,
+      String sentiment,
+      String sentiment_rationale,
+      String subject_prominence,
+      List<String> topics,
+      boolean is_user_edited,
+      List<String> edited_fields) {
+    static EditedCoverageDto from(CoverageItem c) {
+      return new EditedCoverageDto(
+          c.id(),
+          c.headline(),
+          c.subheadline(),
+          c.publishDate() == null ? null : c.publishDate().toString(),
+          c.lede(),
+          c.summary(),
+          c.keyQuote(),
+          c.sentiment(),
+          c.sentimentRationale(),
+          c.subjectProminence(),
+          c.topics(),
+          c.isUserEdited(),
+          c.editedFields());
+    }
+  }
+
+  private static final Set<String> EDITABLE_FIELDS =
+      Set.of(
+          "headline",
+          "subheadline",
+          "publish_date",
+          "lede",
+          "summary",
+          "key_quote",
+          "sentiment",
+          "sentiment_rationale",
+          "subject_prominence",
+          "topics");
+
+  @PatchMapping("/v1/reports/{reportId}/coverage/{itemId}")
+  public EditedCoverageDto edit(
+      @PathVariable UUID reportId,
+      @PathVariable UUID itemId,
+      @Valid @RequestBody EditCoverageRequest body,
+      HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    Report report =
+        reports
+            .findInWorkspace(ctx.workspaceId(), reportId)
+            .orElseThrow(() -> AppException.notFound("Report"));
+    var item =
+        coverage
+            .findInWorkspace(ctx.workspaceId(), itemId)
+            .orElseThrow(() -> AppException.notFound("Coverage item"));
+    if (!item.reportId().equals(report.id())) {
+      throw AppException.notFound("Coverage item");
+    }
+    Map<String, Object> edits = new LinkedHashMap<>();
+    putIfPresent(edits, "headline", body.headline());
+    putIfPresent(edits, "subheadline", body.subheadline());
+    if (body.publish_date() != null) {
+      try {
+        edits.put("publish_date", LocalDate.parse(body.publish_date()));
+      } catch (DateTimeParseException e) {
+        throw AppException.badRequest(
+            "/errors/invalid-date", "Invalid date", "publish_date must be YYYY-MM-DD.");
+      }
+    }
+    putIfPresent(edits, "lede", body.lede());
+    putIfPresent(edits, "summary", body.summary());
+    putIfPresent(edits, "key_quote", body.key_quote());
+    putIfPresent(edits, "sentiment", body.sentiment());
+    putIfPresent(edits, "sentiment_rationale", body.sentiment_rationale());
+    putIfPresent(edits, "subject_prominence", body.subject_prominence());
+    if (body.topics() != null) {
+      edits.put("topics", body.topics().toArray(new String[0]));
+    }
+    if (edits.isEmpty()) {
+      throw AppException.badRequest(
+          "/errors/no-edits", "No edits provided", "Provide at least one editable field.");
+    }
+    for (String k : edits.keySet()) {
+      if (!EDITABLE_FIELDS.contains(k)) {
+        throw AppException.badRequest(
+            "/errors/not-editable", "Field not editable", k + " is not user-editable.");
+      }
+    }
+    var updated = coverage.applyUserEdit(item.id(), edits);
+    return EditedCoverageDto.from(updated);
+  }
+
+  private static void putIfPresent(Map<String, Object> m, String k, String v) {
+    if (v != null) m.put(k, v);
   }
 
   @PostMapping("/v1/reports/{reportId}/coverage/{itemId}/retry")

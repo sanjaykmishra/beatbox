@@ -213,4 +213,30 @@ public class CoverageItemRepository {
         .param("id", id)
         .update();
   }
+
+  /**
+   * Apply user-driven edits. The columns that have a non-null value in {@code edits} are written
+   * verbatim and added to the {@code edited_fields} array; future re-runs will respect those pins.
+   * Returns the updated row.
+   */
+  public CoverageItem applyUserEdit(UUID id, java.util.Map<String, Object> edits) {
+    java.util.List<String> touched = new java.util.ArrayList<>(edits.keySet());
+    java.util.List<String> setClauses = new java.util.ArrayList<>();
+    for (String f : touched) {
+      setClauses.add(f + " = :" + f);
+    }
+    setClauses.add("is_user_edited = true");
+    setClauses.add(
+        "edited_fields = (SELECT array_agg(DISTINCT x) FROM unnest(edited_fields || :touched_arr) AS x)");
+    String sql =
+        "UPDATE coverage_items SET "
+            + String.join(", ", setClauses)
+            + " WHERE id = :id RETURNING *";
+
+    var spec = jdbc.sql(sql).param("id", id).param("touched_arr", touched.toArray(new String[0]));
+    for (var e : edits.entrySet()) {
+      spec = spec.param(e.getKey(), e.getValue());
+    }
+    return spec.query(MAPPER).single();
+  }
 }

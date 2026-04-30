@@ -108,6 +108,89 @@ export const api = {
       '/v1/uploads/presign',
       b,
     ),
+
+  // ----- Reports + coverage (week 5) -----
+  createReport: (
+    clientId: string,
+    b: { title?: string; period_start: string; period_end: string; template_id?: string },
+  ) => request<Report>('POST', `/v1/clients/${clientId}/reports`, b),
+  getReport: (id: string) => request<Report>('GET', `/v1/reports/${id}`),
+  addCoverage: (reportId: string, urls: string[]) =>
+    request<{ items: { id: string; source_url: string; extraction_status: string }[] }>(
+      'POST',
+      `/v1/reports/${reportId}/coverage`,
+      { urls },
+    ),
+  patchCoverage: (
+    reportId: string,
+    itemId: string,
+    edits: Partial<{
+      headline: string;
+      subheadline: string;
+      publish_date: string;
+      lede: string;
+      summary: string;
+      key_quote: string;
+      sentiment: 'positive' | 'neutral' | 'negative' | 'mixed';
+      sentiment_rationale: string;
+      subject_prominence: 'feature' | 'mention' | 'passing';
+      topics: string[];
+    }>,
+  ) =>
+    request<EditedCoverage>('PATCH', `/v1/reports/${reportId}/coverage/${itemId}`, edits),
+  retryCoverage: (reportId: string, itemId: string) =>
+    request<void>('POST', `/v1/reports/${reportId}/coverage/${itemId}/retry`),
+  deleteCoverage: (reportId: string, itemId: string) =>
+    request<void>('DELETE', `/v1/reports/${reportId}/coverage/${itemId}`),
+};
+
+export type Report = {
+  id: string;
+  client_id: string;
+  workspace_id: string;
+  template_id: string;
+  title: string;
+  period_start: string;
+  period_end: string;
+  status: 'draft' | 'processing' | 'ready' | 'failed';
+  executive_summary: string | null;
+  pdf_url: string | null;
+  share_token: string | null;
+  generated_at: string | null;
+  created_at: string;
+  coverage_items: CoverageItemView[];
+};
+
+export type CoverageItemView = {
+  id: string;
+  source_url: string;
+  extraction_status: 'queued' | 'running' | 'done' | 'failed';
+  extraction_error: string | null;
+  outlet: { id: string; name: string; tier: number } | null;
+  headline: string | null;
+  publish_date: string | null;
+  lede: string | null;
+  screenshot_url: string | null;
+  tier_at_extraction: number | null;
+  estimated_reach: number | null;
+  is_user_edited: boolean;
+  edited_fields: string[];
+};
+
+export type EditedCoverage = {
+  id: string;
+  headline: string | null;
+  subheadline: string | null;
+  publish_date: string | null;
+  lede: string | null;
+  summary: string | null;
+  key_quote: string | null;
+  sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' | null;
+  sentiment_rationale: string | null;
+  subject_prominence: 'feature' | 'mention' | 'passing' | null;
+  topics: string[];
+  is_user_edited: boolean;
+  edited_fields: string[];
 };
 
 export async function uploadLogo(
