@@ -4,6 +4,8 @@ FROM eclipse-temurin:21-jdk AS build
 WORKDIR /workspace
 COPY api/gradlew api/gradlew
 COPY api/gradle api/gradle
+# Defensive against Windows checkouts: strip CRLF and ensure executable bit.
+RUN sed -i 's/\r$//' api/gradlew && chmod +x api/gradlew
 COPY api/settings.gradle api/build.gradle ./api/
 RUN cd api && ./gradlew --no-daemon dependencies > /dev/null 2>&1 || true
 COPY api/src api/src

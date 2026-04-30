@@ -1,0 +1,24 @@
+# Default: let Git decide, but normalize to LF in the repo.
+* text=auto eol=lf
+
+# Windows-only files keep CRLF.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Shell scripts and the Gradle wrapper MUST stay LF or they will not execute
+# inside Linux containers (shebang corruption → exit 127).
+*.sh        text eol=lf
+gradlew     text eol=lf
+api/gradlew text eol=lf
+
+# Binary files — never touch line endings.
+*.jar     binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.svg     text
+*.pdf     binary
+*.woff    binary
+*.woff2   binary
