@@ -43,6 +43,14 @@ public class OutletRepository {
         .optional();
   }
 
+  /** Persist an LLM-classified tier (sets tier_source='llm'). */
+  public void setLlmTier(UUID id, int tier) {
+    jdbc.sql("UPDATE outlets SET tier = :t, tier_source = 'llm' WHERE id = :id")
+        .param("id", id)
+        .param("t", tier)
+        .update();
+  }
+
   /** Upsert by domain. Tier defaults to 3 with tier_source='default' on insert. */
   public Outlet upsertByDomain(String domain, String name) {
     return jdbc.sql(

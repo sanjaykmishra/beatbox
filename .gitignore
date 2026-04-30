@@ -35,5 +35,8 @@ logs/
 **/render/coverage/
 api/build/reports/
 
+# Eval harness output (timestamped per run; uploaded as CI artifact)
+api/src/test/eval/reports/
+
 # Fly
 .fly/

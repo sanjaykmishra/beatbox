@@ -29,6 +29,7 @@ dependencies {
     implementation 'org.springframework.security:spring-security-crypto:6.3.4'
     implementation 'software.amazon.awssdk:s3:2.28.16'
     implementation 'org.jsoup:jsoup:1.18.1'
+    implementation 'org.yaml:snakeyaml:2.3'
     runtimeOnly 'org.postgresql:postgresql'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -38,10 +39,13 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-// Bundle the canonical migrations from /migrations into the JAR at db/migration
+// Bundle migrations and versioned prompt sources into the JAR.
 processResources {
     from(rootProject.file('../migrations')) {
         into 'db/migration'
+    }
+    from(rootProject.file('../prompts')) {
+        into 'prompts'
     }
 }
 

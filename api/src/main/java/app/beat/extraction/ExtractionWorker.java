@@ -1,12 +1,18 @@
 package app.beat.extraction;
 
+import app.beat.author.Author;
+import app.beat.author.AuthorRepository;
+import app.beat.client.ClientRepository;
 import app.beat.coverage.CoverageItem;
 import app.beat.coverage.CoverageItemRepository;
+import app.beat.llm.ExtractionService;
+import app.beat.llm.OutletTierClassifier;
 import app.beat.outlet.Domains;
 import app.beat.outlet.Outlet;
 import app.beat.outlet.OutletRepository;
 import app.beat.report.Report;
 import app.beat.report.ReportRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.util.List;
@@ -20,11 +26,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Drains extraction_jobs. For each queued job: claim atomically, fetch the article via the layered
- * fetcher, upsert the outlet, capture a screenshot, write back to coverage_items, mark the job done
- * — or failed with a reason. Per-job concurrency is bounded by a fixed thread pool.
- *
- * <p>v1 dispatch is a periodic poll (every 1s). LISTEN/NOTIFY is a future optimization.
+ * Drains extraction_jobs end-to-end: claim → fetch HTML → outlet upsert + tier classify → Anthropic
+ * Sonnet for sentiment/summary/quote/topics → author upsert → screenshot → write coverage_item →
+ * mark done. Retries on failure (3 attempts, exponential at the API client).
  */
 @Component
 public class ExtractionWorker {
@@ -36,9 +40,14 @@ public class ExtractionWorker {
   private final ExtractionJobRepository jobs;
   private final CoverageItemRepository coverage;
   private final ReportRepository reports;
+  private final ClientRepository clients;
   private final OutletRepository outlets;
+  private final AuthorRepository authors;
   private final LayeredArticleFetcher fetcher;
   private final ScreenshotClient screenshots;
+  private final ExtractionService extraction;
+  private final OutletTierClassifier tierClassifier;
+  private final ObjectMapper json = new ObjectMapper();
   private final boolean enabled;
 
   private final ExecutorService pool = Executors.newFixedThreadPool(BATCH_SIZE);
@@ -47,22 +56,34 @@ public class ExtractionWorker {
       ExtractionJobRepository jobs,
       CoverageItemRepository coverage,
       ReportRepository reports,
+      ClientRepository clients,
       OutletRepository outlets,
+      AuthorRepository authors,
       LayeredArticleFetcher fetcher,
       ScreenshotClient screenshots,
+      ExtractionService extraction,
+      OutletTierClassifier tierClassifier,
       @Value("${beat.extraction.enabled:true}") boolean enabled) {
     this.jobs = jobs;
     this.coverage = coverage;
     this.reports = reports;
+    this.clients = clients;
     this.outlets = outlets;
+    this.authors = authors;
     this.fetcher = fetcher;
     this.screenshots = screenshots;
+    this.extraction = extraction;
+    this.tierClassifier = tierClassifier;
     this.enabled = enabled;
   }
 
   @PostConstruct
   void start() {
-    log.info("extraction worker enabled={}, batch_size={}", enabled, BATCH_SIZE);
+    log.info(
+        "extraction worker enabled={} llm={} batch_size={}",
+        enabled,
+        extraction.isEnabled() ? "anthropic" : "disabled",
+        BATCH_SIZE);
   }
 
   @PreDestroy
@@ -98,6 +119,11 @@ public class ExtractionWorker {
               .findById(item.reportId())
               .orElseThrow(() -> new IllegalStateException("report missing"));
       var workspaceId = report.workspaceId();
+      String subjectName =
+          clients
+              .findInWorkspace(workspaceId, report.clientId())
+              .map(c -> c.name())
+              .orElse("the subject");
 
       var fetched = fetcher.fetch(item.sourceUrl());
       if (fetched.isEmpty()) {
@@ -105,6 +131,8 @@ public class ExtractionWorker {
         return;
       }
       var article = fetched.get();
+
+      // Outlet: upsert by domain, then classify tier if it's still default.
       String domain = Domains.apexFromUrl(item.sourceUrl()).orElse("");
       Outlet outlet =
           domain.isBlank()
@@ -114,26 +142,64 @@ public class ExtractionWorker {
                   article.outletName() != null
                       ? article.outletName()
                       : Domains.outletNameFromDomain(domain));
+      int tier = outlet == null ? 3 : tierClassifier.classifyIfNeeded(outlet);
+
+      // Screenshot (best-effort).
       String screenshotUrl =
           workspaceId == null
               ? null
               : screenshots.capture(workspaceId, item.sourceUrl()).orElse(null);
 
+      // Persist fetcher-derived fields first (so the user sees something even if LLM fails).
       coverage.applyFetched(
           item.id(),
           outlet == null ? null : outlet.id(),
           article.headline(),
           article.publishDate(),
           firstSentenceOf(article.cleanText()),
-          outlet == null ? null : outlet.tier(),
-          /* estimatedReach */ null, // computed in week 4 from outlet stats
+          tier,
+          /* estimatedReach */ null,
           screenshotUrl);
+
+      // Now the LLM extraction (sentiment, summary, quote, topics, prominence). Skipped quietly
+      // when ANTHROPIC_API_KEY isn't set so local dev keeps working.
+      if (extraction.isEnabled()) {
+        var outcome =
+            extraction
+                .extract(
+                    item.sourceUrl(),
+                    outlet == null ? null : outlet.name(),
+                    subjectName,
+                    article.cleanText())
+                .orElse(null);
+        if (outcome != null) {
+          var r = outcome.result();
+          Author author =
+              r.author() == null
+                  ? null
+                  : authors.upsert(r.author(), outlet == null ? null : outlet.id());
+          coverage.applyExtracted(
+              item.id(),
+              author == null ? null : author.id(),
+              r.subheadline(),
+              r.summary(),
+              r.keyQuote(),
+              r.sentiment(),
+              r.sentimentRationale(),
+              r.subjectProminence(),
+              r.topics(),
+              outcome.promptVersion(),
+              json.writeValueAsString(r));
+        }
+      }
+
       jobs.markDone(job.id());
       log.info(
-          "extraction: done item={} url={} fetcher={}",
+          "extraction: done item={} url={} fetcher={} llm={}",
           item.id(),
           item.sourceUrl(),
-          article.fetcher());
+          article.fetcher(),
+          extraction.isEnabled());
     } catch (Exception e) {
       log.warn("extraction: job {} failed: {}", job.id(), e.toString());
       retryOrFail(job, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());

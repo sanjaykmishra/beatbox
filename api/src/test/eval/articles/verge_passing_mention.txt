@@ -1,0 +1,9 @@
+The state of AI-powered SaaS in late 2025
+
+By Tech Roundup · October 22, 2025
+
+The market for AI-driven business software has matured rapidly in 2025, with a clear separation between the early movers — Notion AI, Glean, Harvey — and a long tail of newer entrants. Most of the new entrants are still finding product-market fit, while the leaders have largely settled into stable revenue rhythms.
+
+Notion AI continues to dominate the document-collaboration corner of the market, while Glean has cemented its position in enterprise search. Harvey has expanded beyond its initial legal focus into financial services. Other companies including Acme Corp have raised early growth rounds in this category, but it remains to be seen which of them will reach the same scale.
+
+Pricing across the category has compressed roughly 20 percent year-over-year as enterprise buyers consolidate vendors. Several procurement officers we spoke with said they expect further consolidation in 2026 as enterprises rationalize their AI tooling spend.

@@ -151,6 +151,48 @@ public class CoverageItemRepository {
         .update();
   }
 
+  /** Apply the LLM extraction (sentiment, summary, key_quote, prominence, topics, author). */
+  public void applyExtracted(
+      UUID id,
+      UUID authorId,
+      String subheadline,
+      String summary,
+      String keyQuote,
+      String sentiment,
+      String sentimentRationale,
+      String subjectProminence,
+      java.util.List<String> topics,
+      String promptVersion,
+      String rawJson) {
+    jdbc.sql(
+            """
+            UPDATE coverage_items SET
+              author_id = COALESCE(author_id, :author),
+              subheadline = CASE WHEN 'subheadline' = ANY(edited_fields) THEN subheadline ELSE COALESCE(:sh, subheadline) END,
+              summary = CASE WHEN 'summary' = ANY(edited_fields) THEN summary ELSE COALESCE(:sum, summary) END,
+              key_quote = CASE WHEN 'key_quote' = ANY(edited_fields) THEN key_quote ELSE COALESCE(:kq, key_quote) END,
+              sentiment = CASE WHEN 'sentiment' = ANY(edited_fields) THEN sentiment ELSE COALESCE(:sent, sentiment) END,
+              sentiment_rationale = CASE WHEN 'sentiment_rationale' = ANY(edited_fields) THEN sentiment_rationale ELSE COALESCE(:sr, sentiment_rationale) END,
+              subject_prominence = CASE WHEN 'subject_prominence' = ANY(edited_fields) THEN subject_prominence ELSE COALESCE(:prom, subject_prominence) END,
+              topics = CASE WHEN 'topics' = ANY(edited_fields) THEN topics ELSE :topics END,
+              extraction_prompt_version = :ver,
+              raw_extracted = CAST(:raw AS jsonb)
+            WHERE id = :id
+            """)
+        .param("id", id)
+        .param("author", authorId)
+        .param("sh", subheadline)
+        .param("sum", summary)
+        .param("kq", keyQuote)
+        .param("sent", sentiment)
+        .param("sr", sentimentRationale)
+        .param("prom", subjectProminence)
+        .param("topics", topics == null ? new String[0] : topics.toArray(new String[0]))
+        .param("ver", promptVersion)
+        .param("raw", rawJson)
+        .update();
+  }
+
   public void markFailed(UUID id, String reason) {
     jdbc.sql(
             """

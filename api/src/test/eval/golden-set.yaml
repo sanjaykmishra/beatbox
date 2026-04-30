@@ -1,0 +1,78 @@
+# Beat — golden eval set seed.
+#
+# Construction: ~50 hand-curated articles across categories. We ship with this
+# 5-item seed and grow over time per docs/06-evals.md "Growing the golden set".
+# Each article body lives next to this file under articles/<id>.txt so eval
+# runs are deterministic and offline.
+
+- id: tc_acme_series_b
+  source_file: articles/tc_acme_series_b.txt
+  category: standard_b2b
+  url: https://techcrunch.com/2025/12/04/acme-raises-30m-series-b
+  outlet_name: TechCrunch
+  subject_name: Acme Corp
+  expected:
+    headline_contains: "Acme"
+    sentiment: positive
+    subject_prominence: feature
+    topics_must_include_any_of: [funding]
+    must_include_facts:
+      - "$30"
+      - "Sequoia"
+      - "Series B"
+    must_not_include:
+      - "$300 million"
+      - "Series A"
+      - "groundbreaking"
+      - "revolutionary"
+      - "tremendous"
+      - "unprecedented"
+
+- id: nyt_acme_negative
+  source_file: articles/nyt_acme_negative.txt
+  category: negative
+  url: https://www.nytimes.com/2025/11/18/business/acme-layoffs.html
+  outlet_name: The New York Times
+  subject_name: Acme Corp
+  expected:
+    headline_contains: "Acme"
+    sentiment: negative
+    subject_prominence: feature
+    topics_must_include_any_of: [layoffs]
+    must_not_include:
+      - "groundbreaking"
+      - "revolutionary"
+
+- id: verge_passing_mention
+  source_file: articles/verge_passing_mention.txt
+  category: passing_mention
+  url: https://www.theverge.com/2025/10/22/ai-saas-roundup
+  outlet_name: The Verge
+  subject_name: Acme Corp
+  expected:
+    sentiment: neutral
+    subject_prominence: passing
+    topics_must_include_any_of: [ai, market]
+
+- id: trade_pub_partnership
+  source_file: articles/trade_pub_partnership.txt
+  category: trade_publication
+  url: https://www.example-trade.com/2025/11/05/acme-foo-corp
+  outlet_name: ExampleTrade
+  subject_name: Acme Corp
+  expected:
+    headline_contains: "Acme"
+    sentiment: positive
+    subject_prominence: feature
+    topics_must_include_any_of: [partnership]
+
+- id: mixed_sentiment
+  source_file: articles/mixed_sentiment.txt
+  category: mixed_sentiment
+  url: https://www.example-news.com/2025/12/01/acme-q3
+  outlet_name: ExampleNews
+  subject_name: Acme Corp
+  expected:
+    sentiment: mixed
+    subject_prominence: feature
+    topics_must_include_any_of: [earnings]
