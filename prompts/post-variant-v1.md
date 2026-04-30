@@ -1,6 +1,6 @@
 ---
 version: post_variant_v1.0
-model: claude-sonnet-4
+model: claude-sonnet-4-6
 temperature: 0.4
 max_tokens: 1500
 expected_output_format: json

@@ -1,6 +1,6 @@
 ---
 version: executive_summary_v1.0
-model: claude-opus
+model: claude-opus-4-7
 temperature: 0.4
 max_tokens: 600
 expected_output_format: text
