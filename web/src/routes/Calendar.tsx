@@ -3,12 +3,15 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Eyebrow, Pill, PrimaryButton, type PillTone } from '../components/ui';
+import { Eyebrow, Pill, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import {
   ApiError,
   api,
+  type CalendarEventType,
   type ClientListItem,
+  type FeedItem,
+  type FeedItemType,
   type OwnedPost,
   type PlatformVariant,
   type PostStatus,
@@ -96,12 +99,12 @@ export function Calendar() {
     );
   }
   const [composer, setComposer] = useState<ComposerState>({ open: false });
+  const [eventDrawer, setEventDrawer] = useState<EventDrawerState>({ open: false });
+  const [activeTypes, setActiveTypes] = useState<Set<FeedItemType> | null>(null);
 
   const clientsQ = useQuery({ queryKey: ['clients'], queryFn: api.listClients });
 
   // Lightweight count for the "Needs review" pill: posts currently in internal_review.
-  // Cheap separate fetch (limit 200) so the count survives even when the user is on a
-  // different week/month with no review-state posts in view.
   const reviewCountQ = useQuery({
     queryKey: ['posts-review-count'],
     queryFn: () => api.listPosts({ status: 'internal_review', limit: 200 }),
@@ -110,6 +113,8 @@ export function Calendar() {
   const reviewCount = reviewCountQ.data?.items.length ?? 0;
 
   const range = useMemo(() => visibleRange(view, anchor), [view, anchor]);
+
+  // Posts query (still used for the "Needs review" filter list).
   const postsQ = useQuery({
     queryKey: ['posts', clientFilter, view, needsReview, range.from.toISOString()],
     queryFn: () =>
@@ -120,7 +125,32 @@ export function Calendar() {
         to: needsReview ? undefined : range.to.toISOString(),
         limit: 500,
       }),
+    enabled: needsReview,
   });
+
+  // Unified calendar feed (posts + reports + standalone events).
+  const typesParam = activeTypes
+    ? Array.from(activeTypes).sort().join(',') || undefined
+    : undefined;
+  const feedQ = useQuery({
+    queryKey: [
+      'calendar-feed',
+      clientFilter,
+      view,
+      range.from.toISOString(),
+      typesParam ?? 'all',
+    ],
+    queryFn: () =>
+      api.getCalendarFeed({
+        client_id: clientFilter,
+        types: typesParam,
+        from: range.from.toISOString(),
+        to: range.to.toISOString(),
+      }),
+    enabled: !needsReview,
+  });
+  const availableTypes = feedQ.data?.available_types ?? DEFAULT_FEED_TYPES;
+  const feedItems = feedQ.data?.items ?? [];
 
   const clientsById = useMemo(() => {
     const m = new Map<string, ClientListItem>();
@@ -136,12 +166,10 @@ export function Calendar() {
     <BrowserFrame
       crumbs={[{ label: `${slug}.beat.app`, to: '/clients' }, { label: 'calendar' }]}
       rightSlot={
-        <PrimaryButton
-          onClick={() => setComposer({ open: true, mode: 'new', clientId: clientFilter })}
-          className="!px-3 !py-1 text-[12px]"
-        >
-          + New post
-        </PrimaryButton>
+        <NewMenu
+          onPickPost={() => setComposer({ open: true, mode: 'new', clientId: clientFilter })}
+          onPickEvent={() => setEventDrawer({ open: true, mode: 'new', clientId: clientFilter })}
+        />
       }
     >
       <div className="space-y-6">
@@ -214,6 +242,14 @@ export function Calendar() {
           </div>
         </div>
 
+        {!needsReview && (
+          <TypeChipStrip
+            available={availableTypes}
+            active={activeTypes}
+            onChange={setActiveTypes}
+          />
+        )}
+
         {needsReview ? (
           <ReviewList
             posts={postsQ.data?.items ?? []}
@@ -224,23 +260,37 @@ export function Calendar() {
         ) : view === 'week' ? (
           <WeekGrid
             weekStart={range.from}
-            posts={postsQ.data?.items ?? []}
+            items={feedItems}
             clientsById={clientsById}
-            loading={postsQ.isLoading}
-            onSelect={(p) => setComposer({ open: true, mode: 'edit', postId: p.id })}
+            loading={feedQ.isLoading}
+            onSelect={(item) => openItem(item, setComposer, setEventDrawer)}
             onEmptyDay={(day) =>
-              setComposer({ open: true, mode: 'new', clientId: clientFilter, scheduledFor: day })
+              setComposer({
+                open: true,
+                mode: 'new',
+                clientId: clientFilter,
+                // Don't pre-fill a past date — let the user pick. The composer's min={today}
+                // would otherwise reject the pre-filled value silently.
+                scheduledFor: isPastDay(day) ? undefined : day,
+              })
             }
           />
         ) : (
           <MonthGrid
             anchor={anchor}
-            posts={postsQ.data?.items ?? []}
+            items={feedItems}
             clientsById={clientsById}
-            loading={postsQ.isLoading}
-            onSelect={(p) => setComposer({ open: true, mode: 'edit', postId: p.id })}
+            loading={feedQ.isLoading}
+            onSelect={(item) => openItem(item, setComposer, setEventDrawer)}
             onEmptyDay={(day) =>
-              setComposer({ open: true, mode: 'new', clientId: clientFilter, scheduledFor: day })
+              setComposer({
+                open: true,
+                mode: 'new',
+                clientId: clientFilter,
+                // Don't pre-fill a past date — let the user pick. The composer's min={today}
+                // would otherwise reject the pre-filled value silently.
+                scheduledFor: isPastDay(day) ? undefined : day,
+              })
             }
           />
         )}
@@ -253,6 +303,13 @@ export function Calendar() {
           onClose={() => setComposer({ open: false })}
         />
       )}
+      {eventDrawer.open && (
+        <CalendarEventDrawer
+          state={eventDrawer}
+          clients={clientsQ.data?.items ?? []}
+          onClose={() => setEventDrawer({ open: false })}
+        />
+      )}
     </BrowserFrame>
   );
 }
@@ -262,30 +319,80 @@ type ComposerState =
   | { open: true; mode: 'new'; clientId?: string; scheduledFor?: Date }
   | { open: true; mode: 'edit'; postId: string };
 
+type EventDrawerState =
+  | { open: false }
+  | { open: true; mode: 'new'; clientId?: string; occursAt?: Date }
+  | { open: true; mode: 'edit'; eventId: string };
+
+const DEFAULT_FEED_TYPES: FeedItemType[] = [
+  'post',
+  'report_due',
+  'embargo',
+  'launch',
+  'earnings',
+  'meeting',
+  'blackout',
+  'milestone',
+  'other',
+];
+
+const FEED_TYPE_LABELS: Record<FeedItemType, string> = {
+  post: 'Posts',
+  report_due: 'Reports',
+  embargo: 'Embargo',
+  launch: 'Launch',
+  earnings: 'Earnings',
+  meeting: 'Meeting',
+  blackout: 'Blackout',
+  milestone: 'Milestone',
+  other: 'Other',
+};
+
+const FEED_TYPE_DOT: Record<FeedItemType, string> = {
+  post: '#0b0f19',
+  report_due: '#059669',
+  embargo: '#dc2626',
+  launch: '#7c3aed',
+  earnings: '#0891b2',
+  meeting: '#2563eb',
+  blackout: '#374151',
+  milestone: '#d97706',
+  other: '#9ca3af',
+};
+
+const CALENDAR_EVENT_TYPES: CalendarEventType[] = [
+  'embargo',
+  'launch',
+  'earnings',
+  'meeting',
+  'blackout',
+  'milestone',
+  'other',
+];
+
 // --------------------- Week grid ---------------------
 
 function WeekGrid({
   weekStart,
-  posts,
+  items,
   clientsById,
   loading,
   onSelect,
   onEmptyDay,
 }: {
   weekStart: Date;
-  posts: OwnedPost[];
+  items: FeedItem[];
   clientsById: Map<string, ClientListItem>;
   loading: boolean;
-  onSelect: (p: OwnedPost) => void;
+  onSelect: (item: FeedItem) => void;
   onEmptyDay: (day: Date) => void;
 }) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const byDay = new Map<string, OwnedPost[]>();
-  for (const p of posts) {
-    if (!p.scheduled_for) continue;
-    const k = ymd(new Date(p.scheduled_for));
+  const byDay = new Map<string, FeedItem[]>();
+  for (const it of items) {
+    const k = ymd(new Date(it.occurs_at));
     const list = byDay.get(k) ?? [];
-    list.push(p);
+    list.push(it);
     byDay.set(k, list);
   }
 
@@ -327,21 +434,17 @@ function WeekGrid({
             {loading && list.length === 0 ? (
               <div className="h-3 w-2/3 bg-gray-100 rounded animate-pulse" />
             ) : list.length === 0 ? (
-              <div className="text-[11px] text-gray-300 italic">No posts</div>
+              <div className="text-[11px] text-gray-300 italic">Nothing</div>
             ) : (
               <ul className="space-y-1.5">
                 {list
-                  .sort(
-                    (a, b) =>
-                      (a.scheduled_for ?? '').localeCompare(b.scheduled_for ?? '') ||
-                      a.id.localeCompare(b.id),
-                  )
-                  .map((p) => (
-                    <li key={p.id}>
-                      <PostCard
-                        post={p}
-                        client={clientsById.get(p.client_id)}
-                        onClick={() => onSelect(p)}
+                  .sort((a, b) => a.occurs_at.localeCompare(b.occurs_at) || a.id.localeCompare(b.id))
+                  .map((it) => (
+                    <li key={it.id}>
+                      <FeedCard
+                        item={it}
+                        client={it.client_id ? clientsById.get(it.client_id) : undefined}
+                        onClick={() => onSelect(it)}
                       />
                     </li>
                   ))}
@@ -354,28 +457,32 @@ function WeekGrid({
   );
 }
 
-function PostCard({
-  post,
+function FeedCard({
+  item,
   client,
   onClick,
 }: {
-  post: OwnedPost;
+  item: FeedItem;
   client: ClientListItem | undefined;
   onClick: () => void;
 }) {
-  const time = post.scheduled_for
-    ? new Date(post.scheduled_for).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    : null;
-  const summary =
-    post.title?.trim() ||
-    (post.primary_content_text || '').slice(0, 60) ||
-    '(empty draft)';
+  const time = item.all_day
+    ? null
+    : new Date(item.occurs_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const dotColor = item.color
+    ? `#${item.color}`
+    : FEED_TYPE_DOT[item.type] ?? FEED_TYPE_DOT.other;
   return (
     <button
       onClick={onClick}
       className="w-full text-left bg-gray-50 hover:bg-white border border-gray-200 hover:border-gray-300 rounded-md p-2 transition-colors"
     >
       <div className="flex items-center gap-1.5 mb-1">
+        <span
+          className="h-1.5 w-1.5 rounded-full flex-none"
+          style={{ background: dotColor }}
+          aria-hidden
+        />
         {client && (
           <Avatar
             name={client.name}
@@ -386,14 +493,14 @@ function PostCard({
         )}
         {time && <span className="text-[10px] text-gray-500 tabular-nums">{time}</span>}
       </div>
-      <div className="text-xs font-medium text-ink line-clamp-2">{summary}</div>
+      <div className="text-xs font-medium text-ink line-clamp-2">{item.title}</div>
       <div className="mt-1.5 flex items-center justify-between gap-1">
-        <Pill tone={STATUS_TONE[post.status]} className="!text-[9px] !px-1.5 !py-0">
-          {post.status.replace('_', ' ')}
-        </Pill>
-        <span className="text-[9px] text-gray-400 tabular-nums">
-          {post.target_platforms.length}p
+        <span className="text-[9px] uppercase tracking-wider text-gray-500">
+          {FEED_TYPE_LABELS[item.type]}
         </span>
+        {item.subtitle && (
+          <span className="text-[9px] text-gray-400 truncate ml-1">{item.subtitle}</span>
+        )}
       </div>
     </button>
   );
@@ -511,17 +618,17 @@ function relativeTime(iso: string): string {
 
 function MonthGrid({
   anchor,
-  posts,
+  items,
   clientsById,
   loading,
   onSelect,
   onEmptyDay,
 }: {
   anchor: Date;
-  posts: OwnedPost[];
+  items: FeedItem[];
   clientsById: Map<string, ClientListItem>;
   loading: boolean;
-  onSelect: (p: OwnedPost) => void;
+  onSelect: (item: FeedItem) => void;
   onEmptyDay: (day: Date) => void;
 }) {
   const gridStart = mondayOf(firstOfMonth(anchor));
@@ -534,12 +641,11 @@ function MonthGrid({
     // Stop after we've covered the month *and* completed the week (Sunday).
     if (i >= 27 && d.getMonth() !== monthIdx && d.getDay() === 0) break;
   }
-  const byDay = new Map<string, OwnedPost[]>();
-  for (const p of posts) {
-    if (!p.scheduled_for) continue;
-    const k = ymd(new Date(p.scheduled_for));
+  const byDay = new Map<string, FeedItem[]>();
+  for (const it of items) {
+    const k = ymd(new Date(it.occurs_at));
     const list = byDay.get(k) ?? [];
-    list.push(p);
+    list.push(it);
     byDay.set(k, list);
   }
 
@@ -559,7 +665,7 @@ function MonthGrid({
         {cells.map((d) => {
           const k = ymd(d);
           const list = (byDay.get(k) ?? []).sort((a, b) =>
-            (a.scheduled_for ?? '').localeCompare(b.scheduled_for ?? ''),
+            a.occurs_at.localeCompare(b.occurs_at),
           );
           const inMonth = d.getMonth() === monthIdx;
           const isToday = ymd(new Date()) === k;
@@ -595,30 +701,32 @@ function MonthGrid({
               </div>
               {loading && list.length === 0 ? null : (
                 <ul className="space-y-0.5 flex-1">
-                  {visible.map((p) => (
-                    <li key={p.id}>
-                      <button
-                        onClick={() => onSelect(p)}
-                        className="w-full text-left flex items-center gap-1 px-1 py-0.5 rounded hover:bg-gray-100 transition-colors"
-                        title={p.title || p.primary_content_text || ''}
-                      >
-                        <span
-                          className="h-1.5 w-1.5 rounded-full flex-none"
-                          style={{
-                            background: clientsById.get(p.client_id)?.primary_color
-                              ? `#${clientsById.get(p.client_id)?.primary_color}`
-                              : statusDotColor(p.status),
-                          }}
-                          aria-hidden
-                        />
-                        <span className="text-[11px] text-ink truncate">
-                          {p.title?.trim() ||
-                            (p.primary_content_text ?? '').slice(0, 40) ||
-                            '(empty)'}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
+                  {visible.map((it) => {
+                    const clientPrimary = it.client_id
+                      ? clientsById.get(it.client_id)?.primary_color
+                      : null;
+                    const dot = it.color
+                      ? `#${it.color}`
+                      : clientPrimary
+                        ? `#${clientPrimary}`
+                        : FEED_TYPE_DOT[it.type] ?? FEED_TYPE_DOT.other;
+                    return (
+                      <li key={it.id}>
+                        <button
+                          onClick={() => onSelect(it)}
+                          className="w-full text-left flex items-center gap-1 px-1 py-0.5 rounded hover:bg-gray-100 transition-colors"
+                          title={it.title}
+                        >
+                          <span
+                            className="h-1.5 w-1.5 rounded-full flex-none"
+                            style={{ background: dot }}
+                            aria-hidden
+                          />
+                          <span className="text-[11px] text-ink truncate">{it.title}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
                   {overflow > 0 && (
                     <li>
                       <button
@@ -637,23 +745,6 @@ function MonthGrid({
       </div>
     </div>
   );
-}
-
-function statusDotColor(status: PostStatus): string {
-  switch (status) {
-    case 'rejected':
-      return '#dc2626';
-    case 'client_review':
-      return '#d97706';
-    case 'internal_review':
-      return '#2563eb';
-    case 'approved':
-    case 'scheduled':
-    case 'posted':
-      return '#059669';
-    default:
-      return '#9ca3af';
-  }
 }
 
 // --------------------- View toggle ---------------------
@@ -686,6 +777,551 @@ function ViewToggle({
       ))}
     </div>
   );
+}
+
+// --------------------- Type filter chips ---------------------
+
+function TypeChipStrip({
+  available,
+  active,
+  onChange,
+}: {
+  available: FeedItemType[];
+  active: Set<FeedItemType> | null;
+  onChange: (next: Set<FeedItemType> | null) => void;
+}) {
+  const all = available.length > 0 ? available : DEFAULT_FEED_TYPES;
+  // null === "all" (treat all chips as on without explicitly selecting them).
+  const allOn = active === null;
+  const isOn = (t: FeedItemType) => allOn || (active?.has(t) ?? false);
+  function toggle(t: FeedItemType) {
+    const next = new Set<FeedItemType>(allOn ? all : Array.from(active ?? []));
+    if (next.has(t)) next.delete(t);
+    else next.add(t);
+    if (next.size === 0 || next.size === all.length) onChange(null);
+    else onChange(next);
+  }
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <button
+        type="button"
+        onClick={() => onChange(null)}
+        className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border transition-colors ${
+          allOn
+            ? 'border-ink bg-ink text-white'
+            : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+        }`}
+      >
+        All
+      </button>
+      {all.map((t) => {
+        const on = isOn(t);
+        const dot = FEED_TYPE_DOT[t] ?? FEED_TYPE_DOT.other;
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => toggle(t)}
+            className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border flex items-center gap-1.5 transition-colors ${
+              on
+                ? 'border-gray-400 bg-white text-gray-700'
+                : 'border-gray-200 bg-gray-50 text-gray-400'
+            }`}
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ background: on ? dot : '#d1d5db' }}
+              aria-hidden
+            />
+            {FEED_TYPE_LABELS[t]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// --------------------- New ▾ menu ---------------------
+
+function NewMenu({
+  onPickPost,
+  onPickEvent,
+}: {
+  onPickPost: () => void;
+  onPickEvent: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="ink-btn rounded-md text-white px-3 py-1 text-[12px] font-medium transition-colors flex items-center gap-1"
+      >
+        + New <span className="text-[10px] leading-none">▾</span>
+      </button>
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label="close menu"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onPickPost();
+              }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <div className="font-medium text-ink">Owned post</div>
+              <div className="text-[11px] text-gray-500">Multi-platform composer</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onPickEvent();
+              }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100"
+            >
+              <div className="font-medium text-ink">Calendar event</div>
+              <div className="text-[11px] text-gray-500">
+                Embargo, launch, meeting, blackout, …
+              </div>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// --------------------- Click routing ---------------------
+
+function openItem(
+  item: FeedItem,
+  setComposer: React.Dispatch<React.SetStateAction<ComposerState>>,
+  setEventDrawer: React.Dispatch<React.SetStateAction<EventDrawerState>>,
+) {
+  if (item.type === 'post') {
+    setComposer({ open: true, mode: 'edit', postId: item.source_id });
+  } else if (item.type === 'report_due') {
+    if (item.href) window.location.href = item.href;
+  } else {
+    setEventDrawer({ open: true, mode: 'edit', eventId: item.source_id });
+  }
+}
+
+// --------------------- Calendar event drawer ---------------------
+
+function CalendarEventDrawer({
+  state,
+  clients,
+  onClose,
+}: {
+  state: EventDrawerState;
+  clients: ClientListItem[];
+  onClose: () => void;
+}) {
+  if (!state.open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <button
+        type="button"
+        aria-label="Close"
+        className="flex-1 bg-black/40"
+        onClick={onClose}
+      />
+      <div className="w-full max-w-md bg-white shadow-xl border-l border-gray-200 overflow-y-auto">
+        {state.mode === 'edit' ? (
+          <EditCalendarEvent eventId={state.eventId} clients={clients} onClose={onClose} />
+        ) : (
+          <NewCalendarEvent
+            clients={clients}
+            initialClientId={state.clientId}
+            initialOccursAt={state.occursAt}
+            onClose={onClose}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NewCalendarEvent({
+  clients,
+  initialClientId,
+  initialOccursAt,
+  onClose,
+}: {
+  clients: ClientListItem[];
+  initialClientId?: string;
+  initialOccursAt?: Date;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [eventType, setEventType] = useState<CalendarEventType>('milestone');
+  const [clientId, setClientId] = useState<string>(initialClientId ?? '');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [occursAt, setOccursAt] = useState<string>(
+    initialOccursAt ? toLocalInputFromDate(defaultEventTime(initialOccursAt)) : '',
+  );
+  const [endsAt, setEndsAt] = useState<string>('');
+  const [allDay, setAllDay] = useState(false);
+  const [url, setUrl] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const create = useMutation({
+    mutationFn: () =>
+      api.createCalendarEvent({
+        client_id: clientId || undefined,
+        event_type: eventType,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        occurs_at: new Date(occursAt).toISOString(),
+        ends_at: endsAt ? new Date(endsAt).toISOString() : undefined,
+        all_day: allDay,
+        url: url.trim() || undefined,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['calendar-feed'] });
+      onClose();
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'Create failed'),
+  });
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
+        <div>
+          <Eyebrow>Calendar event</Eyebrow>
+          <h2 className="text-lg font-semibold tracking-tightish text-ink mt-0.5">New event</h2>
+        </div>
+        <button onClick={onClose} className="text-gray-500 hover:text-ink text-2xl leading-none">
+          ×
+        </button>
+      </div>
+      <div className="px-6 py-5 space-y-4 flex-1">
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <Field label="Type">
+          <select
+            value={eventType}
+            onChange={(e) => setEventType(e.target.value as CalendarEventType)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            {CALENDAR_EVENT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {FEED_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Client">
+          <select
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="">Workspace-wide</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Title">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            placeholder="e.g. Series B embargo lifts"
+            autoFocus
+          />
+        </Field>
+
+        <Field label="Description (optional)">
+          <textarea
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Occurs at">
+            <input
+              type="datetime-local"
+              value={occursAt}
+              onChange={(e) => setOccursAt(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </Field>
+          <Field label="Ends at (optional)">
+            <input
+              type="datetime-local"
+              value={endsAt}
+              onChange={(e) => setEndsAt(e.target.value)}
+              min={occursAt || undefined}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </Field>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={allDay}
+            onChange={(e) => setAllDay(e.target.checked)}
+          />
+          All-day
+        </label>
+
+        <Field label="Link (optional)">
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            placeholder="https://…"
+          />
+        </Field>
+
+        <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+          <button onClick={onClose} className="text-sm text-gray-600 hover:text-ink px-3 py-2">
+            Cancel
+          </button>
+          <button
+            onClick={() => create.mutate()}
+            disabled={create.isPending || !title.trim() || !occursAt}
+            className="ink-btn rounded-lg text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {create.isPending ? 'Creating…' : 'Create event'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditCalendarEvent({
+  eventId,
+  clients,
+  onClose,
+}: {
+  eventId: string;
+  clients: ClientListItem[];
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const eventQ = useQuery({
+    queryKey: ['calendar-event', eventId],
+    queryFn: () => api.getCalendarEvent(eventId),
+  });
+  const [hydrated, setHydrated] = useState(false);
+  const [eventType, setEventType] = useState<CalendarEventType>('milestone');
+  const [clientId, setClientId] = useState<string>('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [occursAt, setOccursAt] = useState<string>('');
+  const [endsAt, setEndsAt] = useState<string>('');
+  const [allDay, setAllDay] = useState(false);
+  const [url, setUrl] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (eventQ.data && !hydrated) {
+      const e = eventQ.data;
+      setEventType(e.event_type);
+      setClientId(e.client_id ?? '');
+      setTitle(e.title);
+      setDescription(e.description ?? '');
+      setOccursAt(toLocalInput(e.occurs_at));
+      setEndsAt(e.ends_at ? toLocalInput(e.ends_at) : '');
+      setAllDay(e.all_day);
+      setUrl(e.url ?? '');
+      setHydrated(true);
+    }
+  }, [eventQ.data, hydrated]);
+
+  const save = useMutation({
+    mutationFn: () =>
+      api.updateCalendarEvent(eventId, {
+        client_id: clientId || undefined,
+        event_type: eventType,
+        title: title.trim() || undefined,
+        description: description.trim() || undefined,
+        occurs_at: occursAt ? new Date(occursAt).toISOString() : undefined,
+        ends_at: endsAt ? new Date(endsAt).toISOString() : undefined,
+        all_day: allDay,
+        url: url.trim() || undefined,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['calendar-feed'] });
+      void qc.invalidateQueries({ queryKey: ['calendar-event', eventId] });
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => api.deleteCalendarEvent(eventId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['calendar-feed'] });
+      onClose();
+    },
+  });
+
+  if (eventQ.isLoading || !hydrated) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+          <Eyebrow>Calendar event</Eyebrow>
+          <h2 className="text-lg font-semibold tracking-tightish text-ink mt-0.5">Loading…</h2>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
+        <div>
+          <Eyebrow>{FEED_TYPE_LABELS[eventType]}</Eyebrow>
+          <h2 className="text-lg font-semibold tracking-tightish text-ink mt-0.5 truncate">
+            {title || 'Calendar event'}
+          </h2>
+        </div>
+        <button onClick={onClose} className="text-gray-500 hover:text-ink text-2xl leading-none">
+          ×
+        </button>
+      </div>
+      <div className="px-6 py-5 space-y-4 flex-1">
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <Field label="Type">
+          <select
+            value={eventType}
+            onChange={(e) => setEventType(e.target.value as CalendarEventType)}
+            onBlur={() => save.mutate()}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            {CALENDAR_EVENT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {FEED_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Client">
+          <select
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            onBlur={() => save.mutate()}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="">Workspace-wide</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Title">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => save.mutate()}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </Field>
+
+        <Field label="Description">
+          <textarea
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onBlur={() => save.mutate()}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Occurs at">
+            <input
+              type="datetime-local"
+              value={occursAt}
+              onChange={(e) => setOccursAt(e.target.value)}
+              onBlur={() => save.mutate()}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </Field>
+          <Field label="Ends at">
+            <input
+              type="datetime-local"
+              value={endsAt}
+              onChange={(e) => setEndsAt(e.target.value)}
+              onBlur={() => save.mutate()}
+              min={occursAt || undefined}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </Field>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={allDay}
+            onChange={(e) => {
+              setAllDay(e.target.checked);
+              setTimeout(() => save.mutate(), 0);
+            }}
+          />
+          All-day
+        </label>
+
+        <Field label="Link">
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onBlur={() => save.mutate()}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </Field>
+
+        <div className="flex justify-between gap-2 pt-3 border-t border-gray-100">
+          <button
+            onClick={() => {
+              if (confirm('Delete this event?')) remove.mutate();
+            }}
+            disabled={remove.isPending}
+            className="text-sm text-red-600 hover:underline"
+          >
+            Delete
+          </button>
+          <p className="text-xs text-gray-400">
+            {save.isPending ? 'Saving…' : 'Auto-saves on blur'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function defaultEventTime(day: Date): Date {
+  const out = new Date(day);
+  out.setHours(10, 0, 0, 0);
+  return out;
 }
 
 // --------------------- Client filter ---------------------
@@ -968,8 +1604,14 @@ function EditComposer({
             type="datetime-local"
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             value={scheduledFor}
+            min={isPrePublishStatus(post.status) ? startOfTodayLocalInput() : undefined}
             onChange={(e) => setScheduledFor(e.target.value)}
             onBlur={() => save.mutate()}
+            title={
+              isPrePublishStatus(post.status)
+                ? 'Pick a future date. To log a post you already shipped, use Mark posted.'
+                : 'Past dates are allowed for posts that have already been marked posted or archived.'
+            }
           />
         </Field>
         <Field label="Series tag (optional)">
@@ -1286,6 +1928,36 @@ function formatWeekRange(start: Date): string {
     year: end.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
   });
   return `${startFmt} – ${endFmt}`;
+}
+
+function isPastDay(d: Date): boolean {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const today = ymd(start);
+  return ymd(d) < today;
+}
+
+function isPrePublishStatus(status: PostStatus): boolean {
+  return (
+    status === 'draft' ||
+    status === 'internal_review' ||
+    status === 'client_review' ||
+    status === 'approved' ||
+    status === 'scheduled'
+  );
+}
+
+function startOfTodayLocalInput(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return toLocalInputFromDate(d);
+}
+
+function toLocalInputFromDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+    d.getMinutes(),
+  )}`;
 }
 
 function defaultPostingTime(day: Date): Date {

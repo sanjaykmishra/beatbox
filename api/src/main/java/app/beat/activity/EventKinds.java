@@ -55,4 +55,9 @@ public final class EventKinds {
   public static final String POST_VARIANTS_REGENERATED = "post.variants_regenerated";
   public static final String POST_TRANSITION = "post.transition";
   public static final String POST_DELETED = "post.deleted";
+
+  // General calendar events (V008+)
+  public static final String CALENDAR_EVENT_CREATED = "calendar_event.created";
+  public static final String CALENDAR_EVENT_UPDATED = "calendar_event.updated";
+  public static final String CALENDAR_EVENT_DELETED = "calendar_event.deleted";
 }
