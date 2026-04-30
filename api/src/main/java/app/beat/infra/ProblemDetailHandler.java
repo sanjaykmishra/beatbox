@@ -1,6 +1,8 @@
 package app.beat.infra;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +14,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RestControllerAdvice
 public class ProblemDetailHandler {
 
+  private static final Logger log = LoggerFactory.getLogger(ProblemDetailHandler.class);
+
   @ExceptionHandler(AppException.class)
   public ResponseEntity<ProblemDetail> handleAppException(AppException ex, HttpServletRequest req) {
     ProblemDetail pd = ProblemDetail.forStatusAndDetail(ex.status(), ex.getMessage());
@@ -19,6 +23,14 @@ public class ProblemDetailHandler {
     pd.setTitle(ex.title());
     pd.setInstance(java.net.URI.create(req.getRequestURI()));
     pd.setProperty("request_id", req.getAttribute(RequestIdFilter.ATTRIBUTE));
+    if (ex.status().is5xxServerError()) {
+      log.error(
+          "5xx AppException on {} {}: {}",
+          req.getMethod(),
+          req.getRequestURI(),
+          ex.getMessage(),
+          ex);
+    }
     return ResponseEntity.status(ex.status()).body(pd);
   }
 
@@ -48,11 +60,25 @@ public class ProblemDetailHandler {
     pd.setTitle(status.getReasonPhrase());
     pd.setInstance(java.net.URI.create(req.getRequestURI()));
     pd.setProperty("request_id", req.getAttribute(RequestIdFilter.ATTRIBUTE));
+    if (status.is5xxServerError()) {
+      log.error(
+          "5xx ResponseStatusException on {} {}: {}",
+          req.getMethod(),
+          req.getRequestURI(),
+          detail,
+          ex);
+    }
     return ResponseEntity.status(status).body(pd);
   }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ProblemDetail> handleGeneric(Exception ex, HttpServletRequest req) {
+    log.error(
+        "unhandled exception on {} {}: {}",
+        req.getMethod(),
+        req.getRequestURI(),
+        ex.toString(),
+        ex);
     ProblemDetail pd =
         ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
     pd.setType(java.net.URI.create("/errors/internal"));
