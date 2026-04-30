@@ -44,7 +44,12 @@ export function ReportReview() {
 
   if (report.isLoading) {
     return (
-      <BrowserFrame crumbs={[{ label: `${slug}.beat.app` }, { label: 'reports' }]}>
+      <BrowserFrame
+        crumbs={[
+          { label: `${slug}.beat.app`, to: '/clients' },
+          { label: 'reports' },
+        ]}
+      >
         <p className="text-gray-500">Loading…</p>
       </BrowserFrame>
     );
@@ -55,8 +60,9 @@ export function ReportReview() {
   return (
     <BrowserFrame
       crumbs={[
-        { label: `${slug}.beat.app` },
-        { label: 'clients' },
+        { label: `${slug}.beat.app`, to: '/clients' },
+        { label: 'clients', to: '/clients' },
+        { label: 'client', to: `/clients/${r.client_id}` },
         { label: r.title.toLowerCase() },
       ]}
     >

@@ -57,7 +57,12 @@ export function ReportPreview() {
 
   if (report.isLoading) {
     return (
-      <BrowserFrame crumbs={[{ label: `${slug}.beat.app` }, { label: 'reports' }]}>
+      <BrowserFrame
+        crumbs={[
+          { label: `${slug}.beat.app`, to: '/clients' },
+          { label: 'reports' },
+        ]}
+      >
         <p className="text-gray-500">Loading…</p>
       </BrowserFrame>
     );
@@ -121,7 +126,14 @@ export function ReportPreview() {
         : { label: r.title };
 
   return (
-    <BrowserFrame crumbs={[chromeLabel]} rightSlot={rightSlot}>
+    <BrowserFrame
+      crumbs={[
+        { label: `${slug}.beat.app`, to: '/clients' },
+        { label: r.title.toLowerCase(), to: `/reports/${r.id}` },
+        chromeLabel,
+      ]}
+      rightSlot={rightSlot}
+    >
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-3">

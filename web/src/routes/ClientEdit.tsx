@@ -51,7 +51,13 @@ export function ClientEdit() {
 
   if (q.isLoading) {
     return (
-      <BrowserFrame crumbs={[{ label: `${slug}.beat.app` }, { label: 'clients' }, { label: '…' }]}>
+      <BrowserFrame
+        crumbs={[
+          { label: `${slug}.beat.app`, to: '/clients' },
+          { label: 'clients', to: '/clients' },
+          { label: '…' },
+        ]}
+      >
         <p className="text-gray-500">Loading…</p>
       </BrowserFrame>
     );
@@ -63,9 +69,9 @@ export function ClientEdit() {
   return (
     <BrowserFrame
       crumbs={[
-        { label: `${slug}.beat.app` },
-        { label: 'clients' },
-        { label: c.name.toLowerCase() },
+        { label: `${slug}.beat.app`, to: '/clients' },
+        { label: 'clients', to: '/clients' },
+        { label: c.name.toLowerCase(), to: `/clients/${c.id}` },
         { label: 'settings' },
       ]}
     >

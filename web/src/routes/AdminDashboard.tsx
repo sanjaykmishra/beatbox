@@ -13,7 +13,12 @@ export function AdminDashboard() {
 
   if (dash.isLoading) {
     return (
-      <BrowserFrame crumbs={[{ label: 'beat.app' }, { label: 'admin' }]}>
+      <BrowserFrame
+        crumbs={[
+          { label: 'beat.app', to: '/clients' },
+          { label: 'admin' },
+        ]}
+      >
         <p className="text-gray-500">Loading…</p>
       </BrowserFrame>
     );
@@ -21,7 +26,12 @@ export function AdminDashboard() {
   if (dash.error) {
     const forbidden = dash.error instanceof ApiError && dash.error.status === 403;
     return (
-      <BrowserFrame crumbs={[{ label: 'beat.app' }, { label: 'admin' }]}>
+      <BrowserFrame
+        crumbs={[
+          { label: 'beat.app', to: '/clients' },
+          { label: 'admin' },
+        ]}
+      >
         <div className="text-center py-16">
           <h1 className="text-xl font-semibold text-ink">
             {forbidden ? 'Admin only' : 'Couldn\'t load dashboard'}
@@ -47,7 +57,13 @@ export function AdminDashboard() {
   const totalReports = d.workspace_costs.reduce((acc, w) => acc + w.reports, 0);
 
   return (
-    <BrowserFrame crumbs={[{ label: 'beat.app' }, { label: 'admin' }, { label: 'dashboard' }]}>
+    <BrowserFrame
+      crumbs={[
+        { label: 'beat.app', to: '/clients' },
+        { label: 'admin' },
+        { label: 'dashboard' },
+      ]}
+    >
       <div className="space-y-7">
         <div>
           <h1 className="text-2xl font-semibold tracking-tightish text-ink">Founder dashboard</h1>

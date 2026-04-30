@@ -24,7 +24,13 @@ export function ClientDashboard() {
 
   if (dashboard.isLoading) {
     return (
-      <BrowserFrame crumbs={[{ label: `${slug}.beat.app` }, { label: 'clients' }, { label: '…' }]}>
+      <BrowserFrame
+        crumbs={[
+          { label: `${slug}.beat.app`, to: '/clients' },
+          { label: 'clients', to: '/clients' },
+          { label: '…' },
+        ]}
+      >
         <DashboardSkeleton />
       </BrowserFrame>
     );
@@ -53,8 +59,8 @@ export function ClientDashboard() {
   return (
     <BrowserFrame
       crumbs={[
-        { label: `${slug}.beat.app` },
-        { label: 'clients' },
+        { label: `${slug}.beat.app`, to: '/clients' },
+        { label: 'clients', to: '/clients' },
         { label: d.client.name.toLowerCase() },
       ]}
     >

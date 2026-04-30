@@ -105,7 +105,7 @@ export function Calendar() {
 
   return (
     <BrowserFrame
-      crumbs={[{ label: `${slug}.beat.app` }, { label: 'calendar' }]}
+      crumbs={[{ label: `${slug}.beat.app`, to: '/clients' }, { label: 'calendar' }]}
       rightSlot={
         <PrimaryButton
           onClick={() => setComposer({ open: true, mode: 'new', clientId: clientFilter })}
