@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { Eyebrow, Pill, PrimaryButton, type PillTone } from '../components/ui';
@@ -74,21 +75,49 @@ type CalendarView = 'week' | 'month';
 export function Calendar() {
   const { workspace } = useAuth();
   const slug = workspace?.slug ?? 'workspace';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialClientFilter = searchParams.get('client_id') ?? undefined;
   const [view, setView] = useState<CalendarView>('week');
   const [anchor, setAnchor] = useState(() => new Date());
-  const [clientFilter, setClientFilter] = useState<string | undefined>(undefined);
+  const [clientFilter, setClientFilterState] = useState<string | undefined>(initialClientFilter);
+  const [needsReview, setNeedsReview] = useState(false);
+
+  // Keep ?client_id=… in sync with the filter so the URL is shareable / bookmarkable.
+  function setClientFilter(id: string | undefined) {
+    setClientFilterState(id);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id) next.set('client_id', id);
+        else next.delete('client_id');
+        return next;
+      },
+      { replace: true },
+    );
+  }
   const [composer, setComposer] = useState<ComposerState>({ open: false });
 
   const clientsQ = useQuery({ queryKey: ['clients'], queryFn: api.listClients });
 
+  // Lightweight count for the "Needs review" pill: posts currently in internal_review.
+  // Cheap separate fetch (limit 200) so the count survives even when the user is on a
+  // different week/month with no review-state posts in view.
+  const reviewCountQ = useQuery({
+    queryKey: ['posts-review-count'],
+    queryFn: () => api.listPosts({ status: 'internal_review', limit: 200 }),
+    refetchInterval: 60_000,
+  });
+  const reviewCount = reviewCountQ.data?.items.length ?? 0;
+
   const range = useMemo(() => visibleRange(view, anchor), [view, anchor]);
   const postsQ = useQuery({
-    queryKey: ['posts', clientFilter, view, range.from.toISOString()],
+    queryKey: ['posts', clientFilter, view, needsReview, range.from.toISOString()],
     queryFn: () =>
       api.listPosts({
         client_id: clientFilter,
-        from: range.from.toISOString(),
-        to: range.to.toISOString(),
+        status: needsReview ? 'internal_review' : undefined,
+        from: needsReview ? undefined : range.from.toISOString(),
+        to: needsReview ? undefined : range.to.toISOString(),
         limit: 500,
       }),
   });
@@ -151,6 +180,31 @@ export function Calendar() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setNeedsReview((v) => !v)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium border transition-colors flex items-center gap-1.5 ${
+                needsReview
+                  ? 'bg-amber-100 border-amber-200 text-amber-800'
+                  : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+              title={
+                needsReview
+                  ? 'Showing only posts awaiting internal review. Click to clear.'
+                  : 'Show only posts submitted for internal review across all weeks.'
+              }
+            >
+              Needs review
+              {reviewCount > 0 && (
+                <span
+                  className={`tabular-nums text-[11px] font-semibold rounded-full px-1.5 py-0.5 ${
+                    needsReview ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {reviewCount}
+                </span>
+              )}
+            </button>
             <ViewToggle value={view} onChange={setView} />
             <ClientFilter
               clients={clientsQ.data?.items ?? []}
@@ -160,7 +214,14 @@ export function Calendar() {
           </div>
         </div>
 
-        {view === 'week' ? (
+        {needsReview ? (
+          <ReviewList
+            posts={postsQ.data?.items ?? []}
+            clientsById={clientsById}
+            loading={postsQ.isLoading}
+            onSelect={(p) => setComposer({ open: true, mode: 'edit', postId: p.id })}
+          />
+        ) : view === 'week' ? (
           <WeekGrid
             weekStart={range.from}
             posts={postsQ.data?.items ?? []}
@@ -336,6 +397,114 @@ function PostCard({
       </div>
     </button>
   );
+}
+
+// --------------------- Review list ---------------------
+
+function ReviewList({
+  posts,
+  clientsById,
+  loading,
+  onSelect,
+}: {
+  posts: OwnedPost[];
+  clientsById: Map<string, ClientListItem>;
+  loading: boolean;
+  onSelect: (p: OwnedPost) => void;
+}) {
+  if (loading && posts.length === 0) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="h-3 w-1/3 bg-gray-100 rounded animate-pulse" />
+      </div>
+    );
+  }
+  if (posts.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
+        <p className="text-sm font-medium text-ink">Nothing waiting on you</p>
+        <p className="text-sm text-gray-500 mt-1">
+          When a teammate clicks "Submit for review" on a post, it shows up here. You'll also get
+          an email if your workspace has email configured.
+        </p>
+      </div>
+    );
+  }
+  const sorted = [...posts].sort((a, b) => {
+    const aSub = a.submitted_for_review_at ?? a.updated_at;
+    const bSub = b.submitted_for_review_at ?? b.updated_at;
+    return bSub.localeCompare(aSub);
+  });
+  return (
+    <ul className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
+      {sorted.map((p) => {
+        const client = clientsById.get(p.client_id);
+        const summary =
+          p.title?.trim() ||
+          (p.primary_content_text || '').slice(0, 120) ||
+          '(empty draft)';
+        const submittedAgo = p.submitted_for_review_at
+          ? relativeTime(p.submitted_for_review_at)
+          : null;
+        const scheduled = p.scheduled_for
+          ? new Date(p.scheduled_for).toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+            })
+          : 'no date';
+        return (
+          <li key={p.id}>
+            <button
+              onClick={() => onSelect(p)}
+              className="w-full text-left flex items-start gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors"
+            >
+              {client && (
+                <Avatar
+                  name={client.name}
+                  logoUrl={client.logo_url}
+                  primaryColor={client.primary_color}
+                  size="sm"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-ink truncate">{summary}</span>
+                  <Pill tone={STATUS_TONE[p.status]} className="!text-[10px] !px-1.5 !py-0">
+                    {p.status.replace('_', ' ')}
+                  </Pill>
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5 truncate">
+                  {client?.name ?? '—'}
+                  <span className="mx-1.5 text-gray-300">·</span>
+                  {p.target_platforms.length} platform
+                  {p.target_platforms.length === 1 ? '' : 's'}
+                  <span className="mx-1.5 text-gray-300">·</span>
+                  scheduled {scheduled}
+                </div>
+              </div>
+              {submittedAgo && (
+                <span className="text-xs text-gray-400 tabular-nums flex-none mt-0.5">
+                  submitted {submittedAgo}
+                </span>
+              )}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
 }
 
 // --------------------- Month grid ---------------------
@@ -716,6 +885,7 @@ function EditComposer({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['posts'] });
       void qc.invalidateQueries({ queryKey: ['post', postId] });
+      void qc.invalidateQueries({ queryKey: ['posts-review-count'] });
     },
     onError: (e) => setSaveError(e instanceof ApiError ? e.message : 'Transition failed'),
   });

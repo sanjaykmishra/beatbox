@@ -55,16 +55,19 @@ public class OwnedPostController {
   private final ClientRepository clients;
   private final ActivityRecorder activity;
   private final PostVariantService variants;
+  private final PostReviewNotifier reviewNotifier;
 
   public OwnedPostController(
       OwnedPostRepository posts,
       ClientRepository clients,
       ActivityRecorder activity,
-      PostVariantService variants) {
+      PostVariantService variants,
+      PostReviewNotifier reviewNotifier) {
     this.posts = posts;
     this.clients = clients;
     this.activity = activity;
     this.variants = variants;
+    this.reviewNotifier = reviewNotifier;
   }
 
   // ===================== DTOs =====================
@@ -290,6 +293,11 @@ public class OwnedPostController {
     if (body != null && body.reason() != null) meta.put("reason", body.reason());
     activity.recordUser(
         ctx.workspaceId(), ctx.userId(), EventKinds.POST_TRANSITION, "post", id, meta);
+    if ("internal_review".equals(target)) {
+      clients
+          .findInWorkspace(ctx.workspaceId(), moved.clientId())
+          .ifPresent(c -> reviewNotifier.notifyInternalReview(moved, c, ctx.userId()));
+    }
     return PostDto.from(moved);
   }
 

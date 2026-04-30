@@ -45,8 +45,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     navigate('/login');
   }
 
+  async function refreshWorkspace() {
+    if (!getToken()) return;
+    try {
+      setWorkspace(await api.workspace());
+    } catch {
+      /* leave existing state in place; caller surfaces the error */
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ workspace, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ workspace, loading, signIn, signOut, refreshWorkspace }}>
       {children}
     </AuthContext.Provider>
   );

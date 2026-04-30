@@ -4,7 +4,14 @@ import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { Eyebrow, Pill, PrimaryLink, SecondaryLink, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
-import { api, type AlertCard, type ActivityItem, type Severity } from '../lib/api';
+import {
+  api,
+  type AlertCard,
+  type ActivityItem,
+  type OwnedPost,
+  type PostStatus,
+  type Severity,
+} from '../lib/api';
 
 export function ClientDashboard() {
   const { id = '' } = useParams();
@@ -146,6 +153,9 @@ export function ClientDashboard() {
             </Column>
           </section>
         )}
+
+        {/* Upcoming posts */}
+        {!isNewClient && <UpcomingPosts clientId={id} />}
 
         {/* Recent activity */}
         {!isNewClient && (
@@ -364,6 +374,121 @@ function ComingUpItemView({
   ) : (
     inner
   );
+}
+
+function UpcomingPosts({ clientId }: { clientId: string }) {
+  // Window: now → +30d. Fetched independently of the main dashboard payload because
+  // posts come from a different endpoint and PostStatus filtering is client-side.
+  const fromIso = new Date().toISOString();
+  const toIso = new Date(Date.now() + 30 * 86_400_000).toISOString();
+  const postsQ = useQuery({
+    queryKey: ['client-upcoming-posts', clientId],
+    queryFn: () =>
+      api.listPosts({ client_id: clientId, from: fromIso, to: toIso, limit: 100 }),
+  });
+  const visible = (postsQ.data?.items ?? [])
+    .filter((p) => UPCOMING_STATUSES.includes(p.status))
+    .sort((a, b) => (a.scheduled_for ?? '').localeCompare(b.scheduled_for ?? ''))
+    .slice(0, 5);
+  const total = (postsQ.data?.items ?? []).filter((p) =>
+    UPCOMING_STATUSES.includes(p.status),
+  ).length;
+  return (
+    <section>
+      <div className="flex items-baseline justify-between mb-3">
+        <Eyebrow>Upcoming posts</Eyebrow>
+        <Link
+          to={`/calendar?client_id=${clientId}`}
+          className="text-xs font-medium text-gray-500 hover:text-ink hover:underline"
+        >
+          Open calendar →
+        </Link>
+      </div>
+      <Link
+        to={`/calendar?client_id=${clientId}`}
+        className="block bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-gray-300 transition-colors"
+      >
+        {postsQ.isLoading ? (
+          <div className="p-5">
+            <div className="h-3 w-1/3 bg-gray-100 rounded animate-pulse" />
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="px-5 py-6 text-sm text-gray-500 text-center">
+            No posts scheduled in the next 30 days.
+          </div>
+        ) : (
+          <>
+            <ul className="divide-y divide-gray-100">
+              {visible.map((p) => (
+                <UpcomingPostRow key={p.id} post={p} />
+              ))}
+            </ul>
+            {total > visible.length && (
+              <div className="px-5 py-2 text-xs text-gray-500 bg-gray-50 border-t border-gray-100">
+                + {total - visible.length} more in the next 30 days
+              </div>
+            )}
+          </>
+        )}
+      </Link>
+    </section>
+  );
+}
+
+const UPCOMING_STATUSES: PostStatus[] = [
+  'draft',
+  'internal_review',
+  'client_review',
+  'approved',
+  'scheduled',
+];
+
+function UpcomingPostRow({ post }: { post: OwnedPost }) {
+  const summary =
+    post.title?.trim() ||
+    (post.primary_content_text ?? '').slice(0, 80) ||
+    '(empty draft)';
+  const when = post.scheduled_for
+    ? new Date(post.scheduled_for).toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      })
+    : 'no date';
+  return (
+    <li className="px-5 py-3 flex items-center gap-4">
+      <div className="text-xs text-gray-500 tabular-nums w-24 flex-none">{when}</div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm text-ink truncate">{summary}</div>
+        <div className="text-xs text-gray-500 mt-0.5">
+          {post.target_platforms.length} platform
+          {post.target_platforms.length === 1 ? '' : 's'}
+        </div>
+      </div>
+      <Pill tone={postStatusTone(post.status)} className="!text-[10px] !px-1.5 !py-0 flex-none">
+        {post.status.replace('_', ' ')}
+      </Pill>
+    </li>
+  );
+}
+
+function postStatusTone(s: PostStatus): PillTone {
+  switch (s) {
+    case 'draft':
+      return 'gray';
+    case 'internal_review':
+      return 'blue';
+    case 'client_review':
+      return 'amber';
+    case 'approved':
+    case 'scheduled':
+    case 'posted':
+      return 'green';
+    case 'rejected':
+      return 'red';
+    default:
+      return 'gray';
+  }
 }
 
 function ActivityRowView({ item }: { item: ActivityItem }) {

@@ -6,6 +6,7 @@ export type AuthState = {
   loading: boolean;
   signIn: (token: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshWorkspace: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthState | null>(null);
