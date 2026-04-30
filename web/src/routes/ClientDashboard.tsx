@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
+import { Avatar } from '../components/Avatar';
 import { api, type AlertCard, type ActivityItem, type Severity } from '../lib/api';
 
 /**
@@ -20,7 +21,7 @@ export function ClientDashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dashboard', id] }),
   });
 
-  if (dashboard.isLoading) return <p className="text-gray-500">Loading…</p>;
+  if (dashboard.isLoading) return <DashboardSkeleton />;
   if (dashboard.error || !dashboard.data) {
     return <p className="text-red-600">Failed to load client.</p>;
   }
@@ -31,100 +32,114 @@ export function ClientDashboard() {
     (a) => a.alert_type !== 'client.setup_incomplete' && a.alert_type !== 'client.healthy',
   );
   const hasHealthyOnly = d.alerts.length === 1 && d.alerts[0].alert_type === 'client.healthy';
+  const attentionCount = visibleAlerts.length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <nav className="text-sm text-gray-500">
-        <Link to="/clients" className="hover:text-gray-900">
+        <Link to="/clients" className="hover:text-gray-900 transition-colors">
           Clients
-        </Link>{' '}
-        › <span className="text-gray-900">{d.client.name}</span>
+        </Link>
+        <span className="mx-1.5 text-gray-300">›</span>
+        <span className="text-gray-900">{d.client.name}</span>
       </nav>
 
       {/* Header strip */}
       <div className="flex items-center gap-4">
-        {d.client.logo_url ? (
-          <img src={d.client.logo_url} alt="" className="h-12 w-12 rounded object-cover" />
-        ) : (
-          <div
-            className="h-12 w-12 rounded"
-            style={{ background: d.client.primary_color ? `#${d.client.primary_color}` : '#E5E7EB' }}
-          />
-        )}
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{d.client.name}</h1>
+        <Avatar
+          name={d.client.name}
+          logoUrl={d.client.logo_url}
+          primaryColor={d.client.primary_color}
+          size="lg"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{d.client.name}</h1>
+            {attentionCount > 0 && !isNewClient && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                {attentionCount} item{attentionCount === 1 ? '' : 's'} need attention
+              </span>
+            )}
+            {hasHealthyOnly && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                All caught up
+              </span>
+            )}
+          </div>
           {d.client.default_cadence && (
-            <p className="text-xs text-gray-500 mt-1">{d.client.default_cadence}</p>
+            <p className="text-sm text-gray-500 mt-1 capitalize">
+              {d.client.default_cadence} cadence
+            </p>
           )}
         </div>
-        <Link
-          to={`/clients/${id}/edit`}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-gray-400"
-        >
-          Edit
-        </Link>
-        <Link
-          to={`/clients/${id}/context`}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-gray-400"
-        >
-          Context
-        </Link>
-        <Link
-          to={`/clients/${id}/reports/new`}
-          className="rounded bg-gray-900 text-white px-3 py-1.5 text-sm font-medium hover:bg-gray-800"
-        >
-          + New report
-        </Link>
+        <div className="flex items-center gap-2 flex-none">
+          <Link
+            to={`/clients/${id}/edit`}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors"
+          >
+            Edit
+          </Link>
+          <Link
+            to={`/clients/${id}/context`}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors"
+          >
+            Context
+          </Link>
+          <Link
+            to={`/clients/${id}/reports/new`}
+            className="rounded-md bg-gray-900 text-white px-3 py-1.5 text-sm font-medium hover:bg-gray-800 transition-colors shadow-sm"
+          >
+            + New report
+          </Link>
+        </div>
       </div>
 
       {/* Stats row */}
-      {isNewClient ? (
-        <StatsPlaceholder />
-      ) : (
-        <section className="grid grid-cols-4 gap-3">
-          <StatTile
-            label="Coverage · 30d"
-            value={d.stats_30d.coverage_count.value}
-            deltaLabel={d.stats_30d.coverage_count.delta_label}
-          />
-          <StatTile
-            label="Tier 1"
-            value={d.stats_30d.tier_1_count.value}
-            deltaLabel={d.stats_30d.tier_1_count.delta_label}
-          />
-          <StatTile
-            label="Sentiment"
-            value={d.stats_30d.sentiment.value}
-            deltaLabel={d.stats_30d.sentiment.delta_label}
-          />
-          <StatTile
-            label="Reach"
-            value={formatReach(d.stats_30d.reach.value)}
-            deltaLabel={d.stats_30d.reach.delta_label}
-          />
-        </section>
-      )}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatTile
+          label="Coverage · 30d"
+          value={isNewClient ? null : d.stats_30d.coverage_count.value}
+          deltaLabel={isNewClient ? null : d.stats_30d.coverage_count.delta_label}
+          accent
+        />
+        <StatTile
+          label="Tier 1"
+          value={isNewClient ? null : d.stats_30d.tier_1_count.value}
+          deltaLabel={isNewClient ? null : d.stats_30d.tier_1_count.delta_label}
+        />
+        <StatTile
+          label="Sentiment"
+          value={isNewClient ? null : d.stats_30d.sentiment.value}
+          deltaLabel={isNewClient ? null : d.stats_30d.sentiment.delta_label}
+        />
+        <StatTile
+          label="Reach"
+          value={isNewClient ? null : formatReach(d.stats_30d.reach.value)}
+          deltaLabel={isNewClient ? null : d.stats_30d.reach.delta_label}
+        />
+      </section>
 
       {/* Two-column: Needs attention / Coming up */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <Column title="Needs attention">
           {isNewClient ? (
             <SetupChecklist clientId={id} onDismiss={() => dismiss.mutate()} />
-          ) : hasHealthyOnly ? (
-            <HealthyEmptyState />
           ) : visibleAlerts.length === 0 ? (
-            <HealthyEmptyState />
+            <HealthyEmptyState clientName={d.client.name} />
           ) : (
             visibleAlerts.map((a) => <AlertCardView key={a.alert_type} alert={a} />)
           )}
         </Column>
         <Column title="Coming up">
-          {isNewClient ? null : d.coming_up.length === 0 ? (
-            <p className="text-sm text-gray-500">Nothing scheduled.</p>
+          {isNewClient ? (
+            <ComingUpEmpty
+              copy="Schedule a cadence and add important dates in the client's context to see what's next."
+              action={{ label: 'Add context →', to: `/clients/${id}/context` }}
+            />
+          ) : d.coming_up.length === 0 ? (
+            <ComingUpEmpty copy="Nothing scheduled in the next few weeks." />
           ) : (
-            d.coming_up.map((c, i) => (
-              <ComingUpItemView key={`${c.kind}-${i}`} item={c} />
-            ))
+            d.coming_up.map((c, i) => <ComingUpItemView key={`${c.kind}-${i}`} item={c} />)
           )}
         </Column>
       </section>
@@ -132,13 +147,17 @@ export function ClientDashboard() {
       {/* Recent activity */}
       {!isNewClient && (
         <section>
-          <div className="flex items-baseline justify-between mb-2">
-            <h2 className="text-sm font-medium text-gray-700">Recent activity</h2>
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-xs font-semibold text-gray-500 tracking-wider uppercase">
+              Recent activity
+            </h2>
           </div>
           {d.recent_activity.length === 0 ? (
-            <p className="text-sm text-gray-500">No activity in the last 14 days.</p>
+            <div className="bg-white border border-gray-200 rounded-lg p-6 text-sm text-gray-500 text-center">
+              No activity in the last 14 days.
+            </div>
           ) : (
-            <ul className="bg-white border border-gray-200 rounded divide-y divide-gray-200">
+            <ul className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 overflow-hidden">
               {d.recent_activity.map((e, i) => (
                 <ActivityRowView key={`${e.occurred_at}-${i}`} item={e} />
               ))}
@@ -153,8 +172,8 @@ export function ClientDashboard() {
 function Column({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h2 className="text-sm font-medium text-gray-700 mb-2">{title}</h2>
-      <div className="space-y-2">{children}</div>
+      <h2 className="text-xs font-semibold text-gray-500 tracking-wider uppercase mb-3">{title}</h2>
+      <div className="space-y-3">{children}</div>
     </div>
   );
 }
@@ -163,55 +182,61 @@ function StatTile({
   label,
   value,
   deltaLabel,
+  accent,
 }: {
   label: string;
-  value: number | string;
-  deltaLabel: string;
+  value: number | string | null;
+  deltaLabel: string | null;
+  accent?: boolean;
 }) {
-  const up = deltaLabel.startsWith('↑');
-  const down = deltaLabel.startsWith('↓');
+  const empty = value === null;
+  const up = !empty && deltaLabel?.startsWith('↑');
+  const down = !empty && deltaLabel?.startsWith('↓');
   const cls = up ? 'text-emerald-700' : down ? 'text-red-700' : 'text-gray-500';
   return (
-    <div className="bg-white border border-gray-200 rounded p-4">
-      <div className="text-xs uppercase tracking-wide text-gray-500">{label}</div>
-      <div className="text-2xl font-semibold mt-1">{value}</div>
-      <div className={`text-xs mt-1 ${cls}`}>{deltaLabel}</div>
+    <div
+      className={`bg-white border border-gray-200 rounded-lg p-4 ${
+        accent ? 'border-t-2 border-t-gray-900' : ''
+      }`}
+    >
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+        {label}
+      </div>
+      <div
+        className={`mt-2 font-semibold tabular-nums tracking-tight ${
+          empty ? 'text-2xl text-gray-300' : 'text-3xl text-gray-900'
+        }`}
+      >
+        {empty ? '—' : value}
+      </div>
+      {!empty && deltaLabel && deltaLabel !== 'stable' && (
+        <div className={`text-xs mt-1.5 font-medium ${cls}`}>{deltaLabel}</div>
+      )}
+      {!empty && deltaLabel === 'stable' && (
+        <div className="text-xs mt-1.5 text-gray-400">— stable</div>
+      )}
     </div>
-  );
-}
-
-function StatsPlaceholder() {
-  return (
-    <section className="grid grid-cols-4 gap-3">
-      {['Coverage · 30d', 'Tier 1', 'Sentiment', 'Reach'].map((label) => (
-        <div
-          key={label}
-          className="bg-white border border-gray-200 rounded p-4 text-gray-300"
-        >
-          <div className="text-xs uppercase tracking-wide text-gray-400">{label}</div>
-          <div className="text-2xl font-semibold mt-1">—</div>
-        </div>
-      ))}
-    </section>
   );
 }
 
 function AlertCardView({ alert }: { alert: AlertCard }) {
   const tone = severityClasses(alert.severity);
   return (
-    <div className={`bg-white rounded border p-4 ${tone.border}`}>
+    <div className={`bg-white rounded-lg border p-4 ${tone.border}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className={`text-xs font-medium ${tone.eyebrow}`}>{alert.badge_label}</div>
-          <div className="font-medium text-gray-900 mt-1">{alert.card_title}</div>
+          <div className={`text-[11px] font-semibold uppercase tracking-wider ${tone.eyebrow}`}>
+            {alert.badge_label}
+          </div>
+          <div className="font-semibold text-gray-900 mt-1">{alert.card_title}</div>
           {alert.card_subtitle && (
-            <div className="text-sm text-gray-600 mt-1">{alert.card_subtitle}</div>
+            <div className="text-sm text-gray-600 mt-1.5">{alert.card_subtitle}</div>
           )}
         </div>
         {alert.card_action_path && (
           <Link
             to={alert.card_action_path}
-            className="rounded bg-gray-900 text-white text-sm px-3 py-1.5 font-medium hover:bg-gray-800 flex-none"
+            className="rounded-md bg-gray-900 text-white text-sm px-3 py-1.5 font-medium hover:bg-gray-800 flex-none transition-colors"
           >
             {alert.card_action_label ?? 'Open'}
           </Link>
@@ -221,49 +246,61 @@ function AlertCardView({ alert }: { alert: AlertCard }) {
   );
 }
 
-function HealthyEmptyState() {
+function HealthyEmptyState({ clientName }: { clientName: string }) {
   return (
-    <div className="bg-white rounded border border-emerald-200 p-4">
-      <div className="text-xs font-medium text-emerald-700">All caught up</div>
-      <div className="text-sm text-gray-700 mt-1">Nothing here needs your attention.</div>
+    <div className="bg-white rounded-lg border border-emerald-200 p-5">
+      <div className="flex items-center gap-2">
+        <span
+          className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-100 text-emerald-700 text-sm"
+          aria-hidden
+        >
+          ✓
+        </span>
+        <div className="text-sm font-semibold text-emerald-800">All caught up</div>
+      </div>
+      <div className="text-sm text-gray-600 mt-2">
+        Nothing about {clientName} needs your attention right now.
+      </div>
     </div>
   );
 }
 
 function SetupChecklist({ clientId, onDismiss }: { clientId: string; onDismiss: () => void }) {
   return (
-    <div className="bg-white rounded border border-gray-200 p-4 space-y-3">
-      <div className="text-sm font-medium text-gray-700">Get this client set up</div>
-      <ol className="space-y-2 text-sm">
-        <li className="flex items-center justify-between gap-3">
-          <span>1. Add client context (key messages, style notes)</span>
-          <Link
-            to={`/clients/${clientId}/context`}
-            className="text-gray-900 underline text-sm"
-          >
-            Add
-          </Link>
-        </li>
-        <li className="flex items-center justify-between gap-3">
-          <span>2. Set a default reporting cadence</span>
-          <Link to={`/clients/${clientId}/edit`} className="text-gray-900 underline text-sm">
-            Set
-          </Link>
-        </li>
-        <li className="flex items-center justify-between gap-3">
-          <span>3. Paste your first coverage URLs</span>
-          <Link
-            to={`/clients/${clientId}/reports/new`}
-            className="text-gray-900 underline text-sm"
-          >
-            Start
-          </Link>
-        </li>
+    <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-4">
+      <div>
+        <div className="text-sm font-semibold text-gray-900">Get this client set up</div>
+        <div className="text-xs text-gray-500 mt-0.5">
+          Three quick steps to get the most out of Beat.
+        </div>
+      </div>
+      <ol className="space-y-3">
+        <SetupStep
+          n={1}
+          title="Add client context"
+          subtitle="Key messages, style notes, important dates."
+          to={`/clients/${clientId}/context`}
+          actionLabel="Add"
+        />
+        <SetupStep
+          n={2}
+          title="Set a default reporting cadence"
+          subtitle="So we can flag overdue reports."
+          to={`/clients/${clientId}/edit`}
+          actionLabel="Set"
+        />
+        <SetupStep
+          n={3}
+          title="Paste your first coverage URLs"
+          subtitle="Watch them extract live."
+          to={`/clients/${clientId}/reports/new`}
+          actionLabel="Start"
+        />
       </ol>
-      <div className="text-right">
+      <div className="text-right pt-3 border-t border-gray-100">
         <button
           onClick={onDismiss}
-          className="text-xs text-gray-500 hover:text-gray-900 underline"
+          className="text-xs text-gray-500 hover:text-gray-900 transition-colors"
         >
           I'll do it later
         </button>
@@ -272,15 +309,67 @@ function SetupChecklist({ clientId, onDismiss }: { clientId: string; onDismiss: 
   );
 }
 
-function ComingUpItemView({ item }: { item: { kind: string; title: string; subtitle: string | null; path: string | null } }) {
+function SetupStep({
+  n,
+  title,
+  subtitle,
+  to,
+  actionLabel,
+}: {
+  n: number;
+  title: string;
+  subtitle: string;
+  to: string;
+  actionLabel: string;
+}) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="flex-none flex items-center justify-center h-6 w-6 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold tabular-nums">
+        {n}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-gray-900">{title}</div>
+        <div className="text-xs text-gray-500 mt-0.5">{subtitle}</div>
+      </div>
+      <Link to={to} className="text-sm font-medium text-gray-900 hover:underline flex-none">
+        {actionLabel} →
+      </Link>
+    </li>
+  );
+}
+
+function ComingUpEmpty({
+  copy,
+  action,
+}: {
+  copy: string;
+  action?: { label: string; to: string };
+}) {
+  return (
+    <div className="bg-white border border-dashed border-gray-300 rounded-lg p-5 text-center space-y-3">
+      <p className="text-sm text-gray-500">{copy}</p>
+      {action && (
+        <Link to={action.to} className="text-sm font-medium text-gray-900 hover:underline">
+          {action.label}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function ComingUpItemView({
+  item,
+}: {
+  item: { kind: string; title: string; subtitle: string | null; path: string | null };
+}) {
   const inner = (
-    <div className="bg-white rounded border border-gray-200 p-3">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 transition-colors">
       <div className="font-medium text-sm text-gray-900">{item.title}</div>
-      {item.subtitle && <div className="text-xs text-gray-500 mt-0.5">{item.subtitle}</div>}
+      {item.subtitle && <div className="text-xs text-gray-500 mt-1">{item.subtitle}</div>}
     </div>
   );
   return item.path ? (
-    <Link to={item.path} className="block hover:bg-gray-50 rounded">
+    <Link to={item.path} className="block">
       {inner}
     </Link>
   ) : (
@@ -292,18 +381,40 @@ function ActivityRowView({ item }: { item: ActivityItem }) {
   const ago = relativeTime(item.occurred_at);
   const tone = item.tag ? toneClass(item.tag.tone) : '';
   return (
-    <li className="px-4 py-3 flex items-start gap-4">
-      <div className="text-xs text-gray-500 w-24 flex-none">{ago}</div>
+    <li className="px-4 py-3 flex items-start gap-4 hover:bg-gray-50 transition-colors">
+      <div className="text-xs text-gray-500 w-20 flex-none tabular-nums pt-0.5">{ago}</div>
       <div className="min-w-0 flex-1">
         <div className="text-sm text-gray-900">{item.label}</div>
         {item.detail && <div className="text-xs text-gray-500 truncate mt-0.5">{item.detail}</div>}
       </div>
       {item.tag && (
-        <span className={`text-xs rounded px-2 py-0.5 font-medium flex-none ${tone}`}>
+        <span
+          className={`text-[10px] rounded-full px-2 py-0.5 font-medium flex-none uppercase tracking-wider ${tone}`}
+        >
           {item.tag.label}
         </span>
       )}
     </li>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-8 animate-pulse">
+      <div className="h-4 w-32 bg-gray-200 rounded" />
+      <div className="flex items-center gap-4">
+        <div className="h-14 w-14 rounded-lg bg-gray-200" />
+        <div className="flex-1 space-y-2">
+          <div className="h-6 w-48 bg-gray-200 rounded" />
+          <div className="h-3 w-32 bg-gray-100 rounded" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-24 rounded-lg bg-white border border-gray-200" />
+        ))}
+      </div>
+    </div>
   );
 }
 

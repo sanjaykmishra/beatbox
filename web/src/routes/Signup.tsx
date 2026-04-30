@@ -81,9 +81,13 @@ function Field({
 
 export function AuthShell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 mb-6">{title}</h1>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col items-center justify-center p-6">
+      <div className="text-center mb-6">
+        <div className="text-2xl font-bold tracking-tight text-gray-900">Beat</div>
+        <div className="text-sm text-gray-500 mt-1">Coverage reports in 60 seconds.</div>
+      </div>
+      <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <h1 className="text-xl font-semibold tracking-tight text-gray-900 mb-6">{title}</h1>
         {children}
       </div>
     </div>
