@@ -39,7 +39,7 @@ export function Signup() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded bg-gray-900 text-white py-2.5 font-medium hover:bg-gray-800 disabled:opacity-60"
+          className="ink-btn w-full rounded-lg text-white py-2.5 font-medium disabled:opacity-60 transition-colors"
         >
           {busy ? 'Creating…' : 'Create workspace'}
         </button>
@@ -81,13 +81,13 @@ function Field({
 
 export function AuthShell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-app flex flex-col items-center justify-center p-6">
       <div className="text-center mb-6">
-        <div className="text-2xl font-bold tracking-tight text-gray-900">Beat</div>
+        <div className="text-2xl font-bold tracking-tightish text-ink">Beat</div>
         <div className="text-sm text-gray-500 mt-1">Coverage reports in 60 seconds.</div>
       </div>
-      <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-        <h1 className="text-xl font-semibold tracking-tight text-gray-900 mb-6">{title}</h1>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+        <h1 className="text-xl font-semibold tracking-tightish text-ink mb-6">{title}</h1>
         {children}
       </div>
     </div>

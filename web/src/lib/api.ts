@@ -342,6 +342,7 @@ export type CoverageItemView = {
   headline: string | null;
   publish_date: string | null;
   lede: string | null;
+  sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' | null;
   screenshot_url: string | null;
   tier_at_extraction: number | null;
   estimated_reach: number | null;

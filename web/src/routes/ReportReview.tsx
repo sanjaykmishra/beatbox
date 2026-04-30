@@ -1,12 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { BrowserFrame } from '../components/BrowserFrame';
+import { Pill, type PillTone } from '../components/ui';
+import { useAuth } from '../lib/useAuth';
 import { api, ApiError, type CoverageItemView, type Report } from '../lib/api';
 
 export function ReportReview() {
   const { id = '' } = useParams();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { workspace } = useAuth();
+  const slug = workspace?.slug ?? 'workspace';
   const [editingId, setEditingId] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
@@ -25,8 +30,7 @@ export function ReportReview() {
   const generate = useMutation({
     mutationFn: () => api.generateReport(id),
     onSuccess: () => navigate(`/reports/${id}/preview`),
-    onError: (e) =>
-      setGenerateError(e instanceof ApiError ? e.message : 'Generate failed'),
+    onError: (e) => setGenerateError(e instanceof ApiError ? e.message : 'Generate failed'),
   });
 
   const counts = useMemo(() => countByStatus(report.data?.coverage_items ?? []), [report.data]);
@@ -38,36 +42,85 @@ export function ReportReview() {
     counts.running === 0 &&
     counts.done > 0;
 
-  if (report.isLoading) return <p className="text-gray-500">Loading…</p>;
+  if (report.isLoading) {
+    return (
+      <BrowserFrame crumbs={[{ label: `${slug}.beat.app` }, { label: 'reports' }]}>
+        <p className="text-gray-500">Loading…</p>
+      </BrowserFrame>
+    );
+  }
   if (report.error || !report.data) return <p className="text-red-600">Failed to load report.</p>;
   const r = report.data;
 
   return (
-    <div className="space-y-6">
-      <nav className="text-sm text-gray-500">
-        <Link to="/clients" className="hover:text-gray-900">
-          Clients
-        </Link>{' '}
-        ›{' '}
-        <Link to={`/clients/${r.client_id}`} className="hover:text-gray-900">
-          Client
-        </Link>{' '}
-        › <span className="text-gray-900">{r.title}</span>
-      </nav>
-
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{r.title}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {r.period_start} → {r.period_end}
-          </p>
+    <BrowserFrame
+      crumbs={[
+        { label: `${slug}.beat.app` },
+        { label: 'clients' },
+        { label: r.title.toLowerCase() },
+      ]}
+    >
+      <div className="space-y-6">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-sm text-gray-500">{r.title}</p>
+            <h1 className="text-2xl font-semibold tracking-tightish text-ink mt-0.5">Coverage</h1>
+          </div>
+          <div className="flex items-baseline gap-5">
+            <CounterStat n={counts.done} label="done" tone="gray" />
+            {counts.queued + counts.running > 0 && (
+              <CounterStat
+                n={counts.queued + counts.running}
+                label="extracting"
+                tone="blue"
+              />
+            )}
+            {counts.failed > 0 && (
+              <CounterStat n={counts.failed} label="failed" tone="red" />
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <CountsBadge counts={counts} />
+
+        {generateError && <p className="text-sm text-red-600">{generateError}</p>}
+
+        {r.coverage_items.length === 0 ? (
+          <p className="text-sm text-gray-500 py-8 text-center">No coverage items yet.</p>
+        ) : (
+          <ul className="space-y-3">
+            {r.coverage_items.map((item) => (
+              <li key={item.id}>
+                <CoverageCard
+                  item={item}
+                  onEdit={() => setEditingId(item.id)}
+                  onRetry={async () => {
+                    try {
+                      await api.retryCoverage(r.id, item.id);
+                      qc.invalidateQueries({ queryKey: ['report', r.id] });
+                    } catch {
+                      /* swallow */
+                    }
+                  }}
+                  onRemove={async () => {
+                    if (!confirm('Remove this coverage item?')) return;
+                    try {
+                      await api.deleteCoverage(r.id, item.id);
+                      qc.invalidateQueries({ queryKey: ['report', r.id] });
+                    } catch {
+                      /* swallow */
+                    }
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          <p className="text-sm text-gray-500">Click any item to edit before generating</p>
           <button
             disabled={!canGenerate || generate.isPending}
             onClick={() => generate.mutate()}
-            className="rounded bg-gray-900 text-white px-4 py-2 font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ink-btn rounded-lg text-white px-5 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title={
               canGenerate
                 ? 'Generate report'
@@ -77,49 +130,35 @@ export function ReportReview() {
             {generate.isPending ? 'Generating…' : 'Generate report →'}
           </button>
         </div>
+
+        {editing && (
+          <EditDrawer
+            item={editing}
+            reportId={r.id}
+            onClose={() => setEditingId(null)}
+            onSaved={() => qc.invalidateQueries({ queryKey: ['report', r.id] })}
+          />
+        )}
       </div>
-      {generateError && <p className="text-sm text-red-600">{generateError}</p>}
+    </BrowserFrame>
+  );
+}
 
-      {r.coverage_items.length === 0 ? (
-        <p className="text-gray-500">No coverage items yet.</p>
-      ) : (
-        <ul className="grid grid-cols-1 gap-3">
-          {r.coverage_items.map((item) => (
-            <li key={item.id}>
-              <CoverageCard
-                item={item}
-                onEdit={() => setEditingId(item.id)}
-                onRetry={async () => {
-                  try {
-                    await api.retryCoverage(r.id, item.id);
-                    qc.invalidateQueries({ queryKey: ['report', r.id] });
-                  } catch {
-                    /* swallow — UI shows status from server */
-                  }
-                }}
-                onRemove={async () => {
-                  if (!confirm('Remove this coverage item?')) return;
-                  try {
-                    await api.deleteCoverage(r.id, item.id);
-                    qc.invalidateQueries({ queryKey: ['report', r.id] });
-                  } catch {
-                    /* swallow */
-                  }
-                }}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {editing && (
-        <EditDrawer
-          item={editing}
-          reportId={r.id}
-          onClose={() => setEditingId(null)}
-          onSaved={() => qc.invalidateQueries({ queryKey: ['report', r.id] })}
-        />
-      )}
+function CounterStat({
+  n,
+  label,
+  tone,
+}: {
+  n: number;
+  label: string;
+  tone: 'gray' | 'blue' | 'red';
+}) {
+  const cls =
+    tone === 'blue' ? 'text-blue-700' : tone === 'red' ? 'text-red-700' : 'text-gray-700';
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <span className={`text-xl font-semibold tabular-nums ${cls}`}>{n}</span>
+      <span className="text-sm text-gray-500">{label}</span>
     </div>
   );
 }
@@ -130,17 +169,19 @@ function countByStatus(items: CoverageItemView[]) {
   return c;
 }
 
-function CountsBadge({
-  counts,
-}: {
-  counts: { total: number; queued: number; running: number; done: number; failed: number };
-}) {
-  const inFlight = counts.queued + counts.running;
-  const label =
-    inFlight > 0
-      ? `${counts.done} done, ${inFlight} extracting${counts.failed ? `, ${counts.failed} failed` : ''}`
-      : `${counts.done} done${counts.failed ? `, ${counts.failed} failed` : ''}`;
-  return <span className="text-sm text-gray-600">{label}</span>;
+function sentimentTone(s: CoverageItemView['sentiment']): { tone: PillTone; label: string } | null {
+  switch (s) {
+    case 'positive':
+      return { tone: 'green', label: 'Positive' };
+    case 'negative':
+      return { tone: 'red', label: 'Negative' };
+    case 'neutral':
+      return { tone: 'gray', label: 'Neutral' };
+    case 'mixed':
+      return { tone: 'amber', label: 'Mixed' };
+    default:
+      return null;
+  }
 }
 
 function CoverageCard({
@@ -154,32 +195,44 @@ function CoverageCard({
   onRetry: () => void;
   onRemove: () => void;
 }) {
-  if (item.extraction_status === 'queued') {
-    return <SkeletonCard label={item.source_url} status="Queued" />;
-  }
-  if (item.extraction_status === 'running') {
-    return <SkeletonCard label={item.source_url} status="Extracting…" />;
+  if (item.extraction_status === 'queued' || item.extraction_status === 'running') {
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4">
+        <div className="h-16 w-24 bg-gray-100 rounded-lg flex-none animate-pulse" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-gray-500 truncate" title={item.source_url}>
+            {item.source_url.replace(/^https?:\/\//, '')}
+          </p>
+          <div className="mt-2 h-3 w-2/3 bg-gray-100 rounded animate-pulse" />
+          <div className="mt-1.5 h-3 w-1/2 bg-gray-100 rounded animate-pulse" />
+        </div>
+        <span className="text-sm text-blue-700 flex-none">Extracting…</span>
+      </div>
+    );
   }
   if (item.extraction_status === 'failed') {
     return (
-      <div className="bg-white border border-red-200 rounded p-4 flex items-center justify-between">
+      <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-4">
+        <div className="h-16 w-24 bg-red-100/70 rounded-lg flex-none flex items-center justify-center text-red-500 text-xs">
+          failed
+        </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-red-700">Extraction failed</p>
+          <p className="text-sm font-semibold text-red-700">Extraction failed</p>
           <p className="text-xs text-gray-500 truncate" title={item.source_url}>
-            {item.source_url}
+            {item.source_url.replace(/^https?:\/\//, '')}
           </p>
           {item.extraction_error && (
             <p className="text-xs text-red-600 mt-1">{item.extraction_error}</p>
           )}
         </div>
-        <div className="flex gap-2 ml-4">
-          <button onClick={onRetry} className="text-sm text-gray-700 hover:text-gray-900 underline">
-            Retry
+        <div className="flex items-center gap-3 text-sm flex-none">
+          <button onClick={onRetry} className="text-red-700 hover:underline font-medium">
+            Retry →
           </button>
-          <button onClick={onEdit} className="text-sm text-gray-700 hover:text-gray-900 underline">
-            Edit manually
+          <button onClick={onEdit} className="text-gray-700 hover:underline">
+            Edit
           </button>
-          <button onClick={onRemove} className="text-sm text-red-600 hover:text-red-700 underline">
+          <button onClick={onRemove} className="text-red-600 hover:underline">
             Remove
           </button>
         </div>
@@ -187,53 +240,41 @@ function CoverageCard({
     );
   }
   // done
+  const sent = sentimentTone(item.sentiment);
   return (
     <button
       onClick={onEdit}
-      className="text-left w-full bg-white border border-gray-200 rounded p-4 hover:border-gray-400 flex items-start gap-4"
+      className="text-left w-full bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors flex items-start gap-4"
     >
       {item.screenshot_url ? (
         <img
           src={item.screenshot_url}
           alt=""
-          className="h-16 w-24 object-cover rounded border border-gray-100 flex-none"
+          className="h-20 w-28 object-cover rounded-lg border border-gray-100 flex-none"
         />
       ) : (
-        <div className="h-16 w-24 bg-gray-100 rounded flex-none" />
+        <div className="h-20 w-28 bg-gray-100 rounded-lg flex-none flex items-center justify-center text-[10px] text-gray-400">
+          screenshot
+        </div>
       )}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          {item.outlet?.name ? (
-            <span className="font-medium">{item.outlet.name}</span>
-          ) : null}
-          {item.outlet?.tier ? <span>· tier {item.outlet.tier}</span> : null}
-          {item.publish_date ? <span>· {item.publish_date}</span> : null}
+        <div className="flex items-center gap-2 flex-wrap">
+          {item.outlet?.name && (
+            <span className="text-sm font-medium text-gray-600">{item.outlet.name}</span>
+          )}
+          {item.outlet?.tier && <Pill tone="blue">Tier {item.outlet.tier}</Pill>}
+          {sent && <Pill tone={sent.tone}>{sent.label}</Pill>}
           {item.is_user_edited && (
-            <span className="ml-auto text-amber-700">edited</span>
+            <span className="text-[11px] text-amber-700 ml-auto">edited</span>
           )}
         </div>
-        <h3 className="mt-1 font-medium text-gray-900 truncate">
+        <h3 className="mt-1.5 text-base font-semibold text-ink leading-snug">
           {item.headline ?? item.source_url}
         </h3>
         {item.lede && <p className="mt-1 text-sm text-gray-600 line-clamp-2">{item.lede}</p>}
       </div>
+      <span className="text-sm text-gray-400 flex-none pt-1.5">Edit ›</span>
     </button>
-  );
-}
-
-function SkeletonCard({ label, status }: { label: string; status: string }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded p-4 flex items-start gap-4">
-      <div className="h-16 w-24 bg-gray-100 rounded animate-pulse flex-none" />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-gray-500">{status}</p>
-        <p className="mt-1 text-sm text-gray-700 truncate" title={label}>
-          {label}
-        </p>
-        <div className="mt-2 h-3 w-2/3 bg-gray-100 rounded animate-pulse" />
-        <div className="mt-1 h-3 w-1/2 bg-gray-100 rounded animate-pulse" />
-      </div>
-    </div>
   );
 }
 
@@ -253,7 +294,6 @@ function EditDrawer({
   const [publishDate, setPublishDate] = useState(item.publish_date ?? '');
   const [error, setError] = useState<string | null>(null);
 
-  // Close on Escape.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -288,18 +328,18 @@ function EditDrawer({
       />
       <div className="w-full max-w-md bg-white shadow-xl border-l border-gray-200 p-6 overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold tracking-tight">Edit coverage</h2>
+          <h2 className="text-lg font-semibold tracking-tightish">Edit coverage</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-900">
             ×
           </button>
         </div>
-        <p className="text-xs text-gray-500 truncate mb-4" title={item.source_url}>
+        <p className="text-xs text-gray-500 truncate mb-4 font-mono" title={item.source_url}>
           {item.source_url}
         </p>
         <div className="space-y-3 text-sm">
           <Field label="Headline">
             <input
-              className="w-full rounded border border-gray-300 px-3 py-2"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
             />
@@ -307,7 +347,7 @@ function EditDrawer({
           <Field label="Publish date">
             <input
               type="date"
-              className="w-full rounded border border-gray-300 px-3 py-2"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
               value={publishDate}
               onChange={(e) => setPublishDate(e.target.value)}
             />
@@ -315,7 +355,7 @@ function EditDrawer({
           <Field label="Lede">
             <textarea
               rows={3}
-              className="w-full rounded border border-gray-300 px-3 py-2"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
               value={lede}
               onChange={(e) => setLede(e.target.value)}
             />
@@ -333,7 +373,7 @@ function EditDrawer({
             <button
               onClick={() => save.mutate()}
               disabled={save.isPending}
-              className="rounded bg-gray-900 text-white px-4 py-2 font-medium hover:bg-gray-800 disabled:opacity-60"
+              className="ink-btn rounded-lg text-white px-4 py-2 text-sm font-medium disabled:opacity-50 transition-colors"
             >
               {save.isPending ? 'Saving…' : 'Save'}
             </button>
@@ -347,7 +387,7 @@ function EditDrawer({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-sm font-medium text-gray-700 mb-1">{label}</span>
+      <span className="block text-xs font-medium text-gray-500 mb-1">{label}</span>
       {children}
     </label>
   );
