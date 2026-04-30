@@ -1,17 +1,17 @@
 // Initials-and-color avatar for clients/workspaces. Uses the entity's brand color when set;
 // otherwise picks a deterministic muted color from the name so each row stays visually distinct.
 
-// Pastel pairs (Tailwind ~100 background, ~900 text) for the default deterministic
-// avatar look. Agencies who set a primary_color get the saturated brand path below.
+// Tailwind ~200 background + ~800 text — saturated enough to read distinctly without
+// fighting the muted page palette. Agencies who set primary_color use the brand path below.
 const PALETTE: { bg: string; fg: string }[] = [
-  { bg: '#FEE2E2', fg: '#7F1D1D' }, // red
-  { bg: '#FEF3C7', fg: '#78350F' }, // amber
-  { bg: '#DBEAFE', fg: '#1E3A8A' }, // blue
-  { bg: '#DCFCE7', fg: '#14532D' }, // green
-  { bg: '#E0E7FF', fg: '#312E81' }, // indigo
-  { bg: '#FCE7F3', fg: '#831843' }, // pink
-  { bg: '#EDE9FE', fg: '#4C1D95' }, // violet
-  { bg: '#CCFBF1', fg: '#134E4A' }, // teal
+  { bg: '#FECACA', fg: '#991B1B' }, // red
+  { bg: '#FDE68A', fg: '#92400E' }, // amber
+  { bg: '#BFDBFE', fg: '#1E40AF' }, // blue
+  { bg: '#A7F3D0', fg: '#166534' }, // emerald
+  { bg: '#C7D2FE', fg: '#3730A3' }, // indigo
+  { bg: '#FBCFE8', fg: '#9D174D' }, // pink
+  { bg: '#DDD6FE', fg: '#5B21B6' }, // violet
+  { bg: '#99F6E4', fg: '#115E59' }, // teal
 ];
 
 function hash(s: string): number {
