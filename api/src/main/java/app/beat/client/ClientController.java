@@ -1,5 +1,7 @@
 package app.beat.client;
 
+import app.beat.activity.ActivityRecorder;
+import app.beat.activity.EventKinds;
 import app.beat.audit.AuditService;
 import app.beat.infra.AppException;
 import app.beat.infra.RequestContext;
@@ -29,10 +31,12 @@ public class ClientController {
 
   private final ClientRepository clients;
   private final AuditService audit;
+  private final ActivityRecorder activity;
 
-  public ClientController(ClientRepository clients, AuditService audit) {
+  public ClientController(ClientRepository clients, AuditService audit, ActivityRecorder activity) {
     this.clients = clients;
     this.audit = audit;
+    this.activity = activity;
   }
 
   public record ClientDto(
@@ -110,6 +114,8 @@ public class ClientController {
         c.id(),
         Map.of("name", c.name()),
         req);
+    activity.recordUser(
+        ctx.workspaceId(), ctx.userId(), EventKinds.CLIENT_CREATED, "client", c.id(), Map.of());
     return ResponseEntity.status(HttpStatus.CREATED).body(ClientDto.from(c));
   }
 
@@ -129,6 +135,8 @@ public class ClientController {
                 body.default_cadence())
             .orElseThrow(() -> AppException.notFound("Client"));
     audit.record(ctx.workspaceId(), ctx.userId(), "client.updated", "client", id, Map.of(), req);
+    activity.recordUser(
+        ctx.workspaceId(), ctx.userId(), EventKinds.CLIENT_UPDATED, "client", id, Map.of());
     return ClientDto.from(updated);
   }
 
@@ -139,6 +147,8 @@ public class ClientController {
       throw AppException.notFound("Client");
     }
     audit.record(ctx.workspaceId(), ctx.userId(), "client.deleted", "client", id, Map.of(), req);
+    activity.recordUser(
+        ctx.workspaceId(), ctx.userId(), EventKinds.CLIENT_DELETED, "client", id, Map.of());
     return ResponseEntity.noContent().build();
   }
 }

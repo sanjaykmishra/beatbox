@@ -45,6 +45,7 @@ Deliverables:
 - Frontend: signup, login, logout flows. Client list and client detail pages.
 - Logo upload to R2 (presigned PUT URL pattern).
 - Audit events written for signup, login, client.created/updated/deleted.
+- `activity_events` table created (per `docs/15-additions.md` §15.2). `ActivityRecorder` service implemented. First events fire from auth and client CRUD endpoints.
 
 Acceptance:
 
@@ -69,6 +70,8 @@ Deliverables:
 - `extraction_jobs` queue and worker dispatch via Postgres `LISTEN/NOTIFY`.
 - `POST /v1/clients/:id/reports` and `POST /v1/reports/:id/coverage` endpoints. Coverage items created in `queued` state, jobs dispatched.
 - Worker: dequeues, fetches article (without LLM yet — placeholder data), updates row to `done`.
+- Activity events fire from extraction worker with `kind='report.coverage_extracted'`, `duration_ms` set.
+- `llm.call_completed` events fire from the Anthropic client wrapper with model, prompt_version, tokens, cost.
 
 Acceptance:
 
@@ -115,11 +118,13 @@ Deliverables:
 - "Retry" and "Remove" actions on failed items.
 - Header counts update live.
 - Skeleton loading states for `queued` and `running` items.
+- Client context UI and API per `docs/15-additions.md` §15.1. `client_context` table created. Edit form on `/clients/:id/context`. Context renders on report builder page (collapsed). Extraction worker reads context and renders into the prompt.
 
 Acceptance:
 
 - A user can paste 14 URLs, watch them extract live, edit a couple of fields, and have the edits stick on a forced refresh.
 - The "Generate report" button correctly disables until all items are terminal and at least one is `done`.
+- Context can be saved for a client and is used in the next extraction's LLM call (verifiable in `activity_events.metadata.prompt_version` showing the new context-aware version).
 
 ---
 
@@ -154,6 +159,7 @@ Deliverables:
 
 - Executive summary generated via Anthropic Opus using `prompts/executive-summary-v1.md`.
 - Eval harness extended with `SummaryEvalTest`: hyperbole detection, fact coverage via LLM judge.
+- Eval harness extended to cover client context paths per `docs/15-additions.md` §15.1. Five new golden items with context. Regression test on the no-context golden set. Context-bleed test.
 - Inline editor for executive summary on the preview page. Saving sets `executive_summary_edited=true`.
 - `POST /v1/reports/:id/share` and `DELETE /v1/reports/:id/share`.
 - Public share view at `/r/:token` — read-only HTML rendering of the same template.
@@ -202,6 +208,7 @@ Deliverables:
 - Loading skeletons and optimistic UI where it improves perceived speed.
 - Accessibility pass: keyboard nav, focus states, contrast, alt text on images, aria-labels on interactive elements.
 - Settings page: workspace name/logo/color, members management, billing.
+- Founder dashboard at `/admin/dashboard` (gated to internal users only). Pulls from `activity_events`. Shows daily extractions, daily reports generated, cost per workspace, P95 extraction latency, top error classes.
 - 404 and error boundary pages.
 - Mobile responsive (the editing experience can degrade gracefully — agencies build reports on desktop).
 

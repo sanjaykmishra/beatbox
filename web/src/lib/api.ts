@@ -142,7 +142,36 @@ export const api = {
     request<void>('POST', `/v1/reports/${reportId}/coverage/${itemId}/retry`),
   deleteCoverage: (reportId: string, itemId: string) =>
     request<void>('DELETE', `/v1/reports/${reportId}/coverage/${itemId}`),
+
+  // ----- Client context (docs/15-additions.md §15.1) -----
+  getClientContext: (clientId: string) =>
+    request<ClientContext>('GET', `/v1/clients/${clientId}/context`),
+  putClientContext: (clientId: string, b: ClientContextInput) =>
+    request<ClientContext>('PUT', `/v1/clients/${clientId}/context`, b),
 };
+
+export type ClientContext = {
+  id: string;
+  client_id: string;
+  key_messages: string | null;
+  do_not_pitch: string | null;
+  competitive_set: string | null;
+  important_dates: string | null;
+  style_notes: string | null;
+  notes_markdown: string | null;
+  version: number;
+  last_edited_by_user_id: string | null;
+  updated_at: string;
+};
+
+export type ClientContextInput = Partial<{
+  key_messages: string;
+  do_not_pitch: string;
+  competitive_set: string;
+  important_dates: string;
+  style_notes: string;
+  notes_markdown: string;
+}>;
 
 export type Report = {
   id: string;

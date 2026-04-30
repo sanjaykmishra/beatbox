@@ -1,8 +1,12 @@
 package app.beat.extraction;
 
+import app.beat.activity.ActivityRecorder;
+import app.beat.activity.EventKinds;
 import app.beat.author.Author;
 import app.beat.author.AuthorRepository;
 import app.beat.client.ClientRepository;
+import app.beat.clientcontext.ClientContext;
+import app.beat.clientcontext.ClientContextRepository;
 import app.beat.coverage.CoverageItem;
 import app.beat.coverage.CoverageItemRepository;
 import app.beat.llm.ExtractionService;
@@ -15,7 +19,9 @@ import app.beat.report.ReportRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -41,12 +47,14 @@ public class ExtractionWorker {
   private final CoverageItemRepository coverage;
   private final ReportRepository reports;
   private final ClientRepository clients;
+  private final ClientContextRepository clientContexts;
   private final OutletRepository outlets;
   private final AuthorRepository authors;
   private final LayeredArticleFetcher fetcher;
   private final ScreenshotClient screenshots;
   private final ExtractionService extraction;
   private final OutletTierClassifier tierClassifier;
+  private final ActivityRecorder activity;
   private final ObjectMapper json = new ObjectMapper();
   private final boolean enabled;
 
@@ -57,23 +65,27 @@ public class ExtractionWorker {
       CoverageItemRepository coverage,
       ReportRepository reports,
       ClientRepository clients,
+      ClientContextRepository clientContexts,
       OutletRepository outlets,
       AuthorRepository authors,
       LayeredArticleFetcher fetcher,
       ScreenshotClient screenshots,
       ExtractionService extraction,
       OutletTierClassifier tierClassifier,
+      ActivityRecorder activity,
       @Value("${beat.extraction.enabled:true}") boolean enabled) {
     this.jobs = jobs;
     this.coverage = coverage;
     this.reports = reports;
     this.clients = clients;
+    this.clientContexts = clientContexts;
     this.outlets = outlets;
     this.authors = authors;
     this.fetcher = fetcher;
     this.screenshots = screenshots;
     this.extraction = extraction;
     this.tierClassifier = tierClassifier;
+    this.activity = activity;
     this.enabled = enabled;
   }
 
@@ -109,6 +121,7 @@ public class ExtractionWorker {
   }
 
   void process(ExtractionJobRepository.QueuedJob job) {
+    long startedAt = System.currentTimeMillis();
     try {
       CoverageItem item =
           coverage
@@ -164,13 +177,15 @@ public class ExtractionWorker {
       // Now the LLM extraction (sentiment, summary, quote, topics, prominence). Skipped quietly
       // when ANTHROPIC_API_KEY isn't set so local dev keeps working.
       if (extraction.isEnabled()) {
+        ClientContext context = clientContexts.findByClient(report.clientId()).orElse(null);
         var outcome =
             extraction
                 .extract(
                     item.sourceUrl(),
                     outlet == null ? null : outlet.name(),
                     subjectName,
-                    article.cleanText())
+                    article.cleanText(),
+                    context)
                 .orElse(null);
         if (outcome != null) {
           var r = outcome.result();
@@ -194,6 +209,19 @@ public class ExtractionWorker {
       }
 
       jobs.markDone(job.id());
+      activity.recordWorker(
+          workspaceId,
+          EventKinds.REPORT_COVERAGE_EXTRACTED,
+          "coverage_item",
+          item.id(),
+          Duration.ofMillis(System.currentTimeMillis() - startedAt),
+          Map.of(
+              "fetcher",
+              article.fetcher(),
+              "llm",
+              extraction.isEnabled(),
+              "outlet",
+              outlet == null ? "" : outlet.domain()));
       log.info(
           "extraction: done item={} url={} fetcher={} llm={}",
           item.id(),
@@ -202,6 +230,11 @@ public class ExtractionWorker {
           extraction.isEnabled());
     } catch (Exception e) {
       log.warn("extraction: job {} failed: {}", job.id(), e.toString());
+      activity.recordSystem(
+          EventKinds.EXTRACTION_FAILED,
+          "extraction_job",
+          job.id(),
+          Map.of("error_class", e.getClass().getSimpleName()));
       retryOrFail(job, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
     }
   }

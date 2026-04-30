@@ -1,5 +1,7 @@
 package app.beat.report;
 
+import app.beat.activity.ActivityRecorder;
+import app.beat.activity.EventKinds;
 import app.beat.client.ClientRepository;
 import app.beat.coverage.CoverageItem;
 import app.beat.coverage.CoverageItemRepository;
@@ -12,6 +14,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -32,16 +35,19 @@ public class ReportController {
   private final ClientRepository clients;
   private final CoverageItemRepository coverage;
   private final OutletRepository outlets;
+  private final ActivityRecorder activity;
 
   public ReportController(
       ReportRepository reports,
       ClientRepository clients,
       CoverageItemRepository coverage,
-      OutletRepository outlets) {
+      OutletRepository outlets,
+      ActivityRecorder activity) {
     this.reports = reports;
     this.clients = clients;
     this.coverage = coverage;
     this.outlets = outlets;
+    this.activity = activity;
   }
 
   public record CreateReportRequest(
@@ -113,6 +119,8 @@ public class ReportController {
             body.period_start(),
             body.period_end(),
             ctx.userId());
+    activity.recordUser(
+        ctx.workspaceId(), ctx.userId(), EventKinds.REPORT_CREATED, "report", r.id(), Map.of());
     return ResponseEntity.status(HttpStatus.CREATED).body(toDto(r, List.of()));
   }
 

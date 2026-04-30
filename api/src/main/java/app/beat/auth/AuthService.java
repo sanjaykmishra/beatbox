@@ -1,5 +1,7 @@
 package app.beat.auth;
 
+import app.beat.activity.ActivityRecorder;
+import app.beat.activity.EventKinds;
 import app.beat.audit.AuditService;
 import app.beat.infra.AppException;
 import app.beat.workspace.Slugs;
@@ -20,6 +22,7 @@ public class AuthService {
   private final WorkspaceMemberRepository members;
   private final PasswordHasher hasher;
   private final AuditService audit;
+  private final ActivityRecorder activity;
 
   public AuthService(
       UserRepository users,
@@ -27,13 +30,15 @@ public class AuthService {
       WorkspaceRepository workspaces,
       WorkspaceMemberRepository members,
       PasswordHasher hasher,
-      AuditService audit) {
+      AuditService audit,
+      ActivityRecorder activity) {
     this.users = users;
     this.sessions = sessions;
     this.workspaces = workspaces;
     this.members = members;
     this.hasher = hasher;
     this.audit = audit;
+    this.activity = activity;
   }
 
   public record SignupResult(User user, Workspace workspace, String sessionToken) {}
@@ -64,6 +69,14 @@ public class AuthService {
     audit.record(ws.id(), user.id(), "user.signup", "user", user.id(), Map.of(), req);
     audit.record(
         ws.id(), user.id(), "workspace.created", "workspace", ws.id(), Map.of("slug", slug), req);
+    activity.recordUser(ws.id(), user.id(), EventKinds.USER_SIGNED_UP, "user", user.id(), Map.of());
+    activity.recordUser(
+        ws.id(),
+        user.id(),
+        EventKinds.WORKSPACE_CREATED,
+        "workspace",
+        ws.id(),
+        Map.of("slug", slug));
 
     return new SignupResult(user, ws, token);
   }
@@ -86,6 +99,7 @@ public class AuthService {
     sessions.insert(SessionTokens.hash(token), user.id(), userAgent(req), ip(req));
     users.touchLastLogin(user.id());
     audit.record(ws.id(), user.id(), "user.login", "user", user.id(), Map.of(), req);
+    activity.recordUser(ws.id(), user.id(), EventKinds.USER_LOGGED_IN, "user", user.id(), Map.of());
     return new LoginResult(user, ws, token);
   }
 

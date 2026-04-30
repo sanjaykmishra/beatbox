@@ -1,5 +1,7 @@
 package app.beat.coverage;
 
+import app.beat.activity.ActivityRecorder;
+import app.beat.activity.EventKinds;
 import app.beat.extraction.ExtractionJobRepository;
 import app.beat.infra.AppException;
 import app.beat.infra.RequestContext;
@@ -33,12 +35,17 @@ public class CoverageController {
   private final ReportRepository reports;
   private final CoverageItemRepository coverage;
   private final ExtractionJobRepository jobs;
+  private final ActivityRecorder activity;
 
   public CoverageController(
-      ReportRepository reports, CoverageItemRepository coverage, ExtractionJobRepository jobs) {
+      ReportRepository reports,
+      CoverageItemRepository coverage,
+      ExtractionJobRepository jobs,
+      ActivityRecorder activity) {
     this.reports = reports;
     this.coverage = coverage;
     this.jobs = jobs;
+    this.activity = activity;
   }
 
   public record AddCoverageRequest(@NotEmpty List<String> urls) {}
@@ -77,6 +84,13 @@ public class CoverageController {
         created.add(new QueuedItemDto(inserted.get().id(), url, inserted.get().extractionStatus()));
       }
     }
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.REPORT_URLS_ADDED,
+        "report",
+        report.id(),
+        Map.of("count", created.size()));
     return ResponseEntity.status(HttpStatus.ACCEPTED).body(new AddCoverageResponse(created));
   }
 
@@ -96,6 +110,13 @@ public class CoverageController {
       throw AppException.notFound("Coverage item");
     }
     coverage.delete(item.id());
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.REPORT_COVERAGE_DISMISSED,
+        "coverage_item",
+        item.id(),
+        Map.of());
     return ResponseEntity.noContent().build();
   }
 
@@ -205,6 +226,13 @@ public class CoverageController {
       }
     }
     var updated = coverage.applyUserEdit(item.id(), edits);
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.REPORT_COVERAGE_EDITED,
+        "coverage_item",
+        item.id(),
+        Map.of("fields_edited", edits.keySet()));
     return EditedCoverageDto.from(updated);
   }
 
@@ -235,6 +263,13 @@ public class CoverageController {
     }
     coverage.resetForRetry(item.id());
     jobs.enqueue(item.id());
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.REPORT_COVERAGE_RETRIED,
+        "coverage_item",
+        item.id(),
+        Map.of());
     return ResponseEntity.accepted().build();
   }
 

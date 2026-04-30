@@ -191,6 +191,20 @@ The golden set should grow as we encounter real-world failures. Process:
 
 This converts every customer complaint into a regression test. Compounds value over time.
 
+## Additional categories from `docs/15-additions.md`
+
+These fold into the same harness, with the same hard gates.
+
+**From §15.1 (client context):**
+- 5 new items with associated client context — verify the extraction respects style notes (e.g., "Mike" vs "Michael" appears correctly in the summary).
+- Regression test on the existing 50-item set with empty context — the no-context path must not regress.
+- Context-bleed test — providing irrelevant context for an article shouldn't change extraction outputs that the article itself dictates (headline, publish date, etc.). Only judgment fields (summary, sentiment, prominence) are allowed to vary.
+
+**From §15.3 (digest narrative — Phase 2):**
+- 10 example weeks with hand-written acceptable narratives.
+- Forbidden-word check (no hyperbole) — same forbidden list as the executive summary prompt.
+- Empty-week test — narrative gracefully handles slow weeks without manufacturing energy.
+
 ## What's NOT in the eval harness
 
 - **End-to-end UI tests** — those live in `web/src/__tests__/e2e/` and run via Playwright.

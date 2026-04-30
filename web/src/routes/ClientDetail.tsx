@@ -61,6 +61,12 @@ export function ClientDetail() {
         )}
         <h1 className="text-2xl font-semibold tracking-tight flex-1">{c.name}</h1>
         <Link
+          to={`/clients/${c.id}/context`}
+          className="rounded border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:border-gray-400"
+        >
+          Context
+        </Link>
+        <Link
           to={`/clients/${c.id}/reports/new`}
           className="rounded bg-gray-900 text-white px-4 py-2 font-medium hover:bg-gray-800"
         >

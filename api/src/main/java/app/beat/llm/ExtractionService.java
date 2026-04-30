@@ -1,5 +1,6 @@
 package app.beat.llm;
 
+import app.beat.clientcontext.ClientContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import java.util.Optional;
@@ -45,9 +46,16 @@ public class ExtractionService {
   public record Outcome(ExtractionResult result, String promptVersion) {}
 
   public Optional<Outcome> extract(
-      String url, String outletName, String subjectName, String articleText) {
+      String url,
+      String outletName,
+      String subjectName,
+      String articleText,
+      ClientContext context) {
     if (!isEnabled()) return Optional.empty();
-    PromptTemplate t = prompts.get("extraction-v1");
+    // Use v1.1 when context is available, v1 otherwise. The cache is keyed on prompt version,
+    // so a context add doesn't pollute the no-context cache.
+    boolean useContext = context != null && !context.isEmpty();
+    PromptTemplate t = prompts.get(useContext ? "extraction-v1-1" : "extraction-v1");
     String version = t.version();
 
     String contentHash = ExtractionCacheRepository.hashContent(articleText);
@@ -63,13 +71,17 @@ public class ExtractionService {
     }
 
     String truncated = AnthropicClient.truncateForTokenBudget(articleText, MAX_INPUT_TOKENS);
-    String rendered =
-        t.render(
+    Map<String, String> vars =
+        new java.util.HashMap<>(
             Map.of(
                 "url", safe(url),
                 "outlet_name", safe(outletName),
                 "subject_name", safe(subjectName),
                 "article_text", truncated));
+    if (useContext) {
+      vars.put("client_context", renderClientContext(context, subjectName));
+    }
+    String rendered = t.render(vars);
     String model = modelOverride.isBlank() ? t.model() : modelOverride;
 
     AnthropicClient.Result first;
@@ -119,5 +131,31 @@ public class ExtractionService {
 
   private static String safe(String s) {
     return s == null ? "unknown" : s;
+  }
+
+  /**
+   * Per docs/15-additions.md §15.1, deliberately excludes do_not_pitch and important_dates from the
+   * extraction prompt — those are agency-internal and would bias sentiment.
+   */
+  static String renderClientContext(ClientContext c, String subjectName) {
+    StringBuilder b = new StringBuilder();
+    b.append("Relevant context about ").append(subjectName).append(":\n");
+    if (c.keyMessages() != null && !c.keyMessages().isBlank()) {
+      b.append("- Key messages: ").append(c.keyMessages().trim()).append('\n');
+    }
+    if (c.styleNotes() != null && !c.styleNotes().isBlank()) {
+      b.append("- Style notes (preferred names/spellings): ")
+          .append(c.styleNotes().trim())
+          .append('\n');
+    }
+    if (c.competitiveSet() != null && !c.competitiveSet().isBlank()) {
+      b.append("- Competitive set: ").append(c.competitiveSet().trim()).append('\n');
+    }
+    if (c.notesMarkdown() != null && !c.notesMarkdown().isBlank()) {
+      String excerpt = c.notesMarkdown().trim();
+      if (excerpt.length() > 300) excerpt = excerpt.substring(0, 300) + "…";
+      b.append("- Recent context: ").append(excerpt).append('\n');
+    }
+    return b.toString();
   }
 }
