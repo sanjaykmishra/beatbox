@@ -55,7 +55,7 @@ export function Login() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded bg-gray-900 text-white py-2.5 font-medium hover:bg-gray-800 disabled:opacity-60"
+          className="ink-btn w-full rounded-lg text-white py-2.5 font-medium disabled:opacity-60 transition-colors"
         >
           {busy ? 'Logging in…' : 'Log in'}
         </button>

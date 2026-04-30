@@ -1,18 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { BrowserFrame } from '../components/BrowserFrame';
+import { Pill, type PillTone } from '../components/ui';
+import { useAuth } from '../lib/useAuth';
 import { api, ApiError, type Report } from '../lib/api';
 
-/**
- * Step 3 wireframe. Shows the report preview iframe (server-rendered HTML using the same
- * Handlebars template Puppeteer uses for the PDF), plus Download and Share controls.
- *
- * The browser polls GET /v1/reports/:id every 2s until status leaves 'processing'. Once the
- * report is 'ready', the PDF link enables and the iframe loads the rendered preview.
- */
 export function ReportPreview() {
   const { id = '' } = useParams();
   const qc = useQueryClient();
+  const { workspace } = useAuth();
+  const slug = workspace?.slug ?? 'workspace';
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,134 +55,148 @@ export function ReportPreview() {
     });
   }
 
-  if (report.isLoading) return <p className="text-gray-500">Loading…</p>;
+  if (report.isLoading) {
+    return (
+      <BrowserFrame crumbs={[{ label: `${slug}.beat.app` }, { label: 'reports' }]}>
+        <p className="text-gray-500">Loading…</p>
+      </BrowserFrame>
+    );
+  }
   if (report.error || !report.data) return <p className="text-red-600">Failed to load report.</p>;
   const r = report.data;
 
+  const ready = r.status === 'ready';
+  const generatedSecs =
+    r.generated_at && r.created_at
+      ? Math.max(
+          1,
+          Math.round(
+            (new Date(r.generated_at).getTime() - new Date(r.created_at).getTime()) / 1000,
+          ),
+        )
+      : null;
+
+  const rightSlot = (
+    <>
+      <button
+        disabled={!ready}
+        onClick={() => share.mutate()}
+        className="rounded-md border border-gray-300 bg-white px-3 py-1 text-[12px] font-medium text-gray-700 hover:border-gray-400 hover:bg-white disabled:opacity-50 transition-colors"
+      >
+        {share.isPending ? 'Sharing…' : 'Share link'}
+      </button>
+      <button
+        disabled={!ready}
+        onClick={async () => {
+          try {
+            const blob = await api.fetchReportPdfBlob(r.id);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${r.title}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+          } catch (e) {
+            setError(e instanceof ApiError ? e.message : 'Download failed');
+          }
+        }}
+        className="ink-btn rounded-md text-white px-3 py-1 text-[12px] font-medium disabled:opacity-50 transition-colors"
+      >
+        Download PDF
+      </button>
+    </>
+  );
+
+  const chromeLabel: Crumb = ready
+    ? {
+        label:
+          generatedSecs !== null
+            ? `Report ready · generated in ${generatedSecs}s`
+            : 'Report ready',
+      }
+    : r.status === 'processing'
+      ? { label: 'Generating…' }
+      : r.status === 'failed'
+        ? { label: 'Generation failed' }
+        : { label: r.title };
+
   return (
-    <div className="space-y-6">
-      <nav className="text-sm text-gray-500">
-        <Link to="/clients" className="hover:text-gray-900">
-          Clients
-        </Link>{' '}
-        ›{' '}
-        <Link to={`/reports/${r.id}`} className="hover:text-gray-900">
-          {r.title}
-        </Link>{' '}
-        › <span className="text-gray-900">Preview</span>
-      </nav>
-
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{r.title}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            <StatusBadge status={r.status} />{' '}
-            {r.status === 'ready' && r.generated_at
-              ? `· generated ${new Date(r.generated_at).toLocaleString()}`
-              : null}
-          </p>
+    <BrowserFrame crumbs={[chromeLabel]} rightSlot={rightSlot}>
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-semibold tracking-tightish text-ink">{r.title}</h1>
+          <StatusPill status={r.status} />
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            disabled={r.status !== 'ready'}
-            onClick={() => share.mutate()}
-            className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-gray-400 disabled:opacity-50"
-          >
-            {share.isPending ? 'Sharing…' : 'Share link'}
-          </button>
-          <button
-            disabled={r.status !== 'ready'}
-            onClick={async () => {
-              try {
-                const blob = await api.fetchReportPdfBlob(r.id);
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${r.title}.pdf`;
-                a.click();
-                URL.revokeObjectURL(url);
-              } catch (e) {
-                setError(e instanceof ApiError ? e.message : 'Download failed');
-              }
-            }}
-            className="rounded bg-gray-900 text-white px-3 py-2 text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
-          >
-            Download PDF
-          </button>
-        </div>
-      </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {shareUrl && (
-        <div className="bg-white border border-gray-200 rounded p-3 flex items-center gap-3">
-          <input
-            readOnly
-            value={shareUrl}
-            className="flex-1 font-mono text-xs px-2 py-1 border border-gray-200 rounded bg-gray-50"
-          />
-          <button
-            onClick={copy}
-            className="text-sm text-gray-700 hover:text-gray-900 underline"
-          >
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-          <button
-            onClick={() => revoke.mutate()}
-            className="text-sm text-red-600 hover:text-red-700 underline"
-          >
-            Revoke
-          </button>
-        </div>
-      )}
-
-      {r.status === 'processing' && <ProcessingSkeleton />}
-      {r.status === 'failed' && <FailedNotice />}
-      {r.status === 'ready' && (
-        <div className="space-y-4">
-          <SummaryEditor
-            reportId={r.id}
-            initial={r.executive_summary ?? ''}
-            edited={!!r.executive_summary_edited}
-            onSaved={() => {
-              qc.invalidateQueries({ queryKey: ['report', r.id] });
-              qc.invalidateQueries({ queryKey: ['report-preview', r.id] });
-            }}
-          />
-          {previewHtml.isLoading ? (
-            <ProcessingSkeleton />
-          ) : previewHtml.error ? (
-            <p className="text-red-600 text-sm">Failed to load preview.</p>
-          ) : (
-            <iframe
-              title="Report preview"
-              srcDoc={previewHtml.data ?? ''}
-              sandbox="allow-same-origin"
-              className="w-full h-[80vh] border border-gray-200 rounded bg-white"
+        {shareUrl && (
+          <div className="bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-3">
+            <input
+              readOnly
+              value={shareUrl}
+              className="flex-1 font-mono text-xs px-2 py-1.5 border border-gray-200 rounded bg-gray-50"
             />
-          )}
-        </div>
-      )}
-    </div>
+            <button onClick={copy} className="text-sm text-gray-700 hover:text-gray-900 underline">
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+            <button
+              onClick={() => revoke.mutate()}
+              className="text-sm text-red-600 hover:text-red-700 underline"
+            >
+              Revoke
+            </button>
+          </div>
+        )}
+
+        {r.status === 'processing' && <ProcessingSkeleton />}
+        {r.status === 'failed' && <FailedNotice />}
+        {r.status === 'ready' && (
+          <div className="space-y-4">
+            <SummaryEditor
+              reportId={r.id}
+              initial={r.executive_summary ?? ''}
+              edited={!!r.executive_summary_edited}
+              onSaved={() => {
+                qc.invalidateQueries({ queryKey: ['report', r.id] });
+                qc.invalidateQueries({ queryKey: ['report-preview', r.id] });
+              }}
+            />
+            {previewHtml.isLoading ? (
+              <ProcessingSkeleton />
+            ) : previewHtml.error ? (
+              <p className="text-red-600 text-sm">Failed to load preview.</p>
+            ) : (
+              <iframe
+                title="Report preview"
+                srcDoc={previewHtml.data ?? ''}
+                sandbox="allow-same-origin"
+                className="w-full h-[80vh] border border-gray-200 rounded-xl bg-white"
+              />
+            )}
+          </div>
+        )}
+      </div>
+    </BrowserFrame>
   );
 }
 
-function StatusBadge({ status }: { status: Report['status'] }) {
-  const cls =
-    {
-      draft: 'bg-gray-100 text-gray-700',
-      processing: 'bg-amber-100 text-amber-800',
-      ready: 'bg-emerald-100 text-emerald-800',
-      failed: 'bg-red-100 text-red-800',
-    }[status] ?? 'bg-gray-100 text-gray-700';
-  return (
-    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{status}</span>
-  );
+type Crumb = { label: string };
+
+function StatusPill({ status }: { status: Report['status'] }) {
+  const map: Record<Report['status'], { tone: PillTone; label: string }> = {
+    draft: { tone: 'gray', label: 'draft' },
+    processing: { tone: 'amber', label: 'processing' },
+    ready: { tone: 'green', label: 'ready' },
+    failed: { tone: 'red', label: 'failed' },
+  };
+  const { tone, label } = map[status];
+  return <Pill tone={tone}>{label}</Pill>;
 }
 
 function ProcessingSkeleton() {
   return (
-    <div className="bg-white border border-gray-200 rounded p-12 text-center space-y-3">
+    <div className="bg-white border border-gray-200 rounded-xl p-12 text-center space-y-3">
       <div className="mx-auto h-3 w-1/3 bg-gray-100 rounded animate-pulse" />
       <div className="mx-auto h-3 w-1/4 bg-gray-100 rounded animate-pulse" />
       <p className="text-sm text-gray-500 mt-4">Rendering — usually under 30 seconds.</p>
@@ -194,7 +206,7 @@ function ProcessingSkeleton() {
 
 function FailedNotice() {
   return (
-    <div className="bg-white border border-red-200 rounded p-6 text-sm text-red-700">
+    <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-sm text-red-700">
       Generation failed. Check the report's failure_reason or try again.
     </div>
   );
@@ -225,12 +237,12 @@ function SummaryEditor({
   });
 
   return (
-    <section className="bg-white border border-gray-200 rounded p-4 space-y-3">
+    <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-medium text-gray-700">Executive summary</h2>
+          <div className="eyebrow">Executive summary</div>
           {edited && (
-            <p className="text-xs text-amber-700">
+            <p className="text-xs text-amber-700 mt-1">
               Pinned by you — won't be regenerated on re-runs.
             </p>
           )}
@@ -256,7 +268,7 @@ function SummaryEditor({
             <button
               onClick={() => save.mutate()}
               disabled={save.isPending || !text.trim() || text === initial}
-              className="rounded bg-gray-900 text-white text-sm px-3 py-1.5 font-medium hover:bg-gray-800 disabled:opacity-60"
+              className="ink-btn rounded-md text-white text-sm px-3 py-1.5 font-medium disabled:opacity-60 transition-colors"
             >
               {save.isPending ? 'Saving…' : 'Save'}
             </button>
@@ -268,7 +280,7 @@ function SummaryEditor({
           rows={8}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
           placeholder="Write or paste the executive summary…"
         />
       ) : initial ? (
