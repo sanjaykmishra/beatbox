@@ -31,6 +31,7 @@ public final class EvalRunner {
       String outletName,
       String subjectName,
       String articleText,
+      String contextStyleNotes,
       Map<String, Object> expected) {}
 
   public record Outcome(
@@ -53,7 +54,9 @@ public final class EvalRunner {
       String text = Files.readString(evalDir.resolve(sourceFile), StandardCharsets.UTF_8);
       @SuppressWarnings("unchecked")
       Map<String, Object> expected = (Map<String, Object>) e.getOrDefault("expected", Map.of());
-      items.add(new Item(id, category, url, outletName, subjectName, text, expected));
+      String contextStyleNotes = (String) e.getOrDefault("context_style_notes", null);
+      items.add(
+          new Item(id, category, url, outletName, subjectName, text, contextStyleNotes, expected));
     }
     return items;
   }

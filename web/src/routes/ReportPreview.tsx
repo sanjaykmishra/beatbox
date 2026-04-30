@@ -141,18 +141,29 @@ export function ReportPreview() {
       {r.status === 'processing' && <ProcessingSkeleton />}
       {r.status === 'failed' && <FailedNotice />}
       {r.status === 'ready' && (
-        previewHtml.isLoading ? (
-          <ProcessingSkeleton />
-        ) : previewHtml.error ? (
-          <p className="text-red-600 text-sm">Failed to load preview.</p>
-        ) : (
-          <iframe
-            title="Report preview"
-            srcDoc={previewHtml.data ?? ''}
-            sandbox="allow-same-origin"
-            className="w-full h-[80vh] border border-gray-200 rounded bg-white"
+        <div className="space-y-4">
+          <SummaryEditor
+            reportId={r.id}
+            initial={r.executive_summary ?? ''}
+            edited={!!r.executive_summary_edited}
+            onSaved={() => {
+              qc.invalidateQueries({ queryKey: ['report', r.id] });
+              qc.invalidateQueries({ queryKey: ['report-preview', r.id] });
+            }}
           />
-        )
+          {previewHtml.isLoading ? (
+            <ProcessingSkeleton />
+          ) : previewHtml.error ? (
+            <p className="text-red-600 text-sm">Failed to load preview.</p>
+          ) : (
+            <iframe
+              title="Report preview"
+              srcDoc={previewHtml.data ?? ''}
+              sandbox="allow-same-origin"
+              className="w-full h-[80vh] border border-gray-200 rounded bg-white"
+            />
+          )}
+        </div>
       )}
     </div>
   );
@@ -186,5 +197,86 @@ function FailedNotice() {
     <div className="bg-white border border-red-200 rounded p-6 text-sm text-red-700">
       Generation failed. Check the report's failure_reason or try again.
     </div>
+  );
+}
+
+function SummaryEditor({
+  reportId,
+  initial,
+  edited,
+  onSaved,
+}: {
+  reportId: string;
+  initial: string;
+  edited: boolean;
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState(initial);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = useMutation({
+    mutationFn: () => api.editSummary(reportId, text),
+    onSuccess: () => {
+      setOpen(false);
+      onSaved();
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
+  });
+
+  return (
+    <section className="bg-white border border-gray-200 rounded p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-medium text-gray-700">Executive summary</h2>
+          {edited && (
+            <p className="text-xs text-amber-700">
+              Pinned by you — won't be regenerated on re-runs.
+            </p>
+          )}
+        </div>
+        {!open ? (
+          <button
+            onClick={() => {
+              setOpen(true);
+              setText(initial);
+            }}
+            className="text-sm text-gray-700 hover:text-gray-900 underline"
+          >
+            Edit
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setOpen(false)}
+              className="text-sm text-gray-500 hover:text-gray-900"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => save.mutate()}
+              disabled={save.isPending || !text.trim() || text === initial}
+              className="rounded bg-gray-900 text-white text-sm px-3 py-1.5 font-medium hover:bg-gray-800 disabled:opacity-60"
+            >
+              {save.isPending ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        )}
+      </div>
+      {open ? (
+        <textarea
+          rows={8}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          placeholder="Write or paste the executive summary…"
+        />
+      ) : initial ? (
+        <p className="text-sm text-gray-700 whitespace-pre-wrap">{initial}</p>
+      ) : (
+        <p className="text-sm text-gray-500 italic">No summary yet.</p>
+      )}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+    </section>
   );
 }

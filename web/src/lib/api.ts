@@ -159,6 +159,12 @@ export const api = {
       expires_in_days ? { expires_in_days } : {},
     ),
   revokeShare: (id: string) => request<void>('DELETE', `/v1/reports/${id}/share`),
+  editSummary: (id: string, summary: string) =>
+    request<{ id: string; executive_summary: string; executive_summary_edited: boolean }>(
+      'PATCH',
+      `/v1/reports/${id}/summary`,
+      { summary },
+    ),
   fetchReportPreviewHtml: async (id: string): Promise<string> => {
     const headers: Record<string, string> = {};
     const token = getToken();
@@ -218,6 +224,7 @@ export type Report = {
   period_end: string;
   status: 'draft' | 'processing' | 'ready' | 'failed';
   executive_summary: string | null;
+  executive_summary_edited?: boolean;
   pdf_url: string | null;
   share_token: string | null;
   generated_at: string | null;

@@ -132,4 +132,32 @@ public class ReportRepository {
         .query(MAPPER)
         .optional();
   }
+
+  /** Worker-side: persist an LLM-generated summary only if the user hasn't pinned an edit. */
+  public void setGeneratedSummary(UUID id, String summary) {
+    jdbc.sql(
+            """
+            UPDATE reports SET executive_summary = :s
+            WHERE id = :id AND executive_summary_edited = false
+            """)
+        .param("id", id)
+        .param("s", summary)
+        .update();
+  }
+
+  /** User-side edit: pins executive_summary_edited=true so re-runs don't overwrite. */
+  public Optional<Report> setEditedSummary(UUID workspaceId, UUID id, String summary) {
+    int rows =
+        jdbc.sql(
+                """
+                UPDATE reports SET executive_summary = :s, executive_summary_edited = true
+                WHERE id = :id AND workspace_id = :w AND deleted_at IS NULL
+                """)
+            .param("id", id)
+            .param("w", workspaceId)
+            .param("s", summary)
+            .update();
+    if (rows == 0) return Optional.empty();
+    return findInWorkspace(workspaceId, id);
+  }
 }

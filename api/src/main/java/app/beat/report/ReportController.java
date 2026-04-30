@@ -16,7 +16,9 @@ import app.beat.workspace.WorkspaceRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,6 +31,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -331,6 +334,30 @@ public class ReportController {
         Map.of("expires_in_days", days));
     String base = appBaseUrl == null || appBaseUrl.isBlank() ? "" : appBaseUrl;
     return new ShareResponse(base + "/r/" + token, expiresAt);
+  }
+
+  // ---------- PATCH /v1/reports/:id/summary ----------
+
+  public record EditSummaryRequest(@NotBlank @Size(max = 8000) String summary) {}
+
+  public record SummaryDto(UUID id, String executive_summary, boolean executive_summary_edited) {}
+
+  @PatchMapping("/v1/reports/{id}/summary")
+  public SummaryDto editSummary(
+      @PathVariable UUID id, @Valid @RequestBody EditSummaryRequest body, HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    Report r =
+        reports
+            .setEditedSummary(ctx.workspaceId(), id, body.summary())
+            .orElseThrow(() -> AppException.notFound("Report"));
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.REPORT_SUMMARY_EDITED,
+        "report",
+        r.id(),
+        Map.of());
+    return new SummaryDto(r.id(), r.executiveSummary(), r.executiveSummaryEdited());
   }
 
   @DeleteMapping("/v1/reports/{id}/share")
