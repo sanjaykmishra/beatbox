@@ -3,6 +3,7 @@ package app.beat.social;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Array;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -64,6 +65,11 @@ public class OwnedPostRepository {
     return out == null ? List.of() : List.of(out);
   }
 
+  /** Postgres JDBC can't infer types for {@code java.time.Instant}; convert explicitly. */
+  private static Timestamp ts(Instant i) {
+    return i == null ? null : Timestamp.from(i);
+  }
+
   public OwnedPost insert(
       UUID workspaceId,
       UUID clientId,
@@ -89,7 +95,7 @@ public class OwnedPostRepository {
         .param("content", primaryContentText)
         .param(
             "tp", targetPlatforms == null ? new String[0] : targetPlatforms.toArray(new String[0]))
-        .param("sched", scheduledFor)
+        .param("sched", ts(scheduledFor))
         .param("tz", timezone == null ? "America/Los_Angeles" : timezone)
         .param("series", seriesTag)
         .param("u", draftedByUserId)
@@ -139,8 +145,8 @@ public class OwnedPostRepository {
         .param("status", status)
         .param("series", seriesTag)
         .param("platform", platform)
-        .param("from", from)
-        .param("to", to)
+        .param("from", ts(from))
+        .param("to", ts(to))
         .param("limit", Math.min(Math.max(limit, 1), 500))
         .query(mapper)
         .list();
@@ -182,7 +188,7 @@ public class OwnedPostRepository {
         .param("content", primaryContentText)
         .param("variants", variantsJson)
         .param("tp", targetPlatforms == null ? null : targetPlatforms.toArray(new String[0]))
-        .param("sched", scheduledFor)
+        .param("sched", ts(scheduledFor))
         .param("tz", timezone)
         .param("series", seriesTag)
         .param("assets", assetIds == null ? null : assetIds.toArray(new UUID[0]))
@@ -216,7 +222,7 @@ public class OwnedPostRepository {
         .param("setSubmitted", setSubmitted)
         .param("setApproved", setApproved)
         .param("setPosted", setPosted)
-        .param("now", occurredAt)
+        .param("now", ts(occurredAt))
         .query(mapper)
         .single();
   }

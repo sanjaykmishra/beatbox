@@ -193,9 +193,18 @@ class OwnedPostsIT {
                     json.writeValueAsString(
                         Map.of(
                             "target_platforms", List.of("linkedin", "x", "bluesky"),
+                            "scheduled_for", "2026-12-15T16:00:00Z",
                             "asset_ids", List.of()))))
         .andExpect(MockMvcResultMatchers.status().isOk())
-        .andExpect(MockMvcResultMatchers.jsonPath("$.target_platforms.length()").value(3));
+        .andExpect(MockMvcResultMatchers.jsonPath("$.target_platforms.length()").value(3))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.scheduled_for").exists());
+
+    // List with from/to window (Instant params) — exercises the timestamptz binding too.
+    mvc.perform(
+            MockMvcRequestBuilders.get(
+                    "/v1/posts?from=2026-12-01T00:00:00Z&to=2027-01-01T00:00:00Z")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(MockMvcResultMatchers.status().isOk());
   }
 
   @Test
