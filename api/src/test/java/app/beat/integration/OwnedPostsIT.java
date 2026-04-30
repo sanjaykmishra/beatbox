@@ -163,6 +163,42 @@ class OwnedPostsIT {
   }
 
   @Test
+  void patchAcceptsArrayUpdatesIncludingTargetPlatforms() throws Exception {
+    // Regression for "PATCH 500 when client posts target_platforms": Postgres needs an
+    // explicit cast on the bound array parameter inside COALESCE.
+    var session = signupAndCreateClient();
+    String token = session.token();
+
+    MvcResult created =
+        mvc.perform(
+                MockMvcRequestBuilders.post("/v1/posts")
+                    .header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        json.writeValueAsString(
+                            Map.of(
+                                "client_id", session.clientId(),
+                                "target_platforms", List.of("linkedin")))))
+            .andExpect(MockMvcResultMatchers.status().isCreated())
+            .andReturn();
+    String postId = json.readTree(created.getResponse().getContentAsByteArray()).get("id").asText();
+
+    // PATCH with target_platforms (text[]) and asset_ids (uuid[]) — these go through the
+    // CAST(:tp AS text[]) / CAST(:assets AS uuid[]) paths.
+    mvc.perform(
+            MockMvcRequestBuilders.patch("/v1/posts/" + postId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    json.writeValueAsString(
+                        Map.of(
+                            "target_platforms", List.of("linkedin", "x", "bluesky"),
+                            "asset_ids", List.of()))))
+        .andExpect(MockMvcResultMatchers.status().isOk())
+        .andExpect(MockMvcResultMatchers.jsonPath("$.target_platforms.length()").value(3));
+  }
+
+  @Test
   void rejectsUnknownPlatform() throws Exception {
     var session = signupAndCreateClient();
     mvc.perform(
