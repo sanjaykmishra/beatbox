@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 WORKDIR /app
 COPY --from=build /app/dist ./dist
-COPY render/package.json ./
+COPY render/package.json render/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 EXPOSE 3000
 CMD ["node","dist/server.js"]
