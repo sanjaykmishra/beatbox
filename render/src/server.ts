@@ -1,5 +1,16 @@
 import express from 'express';
 import puppeteer, { type Browser } from 'puppeteer';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Handlebars from 'handlebars';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+// dist/server.js → templates/ at ../templates relative to dist; src/server.ts → ../templates from src.
+const TEMPLATES_DIR = resolve(__dirname, '../templates');
+
+const STANDARD_HBS = readFileSync(resolve(TEMPLATES_DIR, 'standard.hbs'), 'utf-8');
+const standardTemplate = Handlebars.compile(STANDARD_HBS);
 
 const app = express();
 app.use(express.json({ limit: '4mb' }));
@@ -42,9 +53,47 @@ app.get('/healthz', (_req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-app.post('/render', requireServiceToken, (_req, res) => {
-  // Implemented in week 6 — see docs/08-build-plan.md.
-  res.status(501).json({ error: 'not_implemented' });
+function renderHtml(payload: unknown): string {
+  return standardTemplate(payload);
+}
+
+app.post('/preview', requireServiceToken, (req, res) => {
+  try {
+    const html = renderHtml(req.body);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown';
+    res.status(400).json({ error: 'render_failed', detail: message });
+  }
+});
+
+app.post('/render', requireServiceToken, async (req, res) => {
+  let page: Awaited<ReturnType<Browser['newPage']>> | null = null;
+  try {
+    const html = renderHtml(req.body);
+    const browser = await getBrowser();
+    page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30_000 });
+    const pdf = await page.pdf({
+      format: 'Letter',
+      printBackground: true,
+      margin: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' },
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.send(Buffer.from(pdf));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown';
+    res.status(502).json({ error: 'render_failed', detail: message });
+  } finally {
+    if (page) {
+      try {
+        await page.close();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 });
 
 app.post('/screenshot', requireServiceToken, async (req, res) => {

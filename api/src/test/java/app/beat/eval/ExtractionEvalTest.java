@@ -40,6 +40,8 @@ public class ExtractionEvalTest {
     PromptTemplate tmpl = loader.get("extraction-v1");
     assertThat(tmpl.body())
         .contains("{{url}}", "{{outlet_name}}", "{{subject_name}}", "{{article_text}}");
+    PromptTemplate tmpl11 = loader.get("extraction-v1-1");
+    assertThat(tmpl11.body()).contains("{{client_context}}");
 
     // Validate the comparison logic against a synthetic-but-shape-correct response.
     List<EvalRunner.Outcome> outcomes = new ArrayList<>();
@@ -82,16 +84,25 @@ public class ExtractionEvalTest {
     int schemaOk = 0;
     int hallucinations = 0;
     List<EvalRunner.Outcome> outcomes = new ArrayList<>();
+    PromptTemplate tmplWithContext = loader.get("extraction-v1-1");
     for (var it : items) {
-      String rendered =
-          tmpl.render(
-              Map.of(
-                  "url", String.valueOf(it.url()),
-                  "outlet_name", String.valueOf(it.outletName()),
-                  "subject_name", String.valueOf(it.subjectName()),
-                  "article_text", it.articleText()));
-      AnthropicClient.Result r =
-          client.call(tmpl.model(), tmpl.temperature(), tmpl.maxTokens(), rendered);
+      boolean hasContext = it.contextStyleNotes() != null && !it.contextStyleNotes().isBlank();
+      PromptTemplate t = hasContext ? tmplWithContext : tmpl;
+      Map<String, String> vars = new java.util.HashMap<>();
+      vars.put("url", String.valueOf(it.url()));
+      vars.put("outlet_name", String.valueOf(it.outletName()));
+      vars.put("subject_name", String.valueOf(it.subjectName()));
+      vars.put("article_text", it.articleText());
+      if (hasContext) {
+        vars.put(
+            "client_context",
+            "Relevant context about "
+                + it.subjectName()
+                + ":\n- Style notes: "
+                + it.contextStyleNotes());
+      }
+      String rendered = t.render(vars);
+      AnthropicClient.Result r = client.call(t.model(), t.temperature(), t.maxTokens(), rendered);
       boolean ok;
       Map<String, Object> got = new LinkedHashMap<>();
       List<String> failures = new ArrayList<>();

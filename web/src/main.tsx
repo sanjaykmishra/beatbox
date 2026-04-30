@@ -12,6 +12,8 @@ import { ClientDetail } from './routes/ClientDetail';
 import { Settings } from './routes/Settings';
 import { NewReport } from './routes/NewReport';
 import { ReportReview } from './routes/ReportReview';
+import { ReportPreview } from './routes/ReportPreview';
+import { ClientContextEditor } from './routes/ClientContextEditor';
 import './styles.css';
 
 const queryClient = new QueryClient({
@@ -35,8 +37,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             >
               <Route path="/clients" element={<Clients />} />
               <Route path="/clients/:id" element={<ClientDetail />} />
+              <Route path="/clients/:id/context" element={<ClientContextEditor />} />
               <Route path="/clients/:id/reports/new" element={<NewReport />} />
               <Route path="/reports/:id" element={<ReportReview />} />
+              <Route path="/reports/:id/preview" element={<ReportPreview />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<Navigate to="/clients" replace />} />

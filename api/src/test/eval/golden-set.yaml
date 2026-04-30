@@ -76,3 +76,26 @@
     sentiment: mixed
     subject_prominence: feature
     topics_must_include_any_of: [earnings]
+
+# Context-aware items per docs/15-additions.md §15.1.
+# context_style_notes is rendered into prompts/extraction-v1-1.md to test that
+# the LLM respects the agency's preferred names/spellings.
+
+- id: style_notes_acme
+  source_file: articles/style_notes_acme.txt
+  category: standard_b2b
+  url: https://example-profile.com/2026/01/14/acme-mike
+  outlet_name: Example Profile
+  subject_name: Acme Corp
+  context_style_notes: "CEO is Mike, never Michael. The company name 'Acme Corp' is two words; the CEO's family name is also Acme."
+  expected:
+    headline_contains: "Acme"
+    sentiment: positive
+    subject_prominence: feature
+    topics_must_include_any_of: [leadership, strategy]
+    must_include_facts:
+      - "Mike"
+    must_not_include:
+      - "Michael"
+      - "groundbreaking"
+      - "revolutionary"

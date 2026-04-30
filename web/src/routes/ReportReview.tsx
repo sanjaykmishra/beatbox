@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError, type CoverageItemView, type Report } from '../lib/api';
 
 export function ReportReview() {
   const { id = '' } = useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   const report = useQuery({
     queryKey: ['report', id],
@@ -18,6 +20,13 @@ export function ReportReview() {
       );
       return inFlight ? 2000 : false;
     },
+  });
+
+  const generate = useMutation({
+    mutationFn: () => api.generateReport(id),
+    onSuccess: () => navigate(`/reports/${id}/preview`),
+    onError: (e) =>
+      setGenerateError(e instanceof ApiError ? e.message : 'Generate failed'),
   });
 
   const counts = useMemo(() => countByStatus(report.data?.coverage_items ?? []), [report.data]);
@@ -56,7 +65,8 @@ export function ReportReview() {
         <div className="flex items-center gap-3">
           <CountsBadge counts={counts} />
           <button
-            disabled={!canGenerate}
+            disabled={!canGenerate || generate.isPending}
+            onClick={() => generate.mutate()}
             className="rounded bg-gray-900 text-white px-4 py-2 font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
             title={
               canGenerate
@@ -64,10 +74,11 @@ export function ReportReview() {
                 : 'Wait for all extractions to finish; need at least one done item.'
             }
           >
-            Generate report →
+            {generate.isPending ? 'Generating…' : 'Generate report →'}
           </button>
         </div>
       </div>
+      {generateError && <p className="text-sm text-red-600">{generateError}</p>}
 
       {r.coverage_items.length === 0 ? (
         <p className="text-gray-500">No coverage items yet.</p>

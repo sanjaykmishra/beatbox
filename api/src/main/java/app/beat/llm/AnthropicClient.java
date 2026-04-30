@@ -1,5 +1,7 @@
 package app.beat.llm;
 
+import app.beat.activity.ActivityRecorder;
+import app.beat.activity.EventKinds;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -34,6 +36,7 @@ public class AnthropicClient {
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
   private final ObjectMapper json = new ObjectMapper();
   private final String apiKey;
+  private final ActivityRecorder activity;
 
   // Approx Sonnet-class pricing per million tokens. Update when contract changes.
   private static final BigDecimal SONNET_INPUT_PER_MTOK = new BigDecimal("3.00");
@@ -41,8 +44,18 @@ public class AnthropicClient {
   private static final BigDecimal OPUS_INPUT_PER_MTOK = new BigDecimal("15.00");
   private static final BigDecimal OPUS_OUTPUT_PER_MTOK = new BigDecimal("75.00");
 
-  public AnthropicClient(@Value("${ANTHROPIC_API_KEY:}") String apiKey) {
+  @org.springframework.beans.factory.annotation.Autowired
+  public AnthropicClient(
+      @Value("${ANTHROPIC_API_KEY:}") String apiKey,
+      @org.springframework.beans.factory.annotation.Autowired(required = false)
+          ActivityRecorder activity) {
     this.apiKey = apiKey;
+    this.activity = activity;
+  }
+
+  /** Test convenience: construct without the activity recorder. */
+  public AnthropicClient(String apiKey) {
+    this(apiKey, null);
   }
 
   public boolean isConfigured() {
@@ -87,6 +100,23 @@ public class AnthropicClient {
           Result r = parseResult(model, res.body());
           long durMs = System.currentTimeMillis() - started;
           logCall(model, r, durMs, "success");
+          if (activity != null) {
+            activity.recordSystem(
+                EventKinds.LLM_CALL_COMPLETED,
+                "llm_call",
+                null,
+                java.util.Map.of(
+                    "model",
+                    model,
+                    "input_tokens",
+                    r.inputTokens(),
+                    "output_tokens",
+                    r.outputTokens(),
+                    "cost_usd",
+                    r.costUsd().toPlainString(),
+                    "duration_ms",
+                    durMs));
+          }
           return r;
         }
         boolean retryable = status == 429 || status / 100 == 5;

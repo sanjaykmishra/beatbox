@@ -102,6 +102,7 @@ These exist because failure here is high-cost. Don't relax them without explicit
 4. **Cell-level edits always win.** When a user edits an extracted field on a coverage item, that edit is sticky across re-runs. Worker code must respect `is_user_edited` flags.
 5. **Reports lock at generation time.** Once a report is finalized, coverage_items are frozen. Re-runs require explicit user action.
 6. **Brand-safe by default.** Every PDF carries the agency's branding (their logo, their colors), never Beat's. Beat is invisible to the agency's clients.
+7. **Activity events fire on every meaningful action.** When adding new mutations, add the corresponding `activity_events` write. The founder dashboard, customer analytics, and Phase 3+ features depend on this discipline. See `docs/15-additions.md` §15.2.
 
 ## Where to find things
 
@@ -114,6 +115,11 @@ These exist because failure here is high-cost. Don't relax them without explicit
 - **Wireframes for the core flow:** `docs/07-wireframes.md` (PNGs in `assets/`)
 - **Phase 1 build plan, week by week:** `docs/08-build-plan.md`
 - **Customer discovery script (founder reference, not for code):** `docs/09-discovery-script.md`
+- **Roadmap overview, phase gates:** `docs/10-roadmap-overview.md`
+- **Phase 2 (months 4–7) — expand the wedge:** `docs/11-phase-2-features.md`
+- **Phase 3 (months 7–12) — pitch tracker:** `docs/12-phase-3-pitch-tracker.md`
+- **Phase 4 (year 2) — platform:** `docs/13-phase-4-platform.md`
+- **Additions to canonical roadmap (client context, instrumentation, digest):** `docs/15-additions.md`
 
 ## Getting started with Claude Code
 
