@@ -2,14 +2,20 @@ package app.beat.report;
 
 import app.beat.activity.ActivityRecorder;
 import app.beat.activity.EventKinds;
+import app.beat.auth.SessionTokens;
 import app.beat.client.ClientRepository;
 import app.beat.coverage.CoverageItem;
 import app.beat.coverage.CoverageItemRepository;
 import app.beat.infra.AppException;
 import app.beat.infra.RequestContext;
 import app.beat.outlet.OutletRepository;
+import app.beat.render.RenderClient;
+import app.beat.render.RenderJobRepository;
+import app.beat.render.RenderPayloadBuilder;
+import app.beat.workspace.WorkspaceRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -17,8 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,18 +45,33 @@ public class ReportController {
   private final CoverageItemRepository coverage;
   private final OutletRepository outlets;
   private final ActivityRecorder activity;
+  private final WorkspaceRepository workspaces;
+  private final RenderJobRepository renderJobs;
+  private final RenderClient renderClient;
+  private final RenderPayloadBuilder renderPayloads;
+  private final String appBaseUrl;
 
   public ReportController(
       ReportRepository reports,
       ClientRepository clients,
       CoverageItemRepository coverage,
       OutletRepository outlets,
-      ActivityRecorder activity) {
+      ActivityRecorder activity,
+      WorkspaceRepository workspaces,
+      RenderJobRepository renderJobs,
+      RenderClient renderClient,
+      RenderPayloadBuilder renderPayloads,
+      @Value("${APP_BASE_URL:}") String appBaseUrl) {
     this.reports = reports;
     this.clients = clients;
     this.coverage = coverage;
     this.outlets = outlets;
     this.activity = activity;
+    this.workspaces = workspaces;
+    this.renderJobs = renderJobs;
+    this.renderClient = renderClient;
+    this.renderPayloads = renderPayloads;
+    this.appBaseUrl = appBaseUrl;
   }
 
   public record CreateReportRequest(
@@ -187,5 +211,143 @@ public class ReportController {
             .getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ROOT)
         + " "
         + body.period_end().getYear();
+  }
+
+  // ---------- POST /v1/reports/:id/generate ----------
+
+  public record GenerateResponse(UUID id, String status) {}
+
+  @PostMapping("/v1/reports/{id}/generate")
+  public ResponseEntity<GenerateResponse> generate(@PathVariable UUID id, HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    Report r =
+        reports
+            .findInWorkspace(ctx.workspaceId(), id)
+            .orElseThrow(() -> AppException.notFound("Report"));
+    if (!"draft".equals(r.status())) {
+      throw AppException.badRequest(
+          "/errors/report-not-draft",
+          "Report not in draft",
+          "Only draft reports can be generated.");
+    }
+    var items = coverage.listByReport(r.id());
+    boolean anyInflight =
+        items.stream()
+            .anyMatch(
+                i ->
+                    "queued".equals(i.extractionStatus())
+                        || "running".equals(i.extractionStatus()));
+    long doneCount = items.stream().filter(i -> "done".equals(i.extractionStatus())).count();
+    if (anyInflight) {
+      throw AppException.badRequest(
+          "/errors/extraction-pending",
+          "Extraction still running",
+          "Wait for all extractions to complete.");
+    }
+    if (doneCount == 0) {
+      throw AppException.badRequest(
+          "/errors/no-done-items",
+          "No done items",
+          "At least one coverage item must be successfully extracted.");
+    }
+    reports.setStatus(r.id(), "processing");
+    renderJobs.enqueue(r.id());
+    return ResponseEntity.status(HttpStatus.ACCEPTED)
+        .body(new GenerateResponse(r.id(), "processing"));
+  }
+
+  // ---------- GET /v1/reports/:id/pdf ----------
+
+  @GetMapping("/v1/reports/{id}/pdf")
+  public ResponseEntity<Void> downloadPdf(@PathVariable UUID id, HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    Report r =
+        reports
+            .findInWorkspace(ctx.workspaceId(), id)
+            .orElseThrow(() -> AppException.notFound("Report"));
+    if (r.pdfUrl() == null) throw AppException.notFound("PDF not yet ready");
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.REPORT_PDF_DOWNLOADED,
+        "report",
+        r.id(),
+        Map.of());
+    return ResponseEntity.status(HttpStatus.FOUND).header("Location", r.pdfUrl()).build();
+  }
+
+  // ---------- GET /v1/reports/:id/preview ----------
+
+  @GetMapping(value = "/v1/reports/{id}/preview", produces = MediaType.TEXT_HTML_VALUE)
+  public ResponseEntity<String> preview(@PathVariable UUID id, HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    Report r =
+        reports
+            .findInWorkspace(ctx.workspaceId(), id)
+            .orElseThrow(() -> AppException.notFound("Report"));
+    var ws =
+        workspaces.findById(r.workspaceId()).orElseThrow(() -> AppException.notFound("Workspace"));
+    var client =
+        clients
+            .findInWorkspace(r.workspaceId(), r.clientId())
+            .orElseThrow(() -> AppException.notFound("Client"));
+    var items = coverage.listByReport(r.id());
+    var payload = renderPayloads.build(ws, client, r, items);
+    String html = renderClient.renderHtml(payload);
+    return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
+  }
+
+  // ---------- POST + DELETE /v1/reports/:id/share ----------
+
+  public record ShareRequest(@Min(1) Integer expires_in_days) {}
+
+  public record ShareResponse(String share_url, Instant expires_at) {}
+
+  @PostMapping("/v1/reports/{id}/share")
+  public ShareResponse share(
+      @PathVariable UUID id,
+      @Valid @RequestBody(required = false) ShareRequest body,
+      HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    Report r =
+        reports
+            .findInWorkspace(ctx.workspaceId(), id)
+            .orElseThrow(() -> AppException.notFound("Report"));
+    if (!"ready".equals(r.status())) {
+      throw AppException.badRequest(
+          "/errors/report-not-ready", "Report not ready", "Generate the report before sharing.");
+    }
+    int days = (body == null || body.expires_in_days() == null) ? 30 : body.expires_in_days();
+    Instant expiresAt = Instant.now().plus(java.time.Duration.ofDays(days));
+    String token = SessionTokens.generate();
+    String tokenHash = SessionTokens.hash(token);
+    reports.setShareToken(r.id(), tokenHash, expiresAt);
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.REPORT_SHARED,
+        "report",
+        r.id(),
+        Map.of("expires_in_days", days));
+    String base = appBaseUrl == null || appBaseUrl.isBlank() ? "" : appBaseUrl;
+    return new ShareResponse(base + "/r/" + token, expiresAt);
+  }
+
+  @DeleteMapping("/v1/reports/{id}/share")
+  public ResponseEntity<Void> revokeShare(@PathVariable UUID id, HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    Report r =
+        reports
+            .findInWorkspace(ctx.workspaceId(), id)
+            .orElseThrow(() -> AppException.notFound("Report"));
+    reports.setShareToken(r.id(), null, null);
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.REPORT_SHARE_REVOKED,
+        "report",
+        r.id(),
+        Map.of());
+    return ResponseEntity.noContent().build();
   }
 }

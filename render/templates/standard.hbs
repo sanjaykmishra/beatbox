@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{report.title}} — {{client.name}}</title>
+  <style>
+    :root {
+      --primary: #{{branding.primary_color}};
+      --ink: #111827;
+      --ink-soft: #4b5563;
+      --line: #e5e7eb;
+      --bg: #ffffff;
+      --bg-soft: #f9fafb;
+    }
+    * { box-sizing: border-box; }
+    @page { size: Letter; margin: 0.5in; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      font-size: 10.5pt;
+      line-height: 1.45;
+    }
+    section { page-break-inside: avoid; }
+    .page-break { page-break-after: always; }
+    h1, h2, h3 { color: var(--ink); margin: 0 0 0.4em; font-weight: 600; }
+    h1 { font-size: 28pt; letter-spacing: -0.01em; line-height: 1.1; }
+    h2 { font-size: 14pt; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-top: 28px; }
+    h3 { font-size: 11pt; }
+    p { margin: 0 0 0.6em; }
+    .muted { color: var(--ink-soft); font-size: 9pt; }
+
+    /* ----- Cover ----- */
+    .cover {
+      min-height: 9.2in;
+      display: flex;
+      flex-direction: column;
+      padding: 0.4in 0;
+    }
+    .cover-header { display: flex; align-items: center; gap: 14px; }
+    .cover-header .logo {
+      width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: var(--bg-soft);
+    }
+    .cover-header .agency-name { font-weight: 600; font-size: 11pt; color: var(--ink-soft); }
+    .cover-band { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .cover-eyebrow { color: var(--primary); font-weight: 600; font-size: 11pt; letter-spacing: 0.04em; text-transform: uppercase; }
+    .cover-title { font-size: 36pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; margin-top: 8px; }
+    .cover-period { font-size: 13pt; color: var(--ink-soft); margin-top: 14px; }
+
+    /* ----- Executive summary ----- */
+    .summary p:first-child::first-line { font-weight: 500; }
+
+    /* ----- At a glance ----- */
+    .glance { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 8px; }
+    .glance .tile {
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 14px;
+    }
+    .glance .label { color: var(--ink-soft); font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; }
+    .glance .value { font-size: 22pt; font-weight: 700; margin-top: 4px; color: var(--ink); }
+    .glance .accent { border-top: 3px solid var(--primary); }
+
+    /* ----- Highlights ----- */
+    .highlights { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .highlight {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 14px;
+      display: flex;
+      gap: 12px;
+    }
+    .highlight .thumb {
+      width: 84px; height: 56px; flex: none; background: var(--bg-soft); border-radius: 4px; object-fit: cover;
+    }
+    .highlight .meta { color: var(--ink-soft); font-size: 8.5pt; }
+    .highlight .headline { font-weight: 600; font-size: 10.5pt; margin-top: 2px; }
+    .highlight .lede { color: var(--ink-soft); font-size: 9pt; margin-top: 4px; }
+
+    /* ----- Coverage list ----- */
+    .coverage-list { list-style: none; padding: 0; margin: 0; }
+    .coverage-item { padding: 12px 0; border-bottom: 1px solid var(--line); display: flex; gap: 12px; }
+    .coverage-item:last-child { border-bottom: none; }
+    .coverage-item .thumb { width: 84px; height: 56px; flex: none; background: var(--bg-soft); border-radius: 4px; object-fit: cover; }
+    .coverage-item .info { flex: 1; min-width: 0; }
+    .coverage-item .info .meta { color: var(--ink-soft); font-size: 8.5pt; display: flex; gap: 8px; flex-wrap: wrap; }
+    .coverage-item .info .headline { font-weight: 600; margin-top: 2px; }
+    .coverage-item .info .summary { color: var(--ink-soft); font-size: 9pt; margin-top: 4px; }
+    .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 8pt; }
+    .badge.tier-1 { background: var(--primary); color: white; }
+    .badge.tier-2 { background: var(--bg-soft); color: var(--ink); border: 1px solid var(--line); }
+    .badge.tier-3 { background: var(--bg-soft); color: var(--ink-soft); border: 1px solid var(--line); }
+    .badge.sentiment-positive { background: #ecfdf5; color: #065f46; }
+    .badge.sentiment-neutral { background: var(--bg-soft); color: var(--ink-soft); }
+    .badge.sentiment-mixed { background: #fef3c7; color: #92400e; }
+    .badge.sentiment-negative { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+
+  <!-- COVER -->
+  <section class="cover">
+    <div class="cover-header">
+      {{#if branding.logo_url}}
+        <img class="logo" src="{{branding.logo_url}}" alt="" />
+      {{else}}
+        <div class="logo"></div>
+      {{/if}}
+      <div class="agency-name">{{branding.agency_name}}</div>
+    </div>
+    <div class="cover-band">
+      <div class="cover-eyebrow">Coverage report</div>
+      <div class="cover-title">{{client.name}}</div>
+      <div class="cover-period">{{report.period_label}}</div>
+    </div>
+  </section>
+  <div class="page-break"></div>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <section class="summary">
+    <h2>Executive summary</h2>
+    {{#if report.executive_summary}}
+      {{#each report.executive_summary_paragraphs}}
+        <p>{{this}}</p>
+      {{/each}}
+    {{else}}
+      <p class="muted">Executive summary will be generated when the report is finalized.</p>
+    {{/if}}
+  </section>
+
+  <!-- AT A GLANCE -->
+  <section>
+    <h2>At a glance</h2>
+    <div class="glance">
+      <div class="tile accent">
+        <div class="label">Total coverage</div>
+        <div class="value">{{glance.total}}</div>
+      </div>
+      <div class="tile">
+        <div class="label">Tier-1</div>
+        <div class="value">{{glance.tier_1}}</div>
+      </div>
+      <div class="tile">
+        <div class="label">Outlets</div>
+        <div class="value">{{glance.outlets}}</div>
+      </div>
+      <div class="tile">
+        <div class="label">Estimated reach</div>
+        <div class="value">{{glance.reach_human}}</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HIGHLIGHTS -->
+  {{#if highlights.length}}
+  <section>
+    <h2>Highlights</h2>
+    <div class="highlights">
+      {{#each highlights}}
+        <div class="highlight">
+          {{#if screenshot_url}}
+            <img class="thumb" src="{{screenshot_url}}" alt="" />
+          {{else}}
+            <div class="thumb"></div>
+          {{/if}}
+          <div>
+            <div class="meta">
+              {{#if outlet_name}}{{outlet_name}}{{/if}}
+              {{#if publish_date}} · {{publish_date}}{{/if}}
+              {{#if tier}} · <span class="badge tier-{{tier}}">Tier {{tier}}</span>{{/if}}
+            </div>
+            <div class="headline">{{headline}}</div>
+            {{#if lede}}<div class="lede">{{lede}}</div>{{/if}}
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  </section>
+  {{/if}}
+
+  <!-- COVERAGE LIST -->
+  <section>
+    <h2>Coverage</h2>
+    <ul class="coverage-list">
+      {{#each coverage_items}}
+        <li class="coverage-item">
+          {{#if screenshot_url}}
+            <img class="thumb" src="{{screenshot_url}}" alt="" />
+          {{else}}
+            <div class="thumb"></div>
+          {{/if}}
+          <div class="info">
+            <div class="meta">
+              {{#if outlet_name}}<span>{{outlet_name}}</span>{{/if}}
+              {{#if publish_date}}<span>{{publish_date}}</span>{{/if}}
+              {{#if tier}}<span class="badge tier-{{tier}}">Tier {{tier}}</span>{{/if}}
+              {{#if sentiment}}<span class="badge sentiment-{{sentiment}}">{{sentiment}}</span>{{/if}}
+            </div>
+            <div class="headline">{{headline}}</div>
+            {{#if summary}}
+              <div class="summary">{{summary}}</div>
+            {{else if lede}}
+              <div class="summary">{{lede}}</div>
+            {{/if}}
+          </div>
+        </li>
+      {{/each}}
+    </ul>
+  </section>
+
+</body>
+</html>

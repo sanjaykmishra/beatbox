@@ -148,7 +148,42 @@ export const api = {
     request<ClientContext>('GET', `/v1/clients/${clientId}/context`),
   putClientContext: (clientId: string, b: ClientContextInput) =>
     request<ClientContext>('PUT', `/v1/clients/${clientId}/context`, b),
+
+  // ----- Report generation, share, PDF (week 6) -----
+  generateReport: (id: string) =>
+    request<{ id: string; status: string }>('POST', `/v1/reports/${id}/generate`),
+  shareReport: (id: string, expires_in_days?: number) =>
+    request<{ share_url: string; expires_at: string }>(
+      'POST',
+      `/v1/reports/${id}/share`,
+      expires_in_days ? { expires_in_days } : {},
+    ),
+  revokeShare: (id: string) => request<void>('DELETE', `/v1/reports/${id}/share`),
+  fetchReportPreviewHtml: async (id: string): Promise<string> => {
+    const headers: Record<string, string> = {};
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`/v1/reports/${id}/preview`, { headers });
+    if (!res.ok) throw new ApiError({ title: `HTTP ${res.status}` }, res.status);
+    return res.text();
+  },
+  fetchReportPdfBlob: async (id: string): Promise<Blob> => {
+    const headers: Record<string, string> = {};
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`/v1/reports/${id}/pdf`, { headers });
+    if (!res.ok) throw new ApiError({ title: `HTTP ${res.status}` }, res.status);
+    return res.blob();
+  },
 };
+
+/** Build URLs that the browser navigates to (PDF download follows the 302 redirect). */
+export function previewUrl(reportId: string): string {
+  return `/v1/reports/${reportId}/preview`;
+}
+export function pdfDownloadUrl(reportId: string): string {
+  return `/v1/reports/${reportId}/pdf`;
+}
 
 export type ClientContext = {
   id: string;
