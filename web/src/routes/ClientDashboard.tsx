@@ -233,11 +233,11 @@ function AlertCardView({ alert }: { alert: AlertCard }) {
 function alertTone(s: Severity): { bg: string; border: string; action: string } {
   switch (s) {
     case 'red':
-      return { bg: 'bg-red-50', border: 'border-red-200', action: 'text-red-700' };
+      return { bg: 'bg-red-100/70', border: 'border-red-200', action: 'text-red-700' };
     case 'amber':
-      return { bg: 'bg-amber-50', border: 'border-amber-200', action: 'text-amber-800' };
+      return { bg: 'bg-amber-100/70', border: 'border-amber-200', action: 'text-amber-800' };
     case 'blue':
-      return { bg: 'bg-blue-50', border: 'border-blue-200', action: 'text-blue-700' };
+      return { bg: 'bg-blue-100/70', border: 'border-blue-200', action: 'text-blue-700' };
     default:
       return { bg: 'bg-white', border: 'border-gray-200', action: 'text-gray-700' };
   }
@@ -247,7 +247,7 @@ function HealthyEmptyState({ clientName }: { clientName: string }) {
   return (
     <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center">
       <div
-        className="mx-auto inline-flex items-center justify-center h-9 w-9 rounded-full bg-emerald-50 text-emerald-700 text-lg"
+        className="mx-auto inline-flex items-center justify-center h-9 w-9 rounded-full bg-emerald-100 text-emerald-700 text-lg"
         aria-hidden
       >
         ✓

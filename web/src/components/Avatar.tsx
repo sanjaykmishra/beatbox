@@ -1,15 +1,17 @@
 // Initials-and-color avatar for clients/workspaces. Uses the entity's brand color when set;
 // otherwise picks a deterministic muted color from the name so each row stays visually distinct.
 
-const PALETTE = [
-  '#1F2937', // slate
-  '#4F46E5', // indigo
-  '#0891B2', // cyan
-  '#059669', // emerald
-  '#B45309', // amber
-  '#BE123C', // rose
-  '#7C3AED', // violet
-  '#0F766E', // teal
+// Pastel pairs (Tailwind ~100 background, ~900 text) for the default deterministic
+// avatar look. Agencies who set a primary_color get the saturated brand path below.
+const PALETTE: { bg: string; fg: string }[] = [
+  { bg: '#FEE2E2', fg: '#7F1D1D' }, // red
+  { bg: '#FEF3C7', fg: '#78350F' }, // amber
+  { bg: '#DBEAFE', fg: '#1E3A8A' }, // blue
+  { bg: '#DCFCE7', fg: '#14532D' }, // green
+  { bg: '#E0E7FF', fg: '#312E81' }, // indigo
+  { bg: '#FCE7F3', fg: '#831843' }, // pink
+  { bg: '#EDE9FE', fg: '#4C1D95' }, // violet
+  { bg: '#CCFBF1', fg: '#134E4A' }, // teal
 ];
 
 function hash(s: string): number {
@@ -18,7 +20,7 @@ function hash(s: string): number {
   return h;
 }
 
-function pickColor(seed: string): string {
+function pickColor(seed: string): { bg: string; fg: string } {
   return PALETTE[hash(seed) % PALETTE.length];
 }
 
@@ -50,11 +52,22 @@ export function Avatar({
   if (logoUrl) {
     return <img src={logoUrl} alt="" className={`${cls} rounded-lg object-cover flex-none`} />;
   }
-  const bg = primaryColor ? `#${primaryColor}` : pickColor(name);
+  if (primaryColor) {
+    return (
+      <div
+        className={`${cls} rounded-lg flex-none flex items-center justify-center font-semibold text-white tracking-tight`}
+        style={{ background: `#${primaryColor}` }}
+        aria-hidden
+      >
+        {initials(name)}
+      </div>
+    );
+  }
+  const { bg, fg } = pickColor(name);
   return (
     <div
-      className={`${cls} rounded-lg flex-none flex items-center justify-center font-semibold text-white tracking-tight`}
-      style={{ background: bg }}
+      className={`${cls} rounded-lg flex-none flex items-center justify-center font-semibold tracking-tight`}
+      style={{ background: bg, color: fg }}
       aria-hidden
     >
       {initials(name)}

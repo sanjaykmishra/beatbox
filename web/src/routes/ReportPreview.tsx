@@ -206,7 +206,7 @@ function ProcessingSkeleton() {
 
 function FailedNotice() {
   return (
-    <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-sm text-red-700">
+    <div className="bg-red-100/70 border border-red-200 rounded-xl p-6 text-sm text-red-700">
       Generation failed. Check the report's failure_reason or try again.
     </div>
   );
