@@ -1,0 +1,45 @@
+name: Eval
+
+on:
+  pull_request:
+    paths:
+      - 'prompts/**'
+      - 'api/src/main/java/app/beat/llm/**'
+      - 'api/src/main/java/app/beat/extraction/**'
+      - 'api/src/test/eval/**'
+      - 'api/src/test/java/app/beat/eval/**'
+      - 'api/src/test/java/app/beat/llm/**'
+      - '.github/workflows/eval.yml'
+  schedule:
+    - cron: '0 6 * * *'  # nightly
+  workflow_dispatch:
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    env:
+      # Live LLM evaluation runs only when this secret is set in repo settings.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Run eval (live if ANTHROPIC_API_KEY secret is set, otherwise dry-run)
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            ./gradlew --no-daemon test --tests 'app.beat.eval.*' \
+              -Dbeat.eval.live=true
+          else
+            ./gradlew --no-daemon test --tests 'app.beat.eval.*'
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-reports
+          path: api/src/test/eval/reports/

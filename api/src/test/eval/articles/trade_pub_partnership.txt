@@ -1,0 +1,9 @@
+Acme Corp partners with Foo Corp on enterprise integration
+
+By Industry Wire · November 5, 2025
+
+Acme Corp announced a strategic partnership with Foo Corp today, expanding the joint integration between Acme's workflow automation platform and Foo Corp's enterprise data platform. Under the partnership, joint customers will be able to surface Acme workflows directly inside Foo's analytics dashboards.
+
+Acme CEO Jane Doe said the partnership "deepens an integration our shared customers have been asking for." Foo Corp's head of partnerships Linda Chen said the integration was driven by overlapping demand at twelve mutual enterprise accounts.
+
+The integration is generally available to existing Acme and Foo Corp customers starting today, with no additional licensing cost. Acme expects the partnership to accelerate its enterprise pipeline and open new co-sell motions over the coming quarters.

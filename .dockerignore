@@ -1,0 +1,29 @@
+# Build contexts should not include caches, build outputs, or vendored deps.
+**/.git
+**/.gitignore
+**/.github
+**/.idea
+**/.vscode
+**/.DS_Store
+
+**/node_modules
+**/dist
+**/.vite
+**/*.tsbuildinfo
+
+api/.gradle
+api/build
+api/bin
+api/out
+
+# Test coverage report dirs only — anchored so they don't swallow the
+# app.beat.coverage Java package or web/render coverage source dirs.
+/coverage/
+**/web/coverage/
+**/render/coverage/
+api/build/reports/
+
+**/*.log
+.env
+.env.*
+!.env.example

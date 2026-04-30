@@ -1,0 +1,11 @@
+Acme Corp's Q3: Strong revenue growth, weaker margins
+
+By Reporter · December 1, 2025
+
+Acme Corp posted Q3 revenue of $24 million, up 65 percent year-over-year, exceeding analyst expectations. The result reflects continued strength in the company's enterprise tier, which now accounts for over half of total ARR.
+
+However, gross margins compressed to 62 percent, down from 71 percent in the same quarter last year. Executives attributed the decline to higher inference costs as the company scaled its AI features and to incentive pricing offered to win three large enterprise deals.
+
+CEO Jane Doe said the company would prioritize margin recovery over the next two quarters. "We're confident the unit economics improve as we move customers up the platform," she said. Net dollar retention remained strong at 132 percent, though the company saw a small uptick in churn at the lower end of the customer base.
+
+Investors had a mixed reaction, with the stock initially climbing on the revenue beat before giving back gains as analysts probed margin guidance on the earnings call.

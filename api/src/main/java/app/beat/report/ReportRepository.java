@@ -1,0 +1,89 @@
+package app.beat.report;
+
+import java.sql.ResultSet;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class ReportRepository {
+
+  private final JdbcClient jdbc;
+
+  public ReportRepository(JdbcClient jdbc) {
+    this.jdbc = jdbc;
+  }
+
+  static final RowMapper<Report> MAPPER =
+      (ResultSet rs, int n) ->
+          new Report(
+              rs.getObject("id", UUID.class),
+              rs.getObject("client_id", UUID.class),
+              rs.getObject("workspace_id", UUID.class),
+              rs.getObject("template_id", UUID.class),
+              rs.getString("title"),
+              rs.getObject("period_start", LocalDate.class),
+              rs.getObject("period_end", LocalDate.class),
+              rs.getString("status"),
+              rs.getString("executive_summary"),
+              rs.getBoolean("executive_summary_edited"),
+              rs.getString("pdf_url"),
+              rs.getString("share_token"),
+              ts(rs, "share_token_expires_at"),
+              ts(rs, "generated_at"),
+              rs.getString("failure_reason"),
+              rs.getObject("created_by_user_id", UUID.class),
+              ts(rs, "created_at"),
+              ts(rs, "updated_at"));
+
+  private static Instant ts(ResultSet rs, String c) throws java.sql.SQLException {
+    var t = rs.getTimestamp(c);
+    return t == null ? null : t.toInstant();
+  }
+
+  public Report insert(
+      UUID clientId,
+      UUID workspaceId,
+      UUID templateId,
+      String title,
+      LocalDate periodStart,
+      LocalDate periodEnd,
+      UUID createdByUserId) {
+    return jdbc.sql(
+            """
+            INSERT INTO reports (client_id, workspace_id, template_id, title,
+                                 period_start, period_end, created_by_user_id)
+            VALUES (:c, :w, :t, :title, :ps, :pe, :u)
+            RETURNING *
+            """)
+        .param("c", clientId)
+        .param("w", workspaceId)
+        .param("t", templateId)
+        .param("title", title)
+        .param("ps", periodStart)
+        .param("pe", periodEnd)
+        .param("u", createdByUserId)
+        .query(MAPPER)
+        .single();
+  }
+
+  public Optional<Report> findInWorkspace(UUID workspaceId, UUID id) {
+    return jdbc.sql(
+            "SELECT * FROM reports WHERE id = :id AND workspace_id = :w AND deleted_at IS NULL")
+        .param("id", id)
+        .param("w", workspaceId)
+        .query(MAPPER)
+        .optional();
+  }
+
+  public Optional<Report> findById(UUID id) {
+    return jdbc.sql("SELECT * FROM reports WHERE id = :id AND deleted_at IS NULL")
+        .param("id", id)
+        .query(MAPPER)
+        .optional();
+  }
+}

@@ -1,0 +1,42 @@
+# Env
+.env
+.env.local
+.env.*.local
+
+# Java / Gradle
+api/.gradle/
+api/build/
+api/bin/
+api/out/
+api/.idea/
+api/*.iml
+
+# Node
+node_modules/
+web/dist/
+web/.vite/
+render/dist/
+*.tsbuildinfo
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# Coverage (test coverage reports — anchored so it doesn't swallow the
+# app.beat.coverage Java package)
+/coverage/
+**/web/coverage/
+**/render/coverage/
+api/build/reports/
+
+# Eval harness output (timestamped per run; uploaded as CI artifact)
+api/src/test/eval/reports/
+
+# Fly
+.fly/
