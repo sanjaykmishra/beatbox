@@ -84,7 +84,12 @@ export function ReportReview() {
         {generateError && <p className="text-sm text-red-600">{generateError}</p>}
 
         {r.coverage_items.length === 0 ? (
-          <p className="text-sm text-gray-500 py-8 text-center">No coverage items yet.</p>
+          <div className="bg-white border border-dashed border-gray-300 rounded-xl p-10 text-center">
+            <p className="text-sm font-medium text-ink">No coverage URLs yet</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Add the article links from your monthly tracker — Beat will extract them in parallel.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-3">
             {r.coverage_items.map((item) => (

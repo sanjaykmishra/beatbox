@@ -29,6 +29,9 @@ beat:
     secret-access-key: ${R2_SECRET_ACCESS_KEY:}
     bucket: ${R2_BUCKET:}
     public-base-url: ${R2_PUBLIC_BASE_URL:}
+  admin:
+    # Comma-separated list of user emails allowed to view /v1/admin/*. Empty = nobody.
+    emails: ${ADMIN_EMAILS:}
 
 logging:
   level:

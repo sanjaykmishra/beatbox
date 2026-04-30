@@ -93,9 +93,7 @@ export function Clients() {
           </ul>
         )}
         {list.data && list.data.items.length === 0 && (
-          <div className="px-8 py-16 text-center">
-            <p className="text-sm text-gray-500">No clients yet. Add one above to get started.</p>
-          </div>
+          <ColdStartOnboarding onAddClient={() => setAdding(true)} />
         )}
         {list.data && list.data.items.length > 0 && (
           <ul className="divide-y divide-gray-100">
@@ -114,6 +112,84 @@ export function Clients() {
         <LegendItem tone="green" label="green" desc="healthy state" />
       </div>
     </BrowserFrame>
+  );
+}
+
+function ColdStartOnboarding({ onAddClient }: { onAddClient: () => void }) {
+  return (
+    <div className="px-8 py-12">
+      <div className="max-w-xl mx-auto text-center">
+        <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 text-indigo-700 text-xl mb-4">
+          ✦
+        </div>
+        <h2 className="text-xl font-semibold tracking-tightish text-ink">Welcome to Beat</h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Coverage reports in 60 seconds. Let's set up your first client and walk through a real
+          report — should take about five minutes.
+        </p>
+      </div>
+      <ol className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl mx-auto">
+        <Step
+          n={1}
+          title="Create a client"
+          body="Name and (optionally) brand color. Each client gets its own dashboard, context notes, and report history."
+          actionLabel="+ Add client"
+          onClick={onAddClient}
+        />
+        <Step
+          n={2}
+          title="Paste coverage URLs"
+          body="Drop in a few links — TechCrunch, WSJ, anything with a public article. Beat extracts headline, lede, sentiment, outlet tier, screenshot."
+          actionLabel="(after step 1)"
+          disabled
+        />
+        <Step
+          n={3}
+          title="Generate the report"
+          body="Click once. Beat writes the executive summary, lays out the highlights, and renders a branded PDF you can hand to the client."
+          actionLabel="(after step 2)"
+          disabled
+        />
+      </ol>
+    </div>
+  );
+}
+
+function Step({
+  n,
+  title,
+  body,
+  actionLabel,
+  onClick,
+  disabled,
+}: {
+  n: number;
+  title: string;
+  body: string;
+  actionLabel: string;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col">
+      <div className="flex items-center gap-2.5">
+        <span className="flex-none flex items-center justify-center h-6 w-6 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold tabular-nums">
+          {n}
+        </span>
+        <div className="font-semibold text-ink">{title}</div>
+      </div>
+      <p className="text-sm text-gray-600 mt-2 flex-1">{body}</p>
+      {disabled ? (
+        <span className="mt-4 self-start text-xs text-gray-400">{actionLabel}</span>
+      ) : (
+        <button
+          onClick={onClick}
+          className="mt-4 self-start ink-btn rounded-lg text-white px-3 py-1.5 text-sm font-medium"
+        >
+          {actionLabel}
+        </button>
+      )}
+    </div>
   );
 }
 

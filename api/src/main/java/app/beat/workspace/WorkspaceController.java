@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,10 +22,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkspaceController {
 
   private final WorkspaceRepository workspaces;
+  private final WorkspaceMemberRepository members;
   private final AuditService audit;
 
-  public WorkspaceController(WorkspaceRepository workspaces, AuditService audit) {
+  public WorkspaceController(
+      WorkspaceRepository workspaces, WorkspaceMemberRepository members, AuditService audit) {
     this.workspaces = workspaces;
+    this.members = members;
     this.audit = audit;
   }
 
@@ -68,6 +72,25 @@ public class WorkspaceController {
         workspaces
             .findById(ctx.workspaceId())
             .orElseThrow(() -> AppException.notFound("Workspace")));
+  }
+
+  public record MemberDto(
+      UUID user_id,
+      String email,
+      String name,
+      String role,
+      Instant member_since,
+      Instant last_login_at) {}
+
+  @GetMapping("/members")
+  public List<MemberDto> listMembers(HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    return members.listForWorkspace(ctx.workspaceId()).stream()
+        .map(
+            m ->
+                new MemberDto(
+                    m.userId(), m.email(), m.name(), m.role(), m.memberSince(), m.lastLoginAt()))
+        .toList();
   }
 
   @PatchMapping

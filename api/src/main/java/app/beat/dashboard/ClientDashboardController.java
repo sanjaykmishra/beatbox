@@ -1,9 +1,11 @@
 package app.beat.dashboard;
 
 import app.beat.activity.ActivityEventRepository;
+import app.beat.activity.ActivityEventRepository.ActivityEventRow;
 import app.beat.alerts.AlertService;
 import app.beat.alerts.ClientAlert;
 import app.beat.alerts.ClientAlertRepository;
+import app.beat.auth.UserRepository;
 import app.beat.client.Client;
 import app.beat.client.ClientRepository;
 import app.beat.clientcontext.ClientContext;
@@ -41,6 +43,7 @@ public class ClientDashboardController {
   private final AlertService alertService;
   private final DashboardStats stats;
   private final ActivityEventRepository events;
+  private final UserRepository users;
 
   public ClientDashboardController(
       ClientRepository clients,
@@ -48,13 +51,15 @@ public class ClientDashboardController {
       ClientAlertRepository alertRepo,
       AlertService alertService,
       DashboardStats stats,
-      ActivityEventRepository events) {
+      ActivityEventRepository events,
+      UserRepository users) {
     this.clients = clients;
     this.contexts = contexts;
     this.alertRepo = alertRepo;
     this.alertService = alertService;
     this.stats = stats;
     this.events = events;
+    this.users = users;
   }
 
   // ===================== DTOs =====================
@@ -283,7 +288,18 @@ public class ClientDashboardController {
   }
 
   private List<ActivityDto> recentActivityFor(UUID clientId, int limit) {
-    return events.findByClient(clientId, limit).stream()
+    var rows = events.findByClient(clientId, limit);
+    var userIds =
+        rows.stream()
+            .map(ActivityEventRow::userId)
+            .filter(java.util.Objects::nonNull)
+            .distinct()
+            .toList();
+    var userNames = new java.util.HashMap<UUID, String>();
+    for (UUID uid : userIds) {
+      users.findById(uid).ifPresent(u -> userNames.put(u.id(), shortName(u.name(), u.email())));
+    }
+    return rows.stream()
         .map(
             e -> {
               var formatted = ActivityEventFormatter.format(e);
@@ -291,14 +307,29 @@ public class ClientDashboardController {
                   formatted.tagLabel() == null
                       ? null
                       : new Tag(formatted.tagLabel(), formatted.tagTone());
+              String actor =
+                  e.userId() != null && "user".equals(e.actorType())
+                      ? userNames.get(e.userId())
+                      : null;
               return new ActivityDto(
                   e.occurredAt(),
                   formatted.kind(),
                   formatted.label(),
                   formatted.detail(),
                   tag,
-                  null);
+                  actor);
             })
         .toList();
+  }
+
+  /** "Alex Hayworth" -> "Alex H.", fallback to email local-part. */
+  private static String shortName(String name, String email) {
+    if (name != null && !name.isBlank()) {
+      String[] parts = name.trim().split("\\s+");
+      if (parts.length == 1) return parts[0];
+      return parts[0] + " " + parts[parts.length - 1].charAt(0) + ".";
+    }
+    if (email != null && email.contains("@")) return email.substring(0, email.indexOf('@'));
+    return null;
   }
 }
