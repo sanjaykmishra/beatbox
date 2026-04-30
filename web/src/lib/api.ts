@@ -272,6 +272,34 @@ export const api = {
   startCheckout: (plan: 'solo' | 'agency', interval: 'monthly' | 'yearly') =>
     request<{ checkout_url: string }>('POST', '/v1/billing/checkout', { plan, interval }),
   openPortal: () => request<{ portal_url: string }>('POST', '/v1/billing/portal', {}),
+
+  // ----- Members + Admin (week 9) -----
+  listMembers: () => request<Member[]>('GET', '/v1/workspace/members'),
+  adminWhoami: () => request<{ is_admin: boolean }>('GET', '/v1/admin/whoami'),
+  adminDashboard: () => request<AdminDashboard>('GET', '/v1/admin/dashboard'),
+};
+
+export type Member = {
+  user_id: string;
+  email: string;
+  name: string;
+  role: 'owner' | 'member' | 'viewer';
+  member_since: string;
+  last_login_at: string | null;
+};
+
+export type AdminDashboard = {
+  daily_extractions: { day: string; count: number }[];
+  daily_reports: { day: string; count: number }[];
+  workspace_costs: {
+    workspace_id: string;
+    workspace_name: string;
+    extractions: number;
+    reports: number;
+    cost_usd: number;
+  }[];
+  p95_extraction_ms: number | null;
+  top_errors: { error_class: string; count: number }[];
 };
 
 export type Billing = {
