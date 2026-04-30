@@ -154,8 +154,8 @@ export function ClientDashboard() {
           </section>
         )}
 
-        {/* Upcoming posts */}
-        {!isNewClient && <UpcomingPosts clientId={id} />}
+        {/* Upcoming posts (always shown — empty state for new clients is informative) */}
+        <UpcomingPosts clientId={id} />
 
         {/* Recent activity */}
         {!isNewClient && (
