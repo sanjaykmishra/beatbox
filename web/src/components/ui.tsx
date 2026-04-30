@@ -8,11 +8,11 @@ export function Eyebrow({ children, className = '' }: { children: ReactNode; cla
 export type PillTone = 'red' | 'amber' | 'blue' | 'green' | 'gray';
 
 const PILL_CLASSES: Record<PillTone, string> = {
-  red: 'bg-red-50 text-red-700',
-  amber: 'bg-amber-50 text-amber-800',
-  blue: 'bg-blue-50 text-blue-700',
-  green: 'bg-emerald-50 text-emerald-700',
-  gray: 'bg-gray-100 text-gray-700',
+  red: 'bg-red-100 text-red-700',
+  amber: 'bg-amber-100 text-amber-800',
+  blue: 'bg-blue-100 text-blue-700',
+  green: 'bg-emerald-100 text-emerald-800',
+  gray: 'bg-gray-100 text-gray-600',
 };
 
 export function Pill({

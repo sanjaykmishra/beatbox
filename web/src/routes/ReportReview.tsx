@@ -212,7 +212,7 @@ function CoverageCard({
   }
   if (item.extraction_status === 'failed') {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-4">
+      <div className="bg-red-100/70 border border-red-200 rounded-xl p-4 flex items-center gap-4">
         <div className="h-16 w-24 bg-red-100/70 rounded-lg flex-none flex items-center justify-center text-red-500 text-xs">
           failed
         </div>
