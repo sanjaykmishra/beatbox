@@ -69,24 +69,27 @@ const STATUS_TONE: Record<PostStatus, PillTone> = {
   archived: 'gray',
 };
 
+type CalendarView = 'week' | 'month';
+
 export function Calendar() {
   const { workspace } = useAuth();
   const slug = workspace?.slug ?? 'workspace';
-  const [weekStart, setWeekStart] = useState(() => mondayOf(new Date()));
+  const [view, setView] = useState<CalendarView>('week');
+  const [anchor, setAnchor] = useState(() => new Date());
   const [clientFilter, setClientFilter] = useState<string | undefined>(undefined);
   const [composer, setComposer] = useState<ComposerState>({ open: false });
 
   const clientsQ = useQuery({ queryKey: ['clients'], queryFn: api.listClients });
 
-  const weekEnd = addDays(weekStart, 7);
+  const range = useMemo(() => visibleRange(view, anchor), [view, anchor]);
   const postsQ = useQuery({
-    queryKey: ['posts', clientFilter, weekStart.toISOString()],
+    queryKey: ['posts', clientFilter, view, range.from.toISOString()],
     queryFn: () =>
       api.listPosts({
         client_id: clientFilter,
-        from: weekStart.toISOString(),
-        to: weekEnd.toISOString(),
-        limit: 200,
+        from: range.from.toISOString(),
+        to: range.to.toISOString(),
+        limit: 500,
       }),
   });
 
@@ -96,8 +99,8 @@ export function Calendar() {
     return m;
   }, [clientsQ.data]);
 
-  function shiftWeek(deltaWeeks: number) {
-    setWeekStart((d) => addDays(d, deltaWeeks * 7));
+  function shift(delta: number) {
+    setAnchor((d) => (view === 'week' ? addDays(d, delta * 7) : addMonths(d, delta)));
   }
 
   return (
@@ -124,46 +127,62 @@ export function Calendar() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-1">
             <button
-              onClick={() => shiftWeek(-1)}
+              onClick={() => shift(-1)}
               className="rounded-md border border-gray-300 bg-white text-gray-700 px-2.5 py-1.5 text-sm hover:border-gray-400 hover:bg-gray-50"
-              aria-label="Previous week"
+              aria-label={view === 'week' ? 'Previous week' : 'Previous month'}
             >
               ‹
             </button>
             <button
-              onClick={() => setWeekStart(mondayOf(new Date()))}
+              onClick={() => setAnchor(new Date())}
               className="rounded-md border border-gray-300 bg-white text-gray-700 px-3 py-1.5 text-sm hover:border-gray-400 hover:bg-gray-50"
             >
-              This week
+              {view === 'week' ? 'This week' : 'This month'}
             </button>
             <button
-              onClick={() => shiftWeek(1)}
+              onClick={() => shift(1)}
               className="rounded-md border border-gray-300 bg-white text-gray-700 px-2.5 py-1.5 text-sm hover:border-gray-400 hover:bg-gray-50"
-              aria-label="Next week"
+              aria-label={view === 'week' ? 'Next week' : 'Next month'}
             >
               ›
             </button>
             <span className="ml-3 text-sm text-gray-700 font-medium">
-              {formatWeekRange(weekStart)}
+              {view === 'week' ? formatWeekRange(range.from) : formatMonthLabel(anchor)}
             </span>
           </div>
-          <ClientFilter
-            clients={clientsQ.data?.items ?? []}
-            value={clientFilter}
-            onChange={setClientFilter}
-          />
+          <div className="flex items-center gap-2">
+            <ViewToggle value={view} onChange={setView} />
+            <ClientFilter
+              clients={clientsQ.data?.items ?? []}
+              value={clientFilter}
+              onChange={setClientFilter}
+            />
+          </div>
         </div>
 
-        <WeekGrid
-          weekStart={weekStart}
-          posts={postsQ.data?.items ?? []}
-          clientsById={clientsById}
-          loading={postsQ.isLoading}
-          onSelect={(p) => setComposer({ open: true, mode: 'edit', postId: p.id })}
-          onEmptyDay={(day) =>
-            setComposer({ open: true, mode: 'new', clientId: clientFilter, scheduledFor: day })
-          }
-        />
+        {view === 'week' ? (
+          <WeekGrid
+            weekStart={range.from}
+            posts={postsQ.data?.items ?? []}
+            clientsById={clientsById}
+            loading={postsQ.isLoading}
+            onSelect={(p) => setComposer({ open: true, mode: 'edit', postId: p.id })}
+            onEmptyDay={(day) =>
+              setComposer({ open: true, mode: 'new', clientId: clientFilter, scheduledFor: day })
+            }
+          />
+        ) : (
+          <MonthGrid
+            anchor={anchor}
+            posts={postsQ.data?.items ?? []}
+            clientsById={clientsById}
+            loading={postsQ.isLoading}
+            onSelect={(p) => setComposer({ open: true, mode: 'edit', postId: p.id })}
+            onEmptyDay={(day) =>
+              setComposer({ open: true, mode: 'new', clientId: clientFilter, scheduledFor: day })
+            }
+          />
+        )}
       </div>
 
       {composer.open && (
@@ -316,6 +335,187 @@ function PostCard({
         </span>
       </div>
     </button>
+  );
+}
+
+// --------------------- Month grid ---------------------
+
+function MonthGrid({
+  anchor,
+  posts,
+  clientsById,
+  loading,
+  onSelect,
+  onEmptyDay,
+}: {
+  anchor: Date;
+  posts: OwnedPost[];
+  clientsById: Map<string, ClientListItem>;
+  loading: boolean;
+  onSelect: (p: OwnedPost) => void;
+  onEmptyDay: (day: Date) => void;
+}) {
+  const gridStart = mondayOf(firstOfMonth(anchor));
+  // Render until we've passed the end of the month, padded to a full week.
+  const monthIdx = anchor.getMonth();
+  const cells: Date[] = [];
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(gridStart, i);
+    cells.push(d);
+    // Stop after we've covered the month *and* completed the week (Sunday).
+    if (i >= 27 && d.getMonth() !== monthIdx && d.getDay() === 0) break;
+  }
+  const byDay = new Map<string, OwnedPost[]>();
+  for (const p of posts) {
+    if (!p.scheduled_for) continue;
+    const k = ymd(new Date(p.scheduled_for));
+    const list = byDay.get(k) ?? [];
+    list.push(p);
+    byDay.set(k, list);
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+          <div
+            key={d}
+            className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 px-3 py-2"
+          >
+            {d}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {cells.map((d) => {
+          const k = ymd(d);
+          const list = (byDay.get(k) ?? []).sort((a, b) =>
+            (a.scheduled_for ?? '').localeCompare(b.scheduled_for ?? ''),
+          );
+          const inMonth = d.getMonth() === monthIdx;
+          const isToday = ymd(new Date()) === k;
+          const visible = list.slice(0, 3);
+          const overflow = list.length - visible.length;
+          return (
+            <div
+              key={k}
+              className={`min-h-[110px] border-r border-b border-gray-100 p-1.5 flex flex-col gap-1 ${
+                inMonth ? 'bg-white' : 'bg-gray-50/60'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className={`text-[11px] font-semibold tabular-nums ${
+                    isToday
+                      ? 'text-white bg-ink rounded-full px-1.5 py-0.5'
+                      : inMonth
+                        ? 'text-gray-700'
+                        : 'text-gray-400'
+                  }`}
+                >
+                  {d.getDate()}
+                </span>
+                <button
+                  onClick={() => onEmptyDay(d)}
+                  className="text-gray-300 hover:text-ink text-sm leading-none px-1"
+                  title="Draft a post on this day"
+                  aria-label="Draft a post on this day"
+                >
+                  +
+                </button>
+              </div>
+              {loading && list.length === 0 ? null : (
+                <ul className="space-y-0.5 flex-1">
+                  {visible.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        onClick={() => onSelect(p)}
+                        className="w-full text-left flex items-center gap-1 px-1 py-0.5 rounded hover:bg-gray-100 transition-colors"
+                        title={p.title || p.primary_content_text || ''}
+                      >
+                        <span
+                          className="h-1.5 w-1.5 rounded-full flex-none"
+                          style={{
+                            background: clientsById.get(p.client_id)?.primary_color
+                              ? `#${clientsById.get(p.client_id)?.primary_color}`
+                              : statusDotColor(p.status),
+                          }}
+                          aria-hidden
+                        />
+                        <span className="text-[11px] text-ink truncate">
+                          {p.title?.trim() ||
+                            (p.primary_content_text ?? '').slice(0, 40) ||
+                            '(empty)'}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                  {overflow > 0 && (
+                    <li>
+                      <button
+                        onClick={() => onSelect(list[3])}
+                        className="text-[10px] text-gray-500 hover:text-ink hover:underline"
+                      >
+                        + {overflow} more
+                      </button>
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function statusDotColor(status: PostStatus): string {
+  switch (status) {
+    case 'rejected':
+      return '#dc2626';
+    case 'client_review':
+      return '#d97706';
+    case 'internal_review':
+      return '#2563eb';
+    case 'approved':
+    case 'scheduled':
+    case 'posted':
+      return '#059669';
+    default:
+      return '#9ca3af';
+  }
+}
+
+// --------------------- View toggle ---------------------
+
+function ViewToggle({
+  value,
+  onChange,
+}: {
+  value: CalendarView;
+  onChange: (v: CalendarView) => void;
+}) {
+  const options: { id: CalendarView; label: string }[] = [
+    { id: 'week', label: 'Week' },
+    { id: 'month', label: 'Month' },
+  ];
+  return (
+    <div className="inline-flex rounded-md border border-gray-300 bg-white p-0.5">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          onClick={() => onChange(o.id)}
+          className={`px-3 py-1 text-sm font-medium rounded ${
+            value === o.id
+              ? 'bg-gray-900 text-white'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -861,10 +1061,40 @@ function mondayOf(d: Date): Date {
   return out;
 }
 
+function firstOfMonth(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  out.setDate(1);
+  return out;
+}
+
 function addDays(d: Date, n: number): Date {
   const out = new Date(d);
   out.setDate(out.getDate() + n);
   return out;
+}
+
+function addMonths(d: Date, n: number): Date {
+  const out = new Date(d);
+  out.setMonth(out.getMonth() + n);
+  return out;
+}
+
+function visibleRange(view: CalendarView, anchor: Date): { from: Date; to: Date } {
+  if (view === 'week') {
+    const from = mondayOf(anchor);
+    return { from, to: addDays(from, 7) };
+  }
+  // Month: render the grid which can extend a few days into the prior and next month.
+  const from = mondayOf(firstOfMonth(anchor));
+  return { from, to: addDays(from, 42) };
+}
+
+function formatMonthLabel(d: Date): string {
+  return d.toLocaleDateString('en-US', {
+    month: 'long',
+    year: d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+  });
 }
 
 function ymd(d: Date): string {
