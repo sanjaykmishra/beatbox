@@ -1,0 +1,23 @@
+# Build contexts should not include caches, build outputs, or vendored deps.
+**/.git
+**/.gitignore
+**/.github
+**/.idea
+**/.vscode
+**/.DS_Store
+
+**/node_modules
+**/dist
+**/.vite
+**/*.tsbuildinfo
+
+api/.gradle
+api/build
+api/bin
+api/out
+
+**/coverage
+**/*.log
+.env
+.env.*
+!.env.example

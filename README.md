@@ -12,22 +12,50 @@ If you're Claude Code, start with `CLAUDE.md`.
 
 ## Local development
 
+### One-command stack with Docker Compose (recommended)
+
+Brings up Postgres, the api, the render service, and the static web behind nginx — built from the same Dockerfiles used for production deploys.
+
 ```bash
-# Postgres (local)
+make up           # docker compose up -d --build
+make logs         # tail everything
+make ps           # status
+make db           # psql shell into postgres
+make down         # stop
+make clean        # stop AND wipe the postgres volume
+```
+
+Then visit:
+
+| URL                              | Service               |
+|----------------------------------|-----------------------|
+| http://localhost:5173            | web (nginx, proxies `/v1/*` to api) |
+| http://localhost:8080/v1/healthz | api (Spring Boot)     |
+| http://localhost:3000/healthz    | render (Puppeteer)    |
+| `psql -h localhost -U beat -d beat` (password `beat`) | postgres |
+
+API keys (Anthropic, Stripe, R2, etc.) are read from a `.env` file at the repo root if present — copy `.env.example` and fill in only what you want to exercise. The api boots with empty values for all of them; the upload endpoint returns 503 until R2 is configured, and the LLM features land in later weeks.
+
+### Running services directly on the host
+
+```bash
+# Postgres (assuming you have one running locally)
 createdb beat && createuser beat
 cp .env.example .env
 
-# api/  (Spring Boot)
-cd api && ./gradlew bootRun
-
-# web/  (Vite)
-cd web && npm install && npm run dev
-
-# render/  (Express + Puppeteer)
-cd render && npm install && npm run dev
+cd api && ./gradlew bootRun        # Spring Boot — port 8080
+cd web && npm install && npm run dev   # Vite — port 5173, proxies /v1 → 8080
+cd render && npm install && npm run dev   # Express — port 3000
 ```
 
 `migrations/V001__init.sql` is bundled into the api JAR at `classpath:db/migration` and applied by Flyway on startup.
+
+### Tests
+
+```bash
+make test           # api (gradle), web (typecheck + lint + build), render (typecheck + build)
+make api-test       # backend only — integration tests use Testcontainers (needs Docker)
+```
 
 ## Layout
 
@@ -58,7 +86,9 @@ cd render && npm install && npm run dev
 ├── api/                      ← Spring Boot 3 + Java 21
 ├── web/                      ← Vite + React 18 + TS + Tailwind
 ├── render/                   ← Node + Express + Puppeteer
-├── infra/                    ← Dockerfiles + Fly.io configs
+├── infra/                    ← Dockerfiles + Fly.io configs + nginx
+├── docker-compose.yml        ← local stack (postgres + api + render + web)
+├── Makefile                  ← shortcuts: up / down / logs / db / test
 └── .github/workflows/        ← CI + deploy
 ```
 

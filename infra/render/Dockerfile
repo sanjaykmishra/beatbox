@@ -13,6 +13,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD=false
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium fonts-liberation libnss3 libatk-bridge2.0-0 libxkbcommon0 libxcomposite1 \
     libxdamage1 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libpangocairo-1.0-0 libasound2 \
+    wget \
   && rm -rf /var/lib/apt/lists/*
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 WORKDIR /app
