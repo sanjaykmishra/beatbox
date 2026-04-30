@@ -94,6 +94,26 @@ beat/
 
 **Commits.** Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`). One logical change per commit.
 
+## Engineering rules of thumb (lessons learned)
+
+These exist because each one represents a real bug that already shipped. When in doubt, check the named exemplar file before writing new code.
+
+**Mirror existing conventions before writing new infra code.** Before creating a new `*Repository`, `*Controller`, or `*Service`, grep for an analogous one and copy its parameter-binding patterns rather than improvising. `app.beat.report.ReportRepository` and `app.beat.auth.SessionRepository` are the reference implementations for JdbcClient usage.
+
+**Postgres JDBC parameter binding.** Two foot-guns hit us in the same week:
+- `java.time.Instant` cannot be passed via `setObject()`. Always wrap with `java.sql.Timestamp.from(instant)` (handle null). See `OwnedPostRepository.ts(Instant)`.
+- Inside `COALESCE(:param, column)`, every bound parameter needs an explicit cast — including scalars when the value is null. Use `CAST(:p AS text)`, `CAST(:p AS timestamptz)`, `CAST(:tp AS text[])`, `CAST(:variants AS jsonb)`. Without the cast, Postgres throws "could not determine data type of parameter $N". Pattern reference: `OwnedPostRepository.update`.
+
+**Validation annotations are type-specific.** `@NotBlank` only validates `CharSequence` and throws `UnexpectedTypeException` (→ 500) on `UUID`/numeric types. Use `@NotNull` for non-string required fields.
+
+**Bundled JAR resources need both gradle config AND Dockerfile copy.** `api/build.gradle` bundles `migrations/` and `prompts/` via `processResources { from('../X') }`. The Dockerfile must `COPY` each of those source directories into the build context, or the JAR ships without them and `PromptLoader.get()` / Flyway fail at runtime. Locally everything works because the directories exist on disk. See `infra/api/Dockerfile`.
+
+**Smoke-test LLM calls with a real key before claiming a feature is done.** Prompt frontmatter is opaque — model IDs, temperature, max_tokens — and the only way to catch typos is one real call. Run the endpoint once locally with `ANTHROPIC_API_KEY` set before merging.
+
+**Test the path the SPA actually exercises.** Auto-save-on-blur paths usually patch with mostly-null scalars; happy-path tests usually create with all fields set. They're different SQL paths. Integration tests should mirror the request shape the frontend sends, not just the canonical happy path.
+
+**Surface 5xx errors in logs.** `ProblemDetailHandler` and `RequestLogFilter` log unhandled exceptions and per-request access lines. Don't add a swallow-and-return-500 path that bypasses them — every 5xx should leave a stack trace.
+
 ## Critical guardrails
 
 These exist because failure here is high-cost. Don't relax them without explicit human sign-off.
