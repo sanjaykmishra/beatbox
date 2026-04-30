@@ -1,6 +1,7 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ChangeEvent } from 'react';
-import { api, ApiError, uploadLogo } from '../lib/api';
+import { useSearchParams } from 'react-router-dom';
+import { api, ApiError, uploadLogo, type Billing } from '../lib/api';
 import { useAuth } from '../lib/useAuth';
 
 export function Settings() {
@@ -65,8 +66,148 @@ export function Settings() {
         </label>
       </section>
       {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <BillingSection />
     </div>
   );
+}
+
+function BillingSection() {
+  const [params] = useSearchParams();
+  const billing = useQuery({ queryKey: ['billing'], queryFn: () => api.getBilling() });
+  const [error, setError] = useState<string | null>(
+    params.get('billing') === 'cancelled' ? 'Checkout cancelled — try again any time.' : null,
+  );
+
+  const checkout = useMutation({
+    mutationFn: ({ plan, interval }: { plan: 'solo' | 'agency'; interval: 'monthly' | 'yearly' }) =>
+      api.startCheckout(plan, interval),
+    onSuccess: (r) => {
+      window.location.href = r.checkout_url;
+    },
+    onError: (e) =>
+      setError(e instanceof ApiError ? e.message : 'Could not start checkout.'),
+  });
+
+  const portal = useMutation({
+    mutationFn: () => api.openPortal(),
+    onSuccess: (r) => {
+      window.location.href = r.portal_url;
+    },
+    onError: (e) =>
+      setError(e instanceof ApiError ? e.message : 'Could not open billing portal.'),
+  });
+
+  if (billing.isLoading) return null;
+  if (billing.error || !billing.data) {
+    return <p className="text-sm text-red-600">Failed to load billing.</p>;
+  }
+  const b = billing.data;
+  const onPaidPlan = b.plan === 'solo' || b.plan === 'agency' || b.plan === 'enterprise';
+  const trialDaysLeft = trialDays(b);
+
+  return (
+    <section className="bg-white rounded border border-gray-200 p-6 space-y-4">
+      <h2 className="text-sm font-medium text-gray-700">Billing</h2>
+      <Row label="Plan" value={b.plan} />
+      <Row
+        label="Limits"
+        value={`${b.plan_limit_clients} clients · ${
+          b.plan_limit_reports_monthly === 2147483647
+            ? 'unlimited'
+            : b.plan_limit_reports_monthly
+        } reports / month`}
+      />
+      {b.plan === 'trial' && (
+        <p className={trialDaysLeft <= 3 ? 'text-sm text-amber-700' : 'text-sm text-gray-600'}>
+          {trialDaysLeft > 0
+            ? `Trial: ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining.`
+            : 'Trial ended. Add a card to continue creating reports.'}
+        </p>
+      )}
+      {!b.stripe_configured && (
+        <p className="text-xs text-gray-500">
+          Billing isn't configured on the server. Set Stripe env vars to enable upgrades.
+        </p>
+      )}
+      {b.stripe_configured && !onPaidPlan && (
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <PlanCard
+            name="Solo"
+            price="$39/mo"
+            yearly="$33/mo billed annually"
+            disabled={checkout.isPending}
+            onMonthly={() => checkout.mutate({ plan: 'solo', interval: 'monthly' })}
+            onYearly={() => checkout.mutate({ plan: 'solo', interval: 'yearly' })}
+          />
+          <PlanCard
+            name="Agency"
+            price="$99/mo"
+            yearly="$84/mo billed annually"
+            disabled={checkout.isPending}
+            onMonthly={() => checkout.mutate({ plan: 'agency', interval: 'monthly' })}
+            onYearly={() => checkout.mutate({ plan: 'agency', interval: 'yearly' })}
+          />
+        </div>
+      )}
+      {b.stripe_configured && onPaidPlan && (
+        <button
+          onClick={() => portal.mutate()}
+          disabled={portal.isPending}
+          className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-gray-400 disabled:opacity-50"
+        >
+          {portal.isPending ? 'Opening…' : 'Manage subscription'}
+        </button>
+      )}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+    </section>
+  );
+}
+
+function PlanCard({
+  name,
+  price,
+  yearly,
+  disabled,
+  onMonthly,
+  onYearly,
+}: {
+  name: string;
+  price: string;
+  yearly: string;
+  disabled: boolean;
+  onMonthly: () => void;
+  onYearly: () => void;
+}) {
+  return (
+    <div className="border border-gray-200 rounded p-4 space-y-2">
+      <div className="font-medium">{name}</div>
+      <div className="text-2xl font-semibold tracking-tight">{price}</div>
+      <div className="text-xs text-gray-500">{yearly}</div>
+      <div className="flex gap-2 pt-2">
+        <button
+          onClick={onMonthly}
+          disabled={disabled}
+          className="flex-1 rounded bg-gray-900 text-white text-sm px-3 py-1.5 font-medium hover:bg-gray-800 disabled:opacity-60"
+        >
+          Monthly
+        </button>
+        <button
+          onClick={onYearly}
+          disabled={disabled}
+          className="flex-1 rounded border border-gray-300 text-sm px-3 py-1.5 font-medium text-gray-700 hover:border-gray-400 disabled:opacity-60"
+        >
+          Yearly
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function trialDays(b: Billing): number {
+  if (!b.trial_ends_at) return 0;
+  const ms = new Date(b.trial_ends_at).getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
 }
 
 function Row({ label, value }: { label: string; value: string }) {

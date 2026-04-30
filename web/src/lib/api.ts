@@ -181,6 +181,22 @@ export const api = {
     if (!res.ok) throw new ApiError({ title: `HTTP ${res.status}` }, res.status);
     return res.blob();
   },
+
+  // ----- Billing (week 8) -----
+  getBilling: () => request<Billing>('GET', '/v1/billing'),
+  startCheckout: (plan: 'solo' | 'agency', interval: 'monthly' | 'yearly') =>
+    request<{ checkout_url: string }>('POST', '/v1/billing/checkout', { plan, interval }),
+  openPortal: () => request<{ portal_url: string }>('POST', '/v1/billing/portal', {}),
+};
+
+export type Billing = {
+  plan: 'trial' | 'solo' | 'agency' | 'enterprise';
+  plan_limit_clients: number;
+  plan_limit_reports_monthly: number;
+  trial_ends_at: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  stripe_configured: boolean;
 };
 
 /** Build URLs that the browser navigates to (PDF download follows the 302 redirect). */

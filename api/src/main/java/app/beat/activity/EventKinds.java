@@ -36,6 +36,14 @@ public final class EventKinds {
   public static final String REPORT_SHARED = "report.shared";
   public static final String REPORT_SHARE_REVOKED = "report.share_revoked";
 
+  // Billing
+  public static final String BILLING_CHECKOUT_STARTED = "billing.checkout_started";
+  public static final String BILLING_PORTAL_OPENED = "billing.portal_opened";
+  public static final String BILLING_SUBSCRIPTION_ACTIVATED = "billing.subscription_activated";
+  public static final String BILLING_SUBSCRIPTION_UPDATED = "billing.subscription_updated";
+  public static final String BILLING_SUBSCRIPTION_CANCELLED = "billing.subscription_cancelled";
+  public static final String BILLING_PAYMENT_FAILED = "billing.payment_failed";
+
   // System / cost tracking
   public static final String LLM_CALL_COMPLETED = "llm.call_completed";
   public static final String EXTRACTION_FAILED = "extraction.failed";

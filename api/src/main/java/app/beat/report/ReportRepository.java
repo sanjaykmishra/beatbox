@@ -120,6 +120,22 @@ public class ReportRepository {
         .update();
   }
 
+  /** Count reports created in the current calendar month for a workspace. */
+  public int countThisMonth(UUID workspaceId) {
+    Integer n =
+        jdbc.sql(
+                """
+                SELECT count(*) FROM reports
+                WHERE workspace_id = :w
+                  AND deleted_at IS NULL
+                  AND created_at >= date_trunc('month', now())
+                """)
+            .param("w", workspaceId)
+            .query(Integer.class)
+            .single();
+    return n == null ? 0 : n;
+  }
+
   public Optional<Report> findActiveByShareToken(String tokenHash) {
     return jdbc.sql(
             """

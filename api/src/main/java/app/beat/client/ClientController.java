@@ -3,6 +3,7 @@ package app.beat.client;
 import app.beat.activity.ActivityRecorder;
 import app.beat.activity.EventKinds;
 import app.beat.audit.AuditService;
+import app.beat.billing.PlanGuard;
 import app.beat.infra.AppException;
 import app.beat.infra.RequestContext;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,11 +33,14 @@ public class ClientController {
   private final ClientRepository clients;
   private final AuditService audit;
   private final ActivityRecorder activity;
+  private final PlanGuard guard;
 
-  public ClientController(ClientRepository clients, AuditService audit, ActivityRecorder activity) {
+  public ClientController(
+      ClientRepository clients, AuditService audit, ActivityRecorder activity, PlanGuard guard) {
     this.clients = clients;
     this.audit = audit;
     this.activity = activity;
+    this.guard = guard;
   }
 
   public record ClientDto(
@@ -98,6 +102,7 @@ public class ClientController {
   public ResponseEntity<ClientDto> create(
       @Valid @RequestBody CreateClientRequest body, HttpServletRequest req) {
     RequestContext ctx = RequestContext.require(req);
+    guard.requireClientSlot(ctx.workspaceId());
     Client c =
         clients.insert(
             ctx.workspaceId(),

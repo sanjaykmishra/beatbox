@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class ProblemDetailHandler {
@@ -35,6 +36,19 @@ public class ProblemDetailHandler {
     pd.setInstance(java.net.URI.create(req.getRequestURI()));
     pd.setProperty("request_id", req.getAttribute(RequestIdFilter.ATTRIBUTE));
     return ResponseEntity.badRequest().body(pd);
+  }
+
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<ProblemDetail> handleResponseStatus(
+      ResponseStatusException ex, HttpServletRequest req) {
+    HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+    String detail = ex.getReason() == null ? status.getReasonPhrase() : ex.getReason();
+    ProblemDetail pd = ProblemDetail.forStatusAndDetail(status, detail);
+    pd.setType(java.net.URI.create("/errors/" + status.value()));
+    pd.setTitle(status.getReasonPhrase());
+    pd.setInstance(java.net.URI.create(req.getRequestURI()));
+    pd.setProperty("request_id", req.getAttribute(RequestIdFilter.ATTRIBUTE));
+    return ResponseEntity.status(status).body(pd);
   }
 
   @ExceptionHandler(Exception.class)

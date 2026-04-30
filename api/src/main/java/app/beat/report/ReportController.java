@@ -3,6 +3,7 @@ package app.beat.report;
 import app.beat.activity.ActivityRecorder;
 import app.beat.activity.EventKinds;
 import app.beat.auth.SessionTokens;
+import app.beat.billing.PlanGuard;
 import app.beat.client.ClientRepository;
 import app.beat.coverage.CoverageItem;
 import app.beat.coverage.CoverageItemRepository;
@@ -52,6 +53,7 @@ public class ReportController {
   private final RenderJobRepository renderJobs;
   private final RenderClient renderClient;
   private final RenderPayloadBuilder renderPayloads;
+  private final PlanGuard guard;
   private final String appBaseUrl;
 
   public ReportController(
@@ -64,6 +66,7 @@ public class ReportController {
       RenderJobRepository renderJobs,
       RenderClient renderClient,
       RenderPayloadBuilder renderPayloads,
+      PlanGuard guard,
       @Value("${APP_BASE_URL:}") String appBaseUrl) {
     this.reports = reports;
     this.clients = clients;
@@ -74,6 +77,7 @@ public class ReportController {
     this.renderJobs = renderJobs;
     this.renderClient = renderClient;
     this.renderPayloads = renderPayloads;
+    this.guard = guard;
     this.appBaseUrl = appBaseUrl;
   }
 
@@ -124,6 +128,7 @@ public class ReportController {
       @Valid @RequestBody CreateReportRequest body,
       HttpServletRequest req) {
     RequestContext ctx = RequestContext.require(req);
+    guard.requireReportSlot(ctx.workspaceId());
     var client =
         clients
             .findInWorkspace(ctx.workspaceId(), clientId)

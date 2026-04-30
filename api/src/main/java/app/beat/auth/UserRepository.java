@@ -71,4 +71,19 @@ public class UserRepository {
   public void touchLastLogin(UUID id) {
     jdbc.sql("UPDATE users SET last_login_at = now() WHERE id = :id").param("id", id).update();
   }
+
+  /** First owner of the workspace (created earliest). Used by billing emails. */
+  public Optional<User> findOwnerOfWorkspace(UUID workspaceId) {
+    return jdbc.sql(
+            """
+            SELECT u.* FROM users u
+            JOIN workspace_members wm ON wm.user_id = u.id
+            WHERE wm.workspace_id = :w AND wm.role = 'owner' AND u.deleted_at IS NULL
+            ORDER BY wm.created_at
+            LIMIT 1
+            """)
+        .param("w", workspaceId)
+        .query(MAPPER)
+        .optional();
+  }
 }

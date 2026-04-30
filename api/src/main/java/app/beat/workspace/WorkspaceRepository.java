@@ -102,4 +102,40 @@ public class WorkspaceRepository {
         .query(MAPPER)
         .single();
   }
+
+  /** Activate a Stripe subscription on the workspace. Sets plan and limit columns. */
+  public Workspace setSubscription(
+      UUID id,
+      String plan,
+      int planLimitClients,
+      int planLimitReportsMonthly,
+      String stripeCustomerId,
+      String stripeSubscriptionId) {
+    return jdbc.sql(
+            """
+            UPDATE workspaces SET
+              plan = :p,
+              plan_limit_clients = :lc,
+              plan_limit_reports_monthly = :lr,
+              stripe_customer_id = COALESCE(:sc, stripe_customer_id),
+              stripe_subscription_id = COALESCE(:ss, stripe_subscription_id)
+            WHERE id = :id AND deleted_at IS NULL
+            RETURNING *
+            """)
+        .param("id", id)
+        .param("p", plan)
+        .param("lc", planLimitClients)
+        .param("lr", planLimitReportsMonthly)
+        .param("sc", stripeCustomerId)
+        .param("ss", stripeSubscriptionId)
+        .query(MAPPER)
+        .single();
+  }
+
+  public java.util.Optional<Workspace> findByStripeCustomerId(String customerId) {
+    return jdbc.sql("SELECT * FROM workspaces WHERE stripe_customer_id = :c AND deleted_at IS NULL")
+        .param("c", customerId)
+        .query(MAPPER)
+        .optional();
+  }
 }
