@@ -2,6 +2,7 @@ package app.beat.clientcontext;
 
 import app.beat.activity.ActivityRecorder;
 import app.beat.activity.EventKinds;
+import app.beat.alerts.AlertService;
 import app.beat.client.ClientRepository;
 import app.beat.infra.AppException;
 import app.beat.infra.RequestContext;
@@ -28,12 +29,17 @@ public class ClientContextController {
   private final ClientContextRepository contexts;
   private final ClientRepository clients;
   private final ActivityRecorder activity;
+  private final AlertService alerts;
 
   public ClientContextController(
-      ClientContextRepository contexts, ClientRepository clients, ActivityRecorder activity) {
+      ClientContextRepository contexts,
+      ClientRepository clients,
+      ActivityRecorder activity,
+      AlertService alerts) {
     this.contexts = contexts;
     this.clients = clients;
     this.activity = activity;
+    this.alerts = alerts;
   }
 
   public record ContextDto(
@@ -113,6 +119,7 @@ public class ClientContextController {
         "client",
         client.id(),
         Map.of("version", saved.version()));
+    alerts.recomputeFor(client.id());
     return ContextDto.from(saved);
   }
 }

@@ -2,6 +2,7 @@ package app.beat.extraction;
 
 import app.beat.activity.ActivityRecorder;
 import app.beat.activity.EventKinds;
+import app.beat.alerts.AlertService;
 import app.beat.author.Author;
 import app.beat.author.AuthorRepository;
 import app.beat.client.ClientRepository;
@@ -55,6 +56,7 @@ public class ExtractionWorker {
   private final ExtractionService extraction;
   private final OutletTierClassifier tierClassifier;
   private final ActivityRecorder activity;
+  private final AlertService alertService;
   private final ObjectMapper json = new ObjectMapper();
   private final boolean enabled;
 
@@ -73,6 +75,7 @@ public class ExtractionWorker {
       ExtractionService extraction,
       OutletTierClassifier tierClassifier,
       ActivityRecorder activity,
+      AlertService alertService,
       @Value("${beat.extraction.enabled:true}") boolean enabled) {
     this.jobs = jobs;
     this.coverage = coverage;
@@ -86,6 +89,7 @@ public class ExtractionWorker {
     this.extraction = extraction;
     this.tierClassifier = tierClassifier;
     this.activity = activity;
+    this.alertService = alertService;
     this.enabled = enabled;
   }
 
@@ -209,6 +213,7 @@ public class ExtractionWorker {
       }
 
       jobs.markDone(job.id());
+      alertService.recomputeFor(report.clientId());
       activity.recordWorker(
           workspaceId,
           EventKinds.REPORT_COVERAGE_EXTRACTED,
@@ -235,6 +240,15 @@ public class ExtractionWorker {
           "extraction_job",
           job.id(),
           Map.of("error_class", e.getClass().getSimpleName()));
+      // Best-effort: re-derive client_id via the coverage row for the failure case.
+      try {
+        coverage
+            .findById(job.coverageItemId())
+            .flatMap(ci -> reports.findById(ci.reportId()))
+            .ifPresent(r -> alertService.recomputeFor(r.clientId()));
+      } catch (Exception ignored) {
+        /* fire-and-forget */
+      }
       retryOrFail(job, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
     }
   }

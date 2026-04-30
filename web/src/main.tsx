@@ -8,7 +8,8 @@ import { Layout } from './components/Layout';
 import { Signup } from './routes/Signup';
 import { Login } from './routes/Login';
 import { Clients } from './routes/Clients';
-import { ClientDetail } from './routes/ClientDetail';
+import { ClientDashboard } from './routes/ClientDashboard';
+import { ClientEdit } from './routes/ClientEdit';
 import { Settings } from './routes/Settings';
 import { NewReport } from './routes/NewReport';
 import { ReportReview } from './routes/ReportReview';
@@ -36,7 +37,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               }
             >
               <Route path="/clients" element={<Clients />} />
-              <Route path="/clients/:id" element={<ClientDetail />} />
+              <Route path="/clients/:id" element={<ClientDashboard />} />
+              <Route path="/clients/:id/edit" element={<ClientEdit />} />
               <Route path="/clients/:id/context" element={<ClientContextEditor />} />
               <Route path="/clients/:id/reports/new" element={<NewReport />} />
               <Route path="/reports/:id" element={<ReportReview />} />

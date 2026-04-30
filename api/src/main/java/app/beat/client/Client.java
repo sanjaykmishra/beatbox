@@ -11,5 +11,6 @@ public record Client(
     String primaryColor,
     String notes,
     String defaultCadence,
+    Instant setupDismissedAt,
     Instant createdAt,
     Instant updatedAt) {}

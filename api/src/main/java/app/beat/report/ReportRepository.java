@@ -87,6 +87,21 @@ public class ReportRepository {
         .optional();
   }
 
+  /** Latest report for a client whose period_end is on or before the given date. */
+  public Optional<Report> findLatestForClientUpTo(UUID clientId, java.time.LocalDate ceiling) {
+    return jdbc.sql(
+            """
+            SELECT * FROM reports
+            WHERE client_id = :c AND deleted_at IS NULL AND period_end <= :ceil
+            ORDER BY period_end DESC
+            LIMIT 1
+            """)
+        .param("c", clientId)
+        .param("ceil", ceiling)
+        .query(MAPPER)
+        .optional();
+  }
+
   public void setStatus(UUID id, String status) {
     jdbc.sql("UPDATE reports SET status = :s WHERE id = :id")
         .param("id", id)

@@ -46,6 +46,7 @@ Deliverables:
 - Logo upload to R2 (presigned PUT URL pattern).
 - Audit events written for signup, login, client.created/updated/deleted.
 - `activity_events` table created (per `docs/15-additions.md` §15.2). `ActivityRecorder` service implemented. First events fire from auth and client CRUD endpoints.
+- Workspace client list with badges (per `docs/16-client-dashboard.md`): `GET /v1/clients` returns per-client `alerts_summary` + workspace summary. Frontend renders badges with severity colors, sorts by `total_score DESC`. (In Phase 1 the alerts table doesn't exist yet — Week 2 returns a stub `alerts_summary` with all-zero counts. Real alerts land in Week 8.)
 
 Acceptance:
 
@@ -119,6 +120,7 @@ Deliverables:
 - Header counts update live.
 - Skeleton loading states for `queued` and `running` items.
 - Client context UI and API per `docs/15-additions.md` §15.1. `client_context` table created. Edit form on `/clients/:id/context`. Context renders on report builder page (collapsed). Extraction worker reads context and renders into the prompt.
+- Client dashboard scaffolding (per `docs/16-client-dashboard.md`): route `/clients/:id`, header strip, stats row (computed on-the-fly), recent activity from `activity_events`. Two-column layout. No alerts data yet — "Needs attention" shows a placeholder.
 
 Acceptance:
 
@@ -187,12 +189,14 @@ Deliverables:
 - Plan limits enforced: client count cap, monthly report cap. Enforcement returns 402 with clear upgrade copy.
 - Trial state with explicit "trial expired — add card to continue" UX.
 - Email notifications on key billing events (Resend or Postmark, transactional only).
+- **Alert engine and `client_alerts` table (per `docs/16-client-dashboard.md`)**: migration + `client_alerts` table; six alert computations (`report.overdue`, `extraction.failed`, `inbox.pending`, `context.stale`, `client.setup_incomplete`, `client.healthy` — pitch- and attribution-related alerts deferred to Phase 3); event-driven invalidation hooks on the corresponding `activity_events` writes; 30-minute scheduled job for time-based alerts; `GET /v1/clients/:id/dashboard` endpoint returning the unified payload; frontend "Needs attention" column populated; client-list badges populated. (Phase 1 implements 5 of the 6 — `inbox.pending` is deferred until inbox tables exist.)
 
 Acceptance:
 
 - A new user can upgrade from trial to Solo via Stripe Checkout and immediately get higher limits.
 - Trial expiry blocks new report generation but preserves access to existing reports.
 - A failed payment downgrades the workspace and surfaces a clear remediation flow.
+- Resolving an alert (e.g., generating an overdue report) removes the corresponding card from the dashboard and the badge from the list within 60 seconds.
 
 ---
 
@@ -209,6 +213,7 @@ Deliverables:
 - Accessibility pass: keyboard nav, focus states, contrast, alt text on images, aria-labels on interactive elements.
 - Settings page: workspace name/logo/color, members management, billing.
 - Founder dashboard at `/admin/dashboard` (gated to internal users only). Pulls from `activity_events`. Shows daily extractions, daily reports generated, cost per workspace, P95 extraction latency, top error classes.
+- Polish for the client dashboard states (per `docs/16-client-dashboard.md`): empty states (healthy, no recent activity, no upcoming items), loading skeletons, dismiss action on the new-client setup checklist, tooltips on badges.
 - 404 and error boundary pages.
 - Mobile responsive (the editing experience can degrade gracefully — agencies build reports on desktop).
 

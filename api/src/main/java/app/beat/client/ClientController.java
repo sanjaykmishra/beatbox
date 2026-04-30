@@ -2,6 +2,10 @@ package app.beat.client;
 
 import app.beat.activity.ActivityRecorder;
 import app.beat.activity.EventKinds;
+import app.beat.alerts.AlertService;
+import app.beat.alerts.AlertTypes;
+import app.beat.alerts.ClientAlert;
+import app.beat.alerts.ClientAlertRepository;
 import app.beat.audit.AuditService;
 import app.beat.billing.PlanGuard;
 import app.beat.infra.AppException;
@@ -34,13 +38,22 @@ public class ClientController {
   private final AuditService audit;
   private final ActivityRecorder activity;
   private final PlanGuard guard;
+  private final AlertService alerts;
+  private final ClientAlertRepository alertRepo;
 
   public ClientController(
-      ClientRepository clients, AuditService audit, ActivityRecorder activity, PlanGuard guard) {
+      ClientRepository clients,
+      AuditService audit,
+      ActivityRecorder activity,
+      PlanGuard guard,
+      AlertService alerts,
+      ClientAlertRepository alertRepo) {
     this.clients = clients;
     this.audit = audit;
     this.activity = activity;
     this.guard = guard;
+    this.alerts = alerts;
+    this.alertRepo = alertRepo;
   }
 
   public record ClientDto(
@@ -63,7 +76,28 @@ public class ClientController {
     }
   }
 
-  public record ListResponse(List<ClientDto> items, String next_cursor) {}
+  public record ListResponse(
+      List<ListItem> items, WorkspaceSummary workspace_summary, String next_cursor) {}
+
+  public record ListItem(
+      UUID id,
+      String name,
+      String logo_url,
+      String primary_color,
+      String default_cadence,
+      Instant created_at,
+      AlertsSummary alerts_summary) {}
+
+  public record AlertsSummary(
+      int total_score,
+      Map<String, Integer> by_severity,
+      List<TopBadge> top_badges,
+      int overflow_count) {}
+
+  public record TopBadge(String alert_type, String severity, String label) {}
+
+  public record WorkspaceSummary(
+      int total_clients, int total_attention_items, Map<String, Integer> by_severity) {}
 
   public record CreateClientRequest(
       @NotBlank @Size(max = 120) String name,
@@ -84,9 +118,67 @@ public class ClientController {
   @GetMapping
   public ListResponse list(HttpServletRequest req) {
     RequestContext ctx = RequestContext.require(req);
-    var items =
-        clients.listByWorkspace(ctx.workspaceId(), 100).stream().map(ClientDto::from).toList();
-    return new ListResponse(items, null);
+    var clientList = clients.listByWorkspace(ctx.workspaceId(), 100);
+    var alertsByClient =
+        alertRepo.findByWorkspace(ctx.workspaceId()).stream()
+            .collect(java.util.stream.Collectors.groupingBy(ClientAlert::clientId));
+
+    int wsRed = 0, wsAmber = 0, wsBlue = 0;
+    var rows = new java.util.ArrayList<ListItem>();
+    for (var c : clientList) {
+      var alerts = alertsByClient.getOrDefault(c.id(), List.of());
+      int red = 0, amber = 0, blue = 0;
+      for (var a : alerts) {
+        switch (a.severity()) {
+          case AlertTypes.RED -> red++;
+          case AlertTypes.AMBER -> amber++;
+          case AlertTypes.BLUE -> blue++;
+          default -> {}
+        }
+      }
+      wsRed += red;
+      wsAmber += amber;
+      wsBlue += blue;
+      int score = red * 100 + amber * 10 + blue;
+      var sorted =
+          alerts.stream()
+              .filter(a -> !AlertTypes.HEALTHY.equals(a.alertType()))
+              .sorted(
+                  java.util.Comparator.comparingInt(
+                          (ClientAlert a) -> AlertTypes.score(a.severity()))
+                      .reversed())
+              .toList();
+      var badges =
+          sorted.stream()
+              .limit(3)
+              .map(a -> new TopBadge(a.alertType(), a.severity(), a.badgeLabel()))
+              .toList();
+      int overflow = Math.max(0, sorted.size() - 3);
+      rows.add(
+          new ListItem(
+              c.id(),
+              c.name(),
+              c.logoUrl(),
+              c.primaryColor(),
+              c.defaultCadence(),
+              c.createdAt(),
+              new AlertsSummary(
+                  score,
+                  Map.of(AlertTypes.RED, red, AlertTypes.AMBER, amber, AlertTypes.BLUE, blue),
+                  badges,
+                  overflow)));
+    }
+    rows.sort(
+        java.util.Comparator.comparingInt((ListItem i) -> i.alerts_summary().total_score())
+            .reversed()
+            .thenComparing(java.util.Comparator.comparing(ListItem::created_at).reversed())
+            .thenComparing(i -> i.id().toString()));
+    var ws =
+        new WorkspaceSummary(
+            rows.size(),
+            wsRed + wsAmber + wsBlue,
+            Map.of(AlertTypes.RED, wsRed, AlertTypes.AMBER, wsAmber, AlertTypes.BLUE, wsBlue));
+    return new ListResponse(rows, ws, null);
   }
 
   @GetMapping("/{id}")
@@ -121,6 +213,7 @@ public class ClientController {
         req);
     activity.recordUser(
         ctx.workspaceId(), ctx.userId(), EventKinds.CLIENT_CREATED, "client", c.id(), Map.of());
+    alerts.recomputeFor(c.id());
     return ResponseEntity.status(HttpStatus.CREATED).body(ClientDto.from(c));
   }
 

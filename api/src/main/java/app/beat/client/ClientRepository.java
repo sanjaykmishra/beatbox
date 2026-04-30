@@ -28,6 +28,7 @@ public class ClientRepository {
               rs.getString("primary_color"),
               rs.getString("notes"),
               rs.getString("default_cadence"),
+              ts(rs, "setup_dismissed_at"),
               ts(rs, "created_at"),
               ts(rs, "updated_at"));
 
@@ -48,6 +49,14 @@ public class ClientRepository {
         .param("l", limit)
         .query(MAPPER)
         .list();
+  }
+
+  /** Workspace-agnostic lookup. Use sparingly; tenant-scoped queries are preferred. */
+  public Optional<Client> findById(UUID id) {
+    return jdbc.sql("SELECT * FROM clients WHERE id = :id AND deleted_at IS NULL")
+        .param("id", id)
+        .query(MAPPER)
+        .optional();
   }
 
   public Optional<Client> findInWorkspace(UUID workspaceId, UUID id) {
@@ -129,5 +138,17 @@ public class ClientRepository {
             .query(Integer.class)
             .single();
     return n == null ? 0 : n;
+  }
+
+  /** Pin "I'll do it later" on the new-client setup checklist. */
+  public void dismissSetup(UUID id) {
+    jdbc.sql("UPDATE clients SET setup_dismissed_at = now() WHERE id = :id")
+        .param("id", id)
+        .update();
+  }
+
+  /** All non-deleted clients across the workspace. Used by the scheduled alert refresh. */
+  public List<Client> listAllActive() {
+    return jdbc.sql("SELECT * FROM clients WHERE deleted_at IS NULL").query(MAPPER).list();
   }
 }

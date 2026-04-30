@@ -53,6 +53,83 @@ export type Client = {
 };
 export type ListResponse<T> = { items: T[]; next_cursor: string | null };
 
+// Augmented client list per docs/16-client-dashboard.md.
+export type ClientListItem = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  primary_color: string | null;
+  default_cadence: string | null;
+  created_at: string;
+  alerts_summary: AlertsSummary;
+};
+export type AlertsSummary = {
+  total_score: number;
+  by_severity: { red: number; amber: number; blue: number };
+  top_badges: { alert_type: string; severity: Severity; label: string }[];
+  overflow_count: number;
+};
+export type Severity = 'red' | 'amber' | 'blue' | 'green';
+export type ClientListResponse = {
+  items: ClientListItem[];
+  workspace_summary: {
+    total_clients: number;
+    total_attention_items: number;
+    by_severity: { red: number; amber: number; blue: number };
+  };
+  next_cursor: string | null;
+};
+
+export type DashboardStat = {
+  value: number;
+  delta_pct: number | null;
+  delta_pts: number | null;
+  delta_label: string;
+};
+export type AlertCard = {
+  alert_type: string;
+  severity: Severity;
+  count: number;
+  badge_label: string;
+  card_title: string;
+  card_subtitle: string | null;
+  card_action_label: string | null;
+  card_action_path: string | null;
+};
+export type ComingUpItem = {
+  kind: string;
+  title: string;
+  subtitle: string | null;
+  path: string | null;
+};
+export type ActivityItem = {
+  occurred_at: string;
+  kind: string;
+  label: string;
+  detail: string | null;
+  tag: { label: string; tone: string } | null;
+  actor_label: string | null;
+};
+export type ClientDashboard = {
+  client: {
+    id: string;
+    name: string;
+    logo_url: string | null;
+    primary_color: string | null;
+    default_cadence: string | null;
+    setup_dismissed_at: string | null;
+  };
+  stats_30d: {
+    coverage_count: DashboardStat;
+    tier_1_count: DashboardStat;
+    sentiment: DashboardStat;
+    reach: DashboardStat;
+  };
+  alerts: AlertCard[];
+  coming_up: ComingUpItem[];
+  recent_activity: ActivityItem[];
+};
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -82,7 +159,7 @@ export const api = {
   updateWorkspace: (
     b: Partial<{ name: string; logo_url: string; primary_color: string; default_template_id: string }>,
   ) => request<Workspace>('PATCH', '/v1/workspace', b),
-  listClients: () => request<ListResponse<Client>>('GET', '/v1/clients'),
+  listClients: () => request<ClientListResponse>('GET', '/v1/clients'),
   createClient: (b: {
     name: string;
     logo_url?: string;
@@ -102,6 +179,14 @@ export const api = {
     }>,
   ) => request<Client>('PATCH', `/v1/clients/${id}`, b),
   deleteClient: (id: string) => request<void>('DELETE', `/v1/clients/${id}`),
+  getClientDashboard: (id: string) =>
+    request<ClientDashboard>('GET', `/v1/clients/${id}/dashboard`),
+  getClientActivity: (id: string, limit = 100) =>
+    request<ActivityItem[]>('GET', `/v1/clients/${id}/activity?limit=${limit}`),
+  refreshClientAlerts: (id: string) =>
+    request<AlertCard[]>('POST', `/v1/clients/${id}/alerts/refresh`),
+  dismissSetup: (id: string) =>
+    request<void>('POST', `/v1/clients/${id}/setup-checklist/dismiss`),
   presignUpload: (b: { purpose: 'logo' | 'client_logo'; content_type: string }) =>
     request<{ url: string; key: string; public_url: string; expires_in: number }>(
       'POST',

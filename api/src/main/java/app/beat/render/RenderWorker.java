@@ -2,6 +2,7 @@ package app.beat.render;
 
 import app.beat.activity.ActivityRecorder;
 import app.beat.activity.EventKinds;
+import app.beat.alerts.AlertService;
 import app.beat.client.ClientRepository;
 import app.beat.clientcontext.ClientContextRepository;
 import app.beat.coverage.CoverageItem;
@@ -51,6 +52,7 @@ public class RenderWorker {
   private final PdfStorage pdfs;
   private final SummaryService summary;
   private final ActivityRecorder activity;
+  private final AlertService alertService;
   private final boolean enabled;
 
   private final ExecutorService pool = Executors.newFixedThreadPool(BATCH_SIZE);
@@ -68,6 +70,7 @@ public class RenderWorker {
       PdfStorage pdfs,
       SummaryService summary,
       ActivityRecorder activity,
+      AlertService alertService,
       @Value("${beat.render.enabled:true}") boolean enabled) {
     this.jobs = jobs;
     this.reports = reports;
@@ -81,6 +84,7 @@ public class RenderWorker {
     this.pdfs = pdfs;
     this.summary = summary;
     this.activity = activity;
+    this.alertService = alertService;
     this.enabled = enabled;
   }
 
@@ -183,6 +187,7 @@ public class RenderWorker {
       }
       reports.markReady(report.id(), pdfUrl);
       jobs.markDone(job.id());
+      alertService.recomputeFor(report.clientId());
       activity.recordWorker(
           ws.id(),
           EventKinds.REPORT_GENERATED,

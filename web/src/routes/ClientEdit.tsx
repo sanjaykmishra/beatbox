@@ -3,7 +3,7 @@ import { useState, type ChangeEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError, uploadLogo } from '../lib/api';
 
-export function ClientDetail() {
+export function ClientEdit() {
   const { id = '' } = useParams();
   const qc = useQueryClient();
   const navigate = useNavigate();
