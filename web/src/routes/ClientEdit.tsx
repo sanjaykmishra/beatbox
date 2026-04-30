@@ -84,6 +84,10 @@ export function ClientEdit() {
               </Link>
             </p>
             <h1 className="text-2xl font-semibold tracking-tightish text-ink mt-0.5">Settings</h1>
+            <p className="mt-1 text-xs text-gray-500">
+              Branding, cadence, and notes for this client. Field changes save automatically when
+              you click away.
+            </p>
           </div>
           <div className="flex items-center gap-2 flex-none">
             <SecondaryLink to={`/clients/${c.id}/context`}>Context</SecondaryLink>

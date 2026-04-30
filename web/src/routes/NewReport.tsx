@@ -72,6 +72,11 @@ export function NewReport() {
           <h1 className="text-2xl font-semibold tracking-tightish text-ink mt-0.5">
             New coverage report
           </h1>
+          <p className="mt-1 text-xs text-gray-500">
+            Pick the reporting period and paste article URLs (one per line, or any whitespace
+            separator). Beat extracts each in parallel; you'll review on the next screen before
+            generating the PDF.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

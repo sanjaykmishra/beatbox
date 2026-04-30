@@ -123,9 +123,15 @@ export function ReportPreview() {
   return (
     <BrowserFrame crumbs={[chromeLabel]} rightSlot={rightSlot}>
       <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold tracking-tightish text-ink">{r.title}</h1>
-          <StatusPill status={r.status} />
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold tracking-tightish text-ink">{r.title}</h1>
+            <StatusPill status={r.status} />
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Server-rendered preview of the PDF. Edit the executive summary inline; use Share or
+            Download in the chrome to send.
+          </p>
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
