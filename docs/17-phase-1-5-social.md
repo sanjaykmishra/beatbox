@@ -473,7 +473,17 @@ In the post composer:
 
 The single biggest agency-vs-consumer-tool differentiator in Phase 1.5. Existing social tools were built for in-house teams; agencies need a structured way to send drafts to clients for review before publishing.
 
-### How it works
+### Already shipped (interim, Week 2 of Phase 1.5)
+
+The agency-internal review half of the workflow ships before the full portal so the "Submit for review" button on the calendar composer does something useful:
+
+- `internal_review` transition fires `app.beat.social.PostReviewNotifier.notifyInternalReview`, which emails every workspace member (excluding the submitter, excluding viewers) via `EmailService` (Resend). Subject: "{Submitter} submitted a {Client} post for review". Email body includes the post title, a 280-char snippet from `primary_content_text`, and a CTA back to `/calendar`. No-op when `RESEND_API_KEY` is empty.
+- `/calendar` header has a **"Needs review" pill** with a count of posts currently in `internal_review` across the workspace. Clicking it switches the body to a flat list view sorted by `submitted_for_review_at` desc; clicking a row opens the composer.
+- Each post transition invalidates the review-count query so the badge updates immediately after Submit / Approve / Reject.
+
+What's still in scope for the Week 5 build below: the entire **client-facing** half — `client_review` state, magic-link portal, public approval page, comment threading, all of the `post_approval_*` and `post_comments` tables. Internal review is solved; client review still needs the portal.
+
+### How it works (Week 5 — client-facing portal)
 
 1. Agency drafts a post in the calendar.
 2. Agency clicks "Request client approval." Selects which client contacts to send to (one or more).
@@ -750,7 +760,7 @@ One-time work:
 | 2 | Social mention extraction pipeline: per-platform fetchers (Bluesky, Reddit, X via ScrapingBee, LinkedIn via ScrapingBee, others as best-effort). LLM extraction prompt + eval. URL classifier and dispatcher. |
 | 3 | Editorial calendar: month/week views, drag-drop, post detail surface, multi-platform composer, variant generation prompt + eval. |
 | 4 | Calendar polish + asset library: upload, browse, drag-into-composer. Brand colors. Plan limits. |
-| 5 | Approval workflow: approval request flow, portal pages, comment threads. Reuses portal auth from Phase 2 §11.7 (forced forward). |
+| 5 | **Client-facing** approval workflow: approval request flow, portal pages, comment threads. Reuses portal auth from Phase 2 §11.7 (forced forward). The internal-review email + "Needs review" calendar filter already shipped in Week 2; see §17.4 "Already shipped". |
 | 6 | Reports integration: new template sections, exec summary prompt v1.2, eval updates. Updated default system template. |
 | 7 | Manual social listening (Bluesky + Reddit). Polish. End-to-end dogfood with two real clients. |
 

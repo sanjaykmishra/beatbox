@@ -61,6 +61,26 @@ public class WorkspaceMemberRepository {
         .list();
   }
 
+  /**
+   * Returns the email addresses of every member of the workspace (excluding viewers, who shouldn't
+   * get review notifications) optionally excluding one user — typically the actor.
+   */
+  public List<String> notificationEmailsForWorkspace(UUID workspaceId, UUID excludeUserId) {
+    return jdbc.sql(
+            """
+            SELECT u.email
+            FROM workspace_members wm
+            JOIN users u ON u.id = wm.user_id AND u.deleted_at IS NULL
+            WHERE wm.workspace_id = :w
+              AND wm.role IN ('owner','member')
+              AND (:exclude::uuid IS NULL OR u.id <> :exclude)
+            """)
+        .param("w", workspaceId)
+        .param("exclude", excludeUserId)
+        .query((rs, n) -> rs.getString("email"))
+        .list();
+  }
+
   public Optional<Membership> findCurrentForUser(UUID userId) {
     return jdbc.sql(
             """
