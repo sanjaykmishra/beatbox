@@ -1,8 +1,12 @@
 name: Deploy
 
+# Manual-only. Trigger from the Actions tab → "Deploy" → "Run workflow".
+# To re-enable auto-deploy on push to main, replace this block with:
+#   on:
+#     push:
+#       branches: [main]
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-${{ github.ref }}
