@@ -113,7 +113,6 @@ export function ClientDashboard() {
         {/* Action row */}
         <div className="flex items-center gap-2 flex-wrap">
           <PrimaryLink to={`/clients/${id}/reports/new`}>+ New report</PrimaryLink>
-          <SecondaryLink to={`/clients/${id}/reports/new`}>Add coverage</SecondaryLink>
           <SecondaryLink to={`/clients/${id}/context`}>View context</SecondaryLink>
         </div>
 
