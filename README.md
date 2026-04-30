@@ -30,9 +30,9 @@ Then visit:
 | URL                              | Service               |
 |----------------------------------|-----------------------|
 | http://localhost:5173            | web (nginx, proxies `/v1/*` to api) |
-| http://localhost:8080/v1/healthz | api (Spring Boot)     |
+| http://localhost:8081/v1/healthz | api (Spring Boot)     |
 | http://localhost:3000/healthz    | render (Puppeteer)    |
-| `psql -h localhost -U beat -d beat` (password `beat`) | postgres |
+| `psql -h localhost -p 5433 -U beat -d beat` (password `beat`) | postgres |
 
 API keys (Anthropic, Stripe, R2, etc.) are read from a `.env` file at the repo root if present — copy `.env.example` and fill in only what you want to exercise. The api boots with empty values for all of them; the upload endpoint returns 503 until R2 is configured, and the LLM features land in later weeks.
 
