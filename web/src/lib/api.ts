@@ -277,7 +277,119 @@ export const api = {
   listMembers: () => request<Member[]>('GET', '/v1/workspace/members'),
   adminWhoami: () => request<{ is_admin: boolean }>('GET', '/v1/admin/whoami'),
   adminDashboard: () => request<AdminDashboard>('GET', '/v1/admin/dashboard'),
+
+  // ----- Owned posts / editorial calendar (Phase 1.5 §17.2) -----
+  listPosts: (params?: ListPostsParams) =>
+    request<{ items: OwnedPost[] }>('GET', `/v1/posts${qs(params)}`),
+  getPost: (id: string) => request<OwnedPost>('GET', `/v1/posts/${id}`),
+  createPost: (b: CreatePostInput) => request<OwnedPost>('POST', '/v1/posts', b),
+  updatePost: (id: string, b: UpdatePostInput) =>
+    request<OwnedPost>('PATCH', `/v1/posts/${id}`, b),
+  transitionPost: (id: string, transition: PostTransition, body?: { reason?: string }) =>
+    request<OwnedPost>('POST', `/v1/posts/${id}/transitions/${transition}`, body ?? {}),
+  deletePost: (id: string) => request<void>('DELETE', `/v1/posts/${id}`),
 };
+
+function qs(params?: Record<string, string | number | undefined | null>): string {
+  if (!params) return '';
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(params)) {
+    if (v == null || v === '') continue;
+    parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+  }
+  return parts.length ? `?${parts.join('&')}` : '';
+}
+
+export type SocialPlatform =
+  | 'x'
+  | 'linkedin'
+  | 'bluesky'
+  | 'threads'
+  | 'instagram'
+  | 'facebook'
+  | 'tiktok'
+  | 'reddit'
+  | 'substack'
+  | 'youtube'
+  | 'mastodon';
+
+export type PostStatus =
+  | 'draft'
+  | 'internal_review'
+  | 'client_review'
+  | 'approved'
+  | 'scheduled'
+  | 'posted'
+  | 'rejected'
+  | 'archived';
+
+export type PostTransition =
+  | 'submit_for_internal_review'
+  | 'request_client_approval'
+  | 'approve'
+  | 'schedule'
+  | 'mark_posted'
+  | 'reject'
+  | 'archive'
+  | 'reopen';
+
+export type PlatformVariant = {
+  content: string;
+  char_count: number | null;
+  edited_at: string | null;
+};
+
+export type OwnedPost = {
+  id: string;
+  workspace_id: string;
+  client_id: string;
+  title: string | null;
+  primary_content_text: string | null;
+  platform_variants: Record<string, PlatformVariant>;
+  target_platforms: SocialPlatform[];
+  scheduled_for: string | null;
+  timezone: string;
+  status: PostStatus;
+  series_tag: string | null;
+  drafted_by_user_id: string | null;
+  submitted_for_review_at: string | null;
+  approved_at: string | null;
+  posted_at: string | null;
+  asset_ids: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type ListPostsParams = {
+  client_id?: string;
+  status?: PostStatus;
+  series_tag?: string;
+  platform?: SocialPlatform;
+  from?: string;
+  to?: string;
+  limit?: number;
+};
+
+export type CreatePostInput = {
+  client_id: string;
+  title?: string;
+  primary_content_text?: string;
+  target_platforms?: SocialPlatform[];
+  scheduled_for?: string;
+  timezone?: string;
+  series_tag?: string;
+};
+
+export type UpdatePostInput = Partial<{
+  title: string;
+  primary_content_text: string;
+  platform_variants: Record<string, PlatformVariant>;
+  target_platforms: SocialPlatform[];
+  scheduled_for: string;
+  timezone: string;
+  series_tag: string;
+  asset_ids: string[];
+}>;
 
 export type Member = {
   user_id: string;
