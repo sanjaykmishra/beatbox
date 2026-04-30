@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Avatar palette preview</title>
+    <style>
+      :root {
+        font-family: 'Inter', system-ui, sans-serif;
+        color: #0b0f19;
+      }
+      body {
+        margin: 0;
+        padding: 32px;
+        background: #f5f6f8;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+        letter-spacing: -0.01em;
+      }
+      p.lede {
+        margin: 0 0 24px;
+        color: #6b7280;
+        font-size: 13px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+      }
+      .col {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 18px 20px;
+      }
+      .col h2 {
+        font-size: 13px;
+        margin: 0 0 4px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #6b7280;
+        font-weight: 600;
+      }
+      .col p {
+        margin: 0 0 14px;
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      .row:last-child {
+        border-bottom: 0;
+      }
+      .av {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 13px;
+        flex: none;
+        letter-spacing: -0.01em;
+      }
+      .meta {
+        font-size: 13px;
+      }
+      .meta b {
+        font-weight: 500;
+      }
+      .meta small {
+        display: block;
+        color: #6b7280;
+        font-size: 11px;
+        margin-top: 2px;
+      }
+      .legend {
+        margin-top: 28px;
+        font-size: 12px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Avatar palette preview</h1>
+    <p class="lede">
+      Three options to compare. The deterministic palette is keyed by name hash so the same client
+      always gets the same color. Brand-color (workspace primary_color) override path is shown at
+      the bottom and is unaffected.
+    </p>
+
+    <div class="grid">
+      <!-- Option A: current pastel -->
+      <div class="col">
+        <h2>A · Current (pastel)</h2>
+        <p>Tailwind <code>-100</code> bg + <code>-900</code> text. What you have now.</p>
+        <div class="row">
+          <div class="av" style="background:#FEE2E2;color:#7F1D1D">BI</div>
+          <div class="meta"><b>Beta Industries</b><small>red-100 / red-900</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#FEF3C7;color:#78350F">DC</div>
+          <div class="meta"><b>Delta Co</b><small>amber-100 / amber-900</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#DBEAFE;color:#1E3A8A">AC</div>
+          <div class="meta"><b>Acme Corp</b><small>blue-100 / blue-900</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#DCFCE7;color:#14532D">NV</div>
+          <div class="meta"><b>Novara Health</b><small>emerald-100 / emerald-900</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#E0E7FF;color:#312E81">OL</div>
+          <div class="meta"><b>Orbit Labs</b><small>indigo-100 / indigo-900</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#FCE7F3;color:#831843">PR</div>
+          <div class="meta"><b>Pinecone Retail</b><small>pink-100 / pink-900</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#EDE9FE;color:#4C1D95">VG</div>
+          <div class="meta"><b>Voltage Games</b><small>violet-100 / violet-900</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#CCFBF1;color:#134E4A">TM</div>
+          <div class="meta"><b>Tide Motors</b><small>teal-100 / teal-900</small></div>
+        </div>
+      </div>
+
+      <!-- Option B: split-the-difference -->
+      <div class="col">
+        <h2>B · Split the difference</h2>
+        <p>Tailwind <code>-200</code> bg + <code>-800</code> text. My recommendation.</p>
+        <div class="row">
+          <div class="av" style="background:#FECACA;color:#991B1B">BI</div>
+          <div class="meta"><b>Beta Industries</b><small>red-200 / red-800</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#FDE68A;color:#92400E">DC</div>
+          <div class="meta"><b>Delta Co</b><small>amber-200 / amber-800</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#BFDBFE;color:#1E40AF">AC</div>
+          <div class="meta"><b>Acme Corp</b><small>blue-200 / blue-800</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#A7F3D0;color:#166534">NV</div>
+          <div class="meta"><b>Novara Health</b><small>emerald-200 / emerald-800</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#C7D2FE;color:#3730A3">OL</div>
+          <div class="meta"><b>Orbit Labs</b><small>indigo-200 / indigo-800</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#FBCFE8;color:#9D174D">PR</div>
+          <div class="meta"><b>Pinecone Retail</b><small>pink-200 / pink-800</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#DDD6FE;color:#5B21B6">VG</div>
+          <div class="meta"><b>Voltage Games</b><small>violet-200 / violet-800</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#99F6E4;color:#115E59">TM</div>
+          <div class="meta"><b>Tide Motors</b><small>teal-200 / teal-800</small></div>
+        </div>
+      </div>
+
+      <!-- Option C: original saturated -->
+      <div class="col">
+        <h2>C · Original (saturated)</h2>
+        <p>Tailwind <code>~600</code> bg + white text. The pre-desaturation look.</p>
+        <div class="row">
+          <div class="av" style="background:#BE123C;color:#fff">BI</div>
+          <div class="meta"><b>Beta Industries</b><small>rose-700 / white</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#B45309;color:#fff">DC</div>
+          <div class="meta"><b>Delta Co</b><small>amber-700 / white</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#0891B2;color:#fff">AC</div>
+          <div class="meta"><b>Acme Corp</b><small>cyan-600 / white</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#059669;color:#fff">NV</div>
+          <div class="meta"><b>Novara Health</b><small>emerald-600 / white</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#4F46E5;color:#fff">OL</div>
+          <div class="meta"><b>Orbit Labs</b><small>indigo-600 / white</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#1F2937;color:#fff">PR</div>
+          <div class="meta"><b>Pinecone Retail</b><small>slate-800 / white</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#7C3AED;color:#fff">VG</div>
+          <div class="meta"><b>Voltage Games</b><small>violet-600 / white</small></div>
+        </div>
+        <div class="row">
+          <div class="av" style="background:#0F766E;color:#fff">TM</div>
+          <div class="meta"><b>Tide Motors</b><small>teal-700 / white</small></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="legend">
+      Reply with <b>A</b>, <b>B</b>, or <b>C</b> — or describe a tweak (e.g. "B but darker text",
+      "B for blue/green, A for the rest"). I'll wire it in.
+    </p>
+  </body>
+</html>
