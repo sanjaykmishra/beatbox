@@ -42,7 +42,9 @@ export function Settings() {
   }
 
   return (
-    <BrowserFrame crumbs={[{ label: `${slug}.beat.app` }, { label: 'settings' }]}>
+    <BrowserFrame
+      crumbs={[{ label: `${slug}.beat.app`, to: '/clients' }, { label: 'settings' }]}
+    >
       <div className="space-y-7 max-w-3xl">
         <div className="flex items-start justify-between gap-4">
           <div>

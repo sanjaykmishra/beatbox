@@ -36,7 +36,9 @@ export function Clients() {
   const slug = workspace?.slug ?? 'workspace';
 
   return (
-    <BrowserFrame crumbs={[{ label: `${slug}.beat.app` }, { label: 'clients' }]}>
+    <BrowserFrame
+      crumbs={[{ label: `${slug}.beat.app`, to: '/clients' }, { label: 'clients' }]}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tightish text-ink">Clients</h1>

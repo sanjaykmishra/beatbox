@@ -60,9 +60,9 @@ export function NewReport() {
   return (
     <BrowserFrame
       crumbs={[
-        { label: `${slug}.beat.app` },
-        { label: 'clients' },
-        { label: clientLabel.toLowerCase() },
+        { label: `${slug}.beat.app`, to: '/clients' },
+        { label: 'clients', to: '/clients' },
+        { label: clientLabel.toLowerCase(), to: clientId ? `/clients/${clientId}` : undefined },
         { label: 'new report' },
       ]}
     >

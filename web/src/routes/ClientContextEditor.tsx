@@ -75,9 +75,9 @@ export function ClientContextEditor() {
   return (
     <BrowserFrame
       crumbs={[
-        { label: `${slug}.beat.app` },
-        { label: 'clients' },
-        { label: clientLabel.toLowerCase() },
+        { label: `${slug}.beat.app`, to: '/clients' },
+        { label: 'clients', to: '/clients' },
+        { label: clientLabel.toLowerCase(), to: c ? `/clients/${c.id}` : undefined },
         { label: 'context' },
       ]}
     >
