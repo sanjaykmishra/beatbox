@@ -1,0 +1,36 @@
+# Env
+.env
+.env.local
+.env.*.local
+
+# Java / Gradle
+api/.gradle/
+api/build/
+api/bin/
+api/out/
+api/.idea/
+api/*.iml
+
+# Node
+node_modules/
+web/dist/
+web/.vite/
+render/dist/
+*.tsbuildinfo
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+api/build/reports/
+
+# Fly
+.fly/

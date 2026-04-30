@@ -5,10 +5,29 @@
 
 ## What this repo is
 
-This is the **product specification** for Beat, structured as project memory for [Claude Code](https://claude.com/product/claude-code). The actual codebase will live alongside these docs once Phase 1 starts.
+The product specification and the Phase 1 codebase for Beat. Project memory for [Claude Code](https://claude.com/product/claude-code) is in `CLAUDE.md`.
 
 If you're a human contributor, start with `docs/01-product-and-users.md`.
 If you're Claude Code, start with `CLAUDE.md`.
+
+## Local development
+
+```bash
+# Postgres (local)
+createdb beat && createuser beat
+cp .env.example .env
+
+# api/  (Spring Boot)
+cd api && ./gradlew bootRun
+
+# web/  (Vite)
+cd web && npm install && npm run dev
+
+# render/  (Express + Puppeteer)
+cd render && npm install && npm run dev
+```
+
+`migrations/V001__init.sql` is bundled into the api JAR at `classpath:db/migration` and applied by Flyway on startup.
 
 ## Layout
 
@@ -30,10 +49,17 @@ If you're Claude Code, start with `CLAUDE.md`.
 │   ├── extraction-v1.md
 │   ├── outlet-tier-v1.md
 │   └── executive-summary-v1.md
-└── assets/                   ← wireframes
-    ├── wireframe-1-create.png
-    ├── wireframe-2-review.png
-    └── wireframe-3-report.png
+├── assets/                   ← wireframes
+│   ├── wireframe-1-create.png
+│   ├── wireframe-2-review.png
+│   └── wireframe-3-report.png
+├── migrations/               ← Flyway SQL migrations (forward-only)
+│   └── V001__init.sql
+├── api/                      ← Spring Boot 3 + Java 21
+├── web/                      ← Vite + React 18 + TS + Tailwind
+├── render/                   ← Node + Express + Puppeteer
+├── infra/                    ← Dockerfiles + Fly.io configs
+└── .github/workflows/        ← CI + deploy
 ```
 
 ## Phase 1 in one paragraph
