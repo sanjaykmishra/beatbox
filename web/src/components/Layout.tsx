@@ -26,6 +26,7 @@ export function Layout() {
           </Link>
           <nav className="flex items-center gap-1 text-[13px]">
             <NavItem to="/clients">Clients</NavItem>
+            <NavItem to="/calendar">Calendar</NavItem>
             <NavItem to="/settings">Settings</NavItem>
             <span className="mx-2 h-4 w-px bg-gray-200" aria-hidden />
             <button

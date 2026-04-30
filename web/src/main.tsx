@@ -16,6 +16,7 @@ import { NewReport } from './routes/NewReport';
 import { ReportReview } from './routes/ReportReview';
 import { ReportPreview } from './routes/ReportPreview';
 import { ClientContextEditor } from './routes/ClientContextEditor';
+import { Calendar } from './routes/Calendar';
 import { AdminDashboard } from './routes/AdminDashboard';
 import { NotFound } from './routes/NotFound';
 import './styles.css';
@@ -40,6 +41,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                   </ProtectedRoute>
                 }
               >
+                <Route path="/calendar" element={<Calendar />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/clients/:id" element={<ClientDashboard />} />
                 <Route path="/clients/:id/edit" element={<ClientEdit />} />

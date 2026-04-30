@@ -54,12 +54,17 @@ public class OwnedPostController {
   private final OwnedPostRepository posts;
   private final ClientRepository clients;
   private final ActivityRecorder activity;
+  private final PostVariantService variants;
 
   public OwnedPostController(
-      OwnedPostRepository posts, ClientRepository clients, ActivityRecorder activity) {
+      OwnedPostRepository posts,
+      ClientRepository clients,
+      ActivityRecorder activity,
+      PostVariantService variants) {
     this.posts = posts;
     this.clients = clients;
     this.activity = activity;
+    this.variants = variants;
   }
 
   // ===================== DTOs =====================
@@ -286,6 +291,75 @@ public class OwnedPostController {
     activity.recordUser(
         ctx.workspaceId(), ctx.userId(), EventKinds.POST_TRANSITION, "post", id, meta);
     return PostDto.from(moved);
+  }
+
+  public record RegenerateVariantsRequest(List<String> platforms) {}
+
+  public record RegenerateVariantsResponse(
+      Map<String, PlatformVariantDto> variants,
+      Map<String, List<String>> warnings,
+      String prompt_version,
+      PostDto post) {}
+
+  @PostMapping("/posts/{id}/regenerate-variants")
+  public RegenerateVariantsResponse regenerateVariants(
+      @PathVariable UUID id,
+      @RequestBody(required = false) RegenerateVariantsRequest body,
+      HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    var post =
+        posts
+            .findInWorkspace(ctx.workspaceId(), id)
+            .orElseThrow(() -> AppException.notFound("Post"));
+    if (!variants.isEnabled()) {
+      throw AppException.badRequest(
+          "/errors/llm-disabled",
+          "LLM disabled",
+          "ANTHROPIC_API_KEY not configured; can't generate variants.");
+    }
+    if (post.primaryContentText() == null || post.primaryContentText().isBlank()) {
+      throw AppException.badRequest(
+          "/errors/empty-master",
+          "Empty master",
+          "Add primary_content_text before regenerating variants.");
+    }
+    List<String> targets =
+        body != null && body.platforms() != null && !body.platforms().isEmpty()
+            ? body.platforms()
+            : post.targetPlatforms();
+    if (targets.isEmpty()) {
+      throw AppException.badRequest(
+          "/errors/no-platforms",
+          "No platforms",
+          "Specify target platforms before regenerating variants.");
+    }
+    targets.forEach(OwnedPostController::requirePlatform);
+    var clientRow =
+        clients
+            .findInWorkspace(ctx.workspaceId(), post.clientId())
+            .orElseThrow(() -> AppException.notFound("Client"));
+    var outcome =
+        variants.generate(clientRow, post.primaryContentText(), targets, post.seriesTag());
+
+    // Merge new variants into existing map, preserving any user edits the model didn't touch.
+    var merged = new LinkedHashMap<>(post.platformVariants());
+    merged.putAll(outcome.variants());
+    OwnedPost updated = posts.update(id, null, null, merged, null, null, null, null, null);
+
+    var dtoVariants = new LinkedHashMap<String, PlatformVariantDto>();
+    for (var e : outcome.variants().entrySet()) {
+      var v = e.getValue();
+      dtoVariants.put(e.getKey(), new PlatformVariantDto(v.content(), v.charCount(), v.editedAt()));
+    }
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.POST_VARIANTS_REGENERATED,
+        "post",
+        id,
+        Map.of("platforms", targets, "prompt_version", outcome.promptVersion()));
+    return new RegenerateVariantsResponse(
+        dtoVariants, outcome.warnings(), outcome.promptVersion(), PostDto.from(updated));
   }
 
   @DeleteMapping("/posts/{id}")
