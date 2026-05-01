@@ -28,6 +28,11 @@ import org.springframework.stereotype.Component;
  *
  * <p>{@code inbox.pending}, pitch alerts, and attribution alerts are deferred until those tables
  * exist (Phase 3+).
+ *
+ * <p>Per CLAUDE.md guardrail #8, the {@code setup_incomplete} gate and the {@code
+ * extraction.failed} count both consider {@code coverage_items} AND {@code social_mentions}: a
+ * workspace whose only content is social mentions is set up, and a failed social-mention scrape is
+ * just as much an extraction failure as a failed article fetch.
  */
 @Component
 public class AlertEngine {
@@ -47,7 +52,7 @@ public class AlertEngine {
 
     // 1. setup_incomplete — special; replaces the column. Skip if dismissed.
     boolean hasContext = contexts.findByClient(client.id()).filter(c -> !c.isEmpty()).isPresent();
-    boolean hasCoverage = coverageCount(client.id()) > 0;
+    boolean hasCoverage = hasAnyCoverageOrSocialMention(client.id());
     boolean hasCadence = client.defaultCadence() != null && !client.defaultCadence().isBlank();
     if (!hasContext && !hasCoverage && !hasCadence && client.setupDismissedAt() == null) {
       out.add(setupIncomplete(client));
@@ -58,7 +63,10 @@ public class AlertEngine {
     // 2. report.overdue — cadence-derived. Only if a cadence is set.
     overdueAlert(client).ifPresent(out::add);
 
-    // 3. extraction.failed — count items in 'failed' status across this client's reports.
+    // 3. extraction.failed — count items in 'failed' status across this client's articles AND
+    // social mentions. Per CLAUDE.md guardrail #8, "what's been written about a client" must
+    // include both streams; a failed Twitter scrape is just as much a failed extraction as a
+    // failed article fetch.
     int failed = failedCount(client.id());
     if (failed > 0) out.add(extractionFailed(client, failed));
 
@@ -74,22 +82,35 @@ public class AlertEngine {
     return out;
   }
 
-  private int coverageCount(java.util.UUID clientId) {
-    Integer n =
+  /**
+   * Whether the client has any captured content — articles or social mentions. Drives the {@code
+   * setup_incomplete} gate. Per CLAUDE.md guardrail #8, a workspace whose only captured content is
+   * a Bluesky mention shouldn't get a "finish setup" alert; mentions are first-class.
+   */
+  private boolean hasAnyCoverageOrSocialMention(java.util.UUID clientId) {
+    Boolean hasArticle =
         jdbc.sql(
                 """
-                SELECT count(*) FROM coverage_items ci
-                JOIN reports r ON r.id = ci.report_id
-                WHERE r.client_id = :c AND r.deleted_at IS NULL
+                SELECT EXISTS(
+                  SELECT 1 FROM coverage_items ci
+                  JOIN reports r ON r.id = ci.report_id
+                  WHERE r.client_id = :c AND r.deleted_at IS NULL
+                )
                 """)
             .param("c", clientId)
-            .query(Integer.class)
+            .query(Boolean.class)
             .single();
-    return n == null ? 0 : n;
+    if (Boolean.TRUE.equals(hasArticle)) return true;
+    Boolean hasMention =
+        jdbc.sql("SELECT EXISTS(SELECT 1 FROM social_mentions WHERE client_id = :c)")
+            .param("c", clientId)
+            .query(Boolean.class)
+            .single();
+    return Boolean.TRUE.equals(hasMention);
   }
 
   private int failedCount(java.util.UUID clientId) {
-    Integer n =
+    Integer articleFails =
         jdbc.sql(
                 """
                 SELECT count(*) FROM coverage_items ci
@@ -101,7 +122,16 @@ public class AlertEngine {
             .param("c", clientId)
             .query(Integer.class)
             .single();
-    return n == null ? 0 : n;
+    Integer socialFails =
+        jdbc.sql(
+                """
+                SELECT count(*) FROM social_mentions
+                WHERE client_id = :c AND extraction_status = 'failed'
+                """)
+            .param("c", clientId)
+            .query(Integer.class)
+            .single();
+    return (articleFails == null ? 0 : articleFails) + (socialFails == null ? 0 : socialFails);
   }
 
   private static long ageDays(Instant t) {
