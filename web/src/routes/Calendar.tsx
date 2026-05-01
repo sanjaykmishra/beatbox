@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
@@ -851,52 +852,70 @@ function NewMenu({
   onPickEvent: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  function toggle() {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setAnchor({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setOpen((v) => !v);
+  }
+
   return (
-    <div className="relative">
+    <>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className="ink-btn rounded-md text-white px-3 py-1 text-[12px] font-medium transition-colors flex items-center gap-1"
       >
         + New <span className="text-[10px] leading-none">▾</span>
       </button>
-      {open && (
-        <>
-          <button
-            type="button"
-            aria-label="close menu"
-            className="fixed inset-0 z-40 cursor-default"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+      {open &&
+        anchor &&
+        createPortal(
+          <>
             <button
               type="button"
-              onClick={() => {
-                setOpen(false);
-                onPickPost();
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              aria-label="close menu"
+              className="fixed inset-0 z-40 cursor-default"
+              onClick={() => setOpen(false)}
+            />
+            <div
+              className="fixed z-50 min-w-[200px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
+              style={{ top: anchor.top, right: anchor.right }}
             >
-              <div className="font-medium text-ink">Owned post</div>
-              <div className="text-[11px] text-gray-500">Multi-platform composer</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onPickEvent();
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100"
-            >
-              <div className="font-medium text-ink">Calendar event</div>
-              <div className="text-[11px] text-gray-500">
-                Embargo, launch, meeting, blackout, …
-              </div>
-            </button>
-          </div>
-        </>
-      )}
-    </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onPickPost();
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <div className="font-medium text-ink">Owned post</div>
+                <div className="text-[11px] text-gray-500">Multi-platform composer</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onPickEvent();
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100"
+              >
+                <div className="font-medium text-ink">Calendar event</div>
+                <div className="text-[11px] text-gray-500">
+                  Embargo, launch, meeting, blackout, …
+                </div>
+              </button>
+            </div>
+          </>,
+          document.body,
+        )}
+    </>
   );
 }
 
