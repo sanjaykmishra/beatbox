@@ -37,10 +37,14 @@ export function ReportReview() {
   const report = useQuery({
     queryKey: ['report', id],
     queryFn: () => api.getReport(id),
+    // Poll while either extraction or render is in flight — render-worker completion is what
+    // flips the banner from "Generating…" to "Report generated", and the page wouldn't notice
+    // without polling on status='processing' too.
     refetchInterval: (q) => {
       const data = q.state.data as Report | undefined;
-      const inFlight = isAnyExtracting(data);
-      return inFlight ? 2000 : false;
+      const extracting = isAnyExtracting(data);
+      const rendering = data?.status === 'processing';
+      return extracting || rendering ? 2000 : false;
     },
   });
 
@@ -629,8 +633,14 @@ function formatCount(n: number | null | undefined): string | null {
  * stale row from a previous data shape). Matches the placeholder size + chrome so layout doesn't
  * shift when the load fails. */
 function Thumbnail({ src }: { src: string | null }) {
+  const validSrc = isLikelyValidImageUrl(src) ? src : null;
+  // Reset failed state when the URL changes (otherwise React keeps state across re-renders and
+  // a previously-failed item shows the placeholder even after the URL is fixed).
   const [failed, setFailed] = useState(false);
-  if (!src || failed) {
+  useEffect(() => {
+    setFailed(false);
+  }, [validSrc]);
+  if (!validSrc || failed) {
     return (
       <div className="h-16 w-[86px] bg-gray-50 border border-gray-100 rounded flex-none flex items-center justify-center text-[11px] text-gray-400">
         screenshot
@@ -639,12 +649,28 @@ function Thumbnail({ src }: { src: string | null }) {
   }
   return (
     <img
-      src={src}
+      src={validSrc}
       alt=""
       onError={() => setFailed(true)}
+      onLoad={(e) => {
+        // Some servers return 200 with 0 bytes (e.g. partial write) — onError doesn't fire. Trip
+        // the fallback when the loaded image has no size.
+        const img = e.currentTarget;
+        if (!img.naturalWidth || !img.naturalHeight) setFailed(true);
+      }}
       className="h-16 w-[86px] object-cover rounded border border-gray-100 flex-none bg-gray-50"
     />
   );
+}
+
+function isLikelyValidImageUrl(s: string | null): boolean {
+  if (!s) return false;
+  const t = s.trim();
+  if (!t) return false;
+  // Production R2 URLs are absolute https; local-disk URLs are relative /v1/screenshots/...
+  // Anything else (a bare /screenshots/... from a buggy older code path, javascript:, etc.) is
+  // rejected upfront so we don't even render the broken <img>.
+  return t.startsWith('https://') || t.startsWith('http://') || t.startsWith('/v1/');
 }
 
 // --------------------- Shared panel states ---------------------
