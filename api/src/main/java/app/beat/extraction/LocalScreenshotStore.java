@@ -28,6 +28,20 @@ public class LocalScreenshotStore {
 
   public LocalScreenshotStore(@Value("${beat.screenshots.local-dir}") String dir) {
     this.root = Path.of(dir);
+    try {
+      Files.createDirectories(this.root);
+      // Probe write access immediately so a misconfigured volume mount surfaces at startup
+      // instead of silently failing on the first extraction.
+      Path probe = this.root.resolve(".write-probe");
+      Files.writeString(probe, "ok");
+      Files.deleteIfExists(probe);
+      log.info("LocalScreenshotStore: writable at {}", this.root.toAbsolutePath());
+    } catch (IOException e) {
+      log.error(
+          "LocalScreenshotStore: root {} not writable — screenshots will fail to persist: {}",
+          this.root.toAbsolutePath(),
+          e.toString());
+    }
   }
 
   /**

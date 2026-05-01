@@ -218,6 +218,36 @@ public class ReportController {
 
   // ---------- GET /v1/reports/:id ----------
 
+  /** Compact summary for the client-dashboard "Past reports" list. */
+  public record ReportSummaryDto(
+      UUID id,
+      String title,
+      LocalDate period_start,
+      LocalDate period_end,
+      String status,
+      Instant generated_at,
+      Instant created_at) {}
+
+  @GetMapping("/v1/clients/{clientId}/reports")
+  public List<ReportSummaryDto> listForClient(@PathVariable UUID clientId, HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    clients
+        .findInWorkspace(ctx.workspaceId(), clientId)
+        .orElseThrow(() -> AppException.notFound("Client"));
+    return reports.listForClient(ctx.workspaceId(), clientId).stream()
+        .map(
+            r ->
+                new ReportSummaryDto(
+                    r.id(),
+                    r.title(),
+                    r.periodStart(),
+                    r.periodEnd(),
+                    r.status(),
+                    r.generatedAt(),
+                    r.createdAt()))
+        .toList();
+  }
+
   @GetMapping("/v1/reports/{id}")
   public ReportDto get(@PathVariable UUID id, HttpServletRequest req) {
     RequestContext ctx = RequestContext.require(req);

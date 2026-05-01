@@ -113,6 +113,25 @@ function renderHtml(payload: unknown): string {
   return standardTemplate(payload);
 }
 
+/**
+ * Inject {@code <base href>} into a rendered HTML document so relative URLs (the
+ * {@code /v1/screenshots/...} shape used by the local-disk fallback in dev) resolve to the API
+ * service from puppeteer's about:blank context. Without this, setContent's networkidle wait
+ * stalls on requests for resources it can't address. No-op when no baseUrl is provided
+ * (production R2 URLs are already absolute).
+ */
+function injectBaseHref(html: string, baseUrl: string | undefined): string {
+  if (!baseUrl) return html;
+  const tag = `<base href="${baseUrl.replace(/"/g, '&quot;')}">`;
+  // Insert immediately after <head ...> if present; otherwise prepend.
+  const headOpen = /<head\b[^>]*>/i.exec(html);
+  if (headOpen) {
+    const at = headOpen.index + headOpen[0].length;
+    return html.slice(0, at) + tag + html.slice(at);
+  }
+  return tag + html;
+}
+
 app.post('/preview', requireServiceToken, (req, res) => {
   try {
     const html = renderHtml(req.body);
@@ -129,10 +148,15 @@ app.post('/preview', requireServiceToken, (req, res) => {
 app.post('/render', requireServiceToken, async (req, res) => {
   let page: Awaited<ReturnType<Browser['newPage']>> | null = null;
   const reportId = (req.body?.report?.id as string | undefined) ?? null;
+  const baseUrl = (req.body?.base_url as string | undefined) ?? undefined;
   const startedAt = Date.now();
   try {
-    const html = renderHtml(req.body);
-    log('debug', 'render_html_built', { report_id: reportId, html_bytes: Buffer.byteLength(html) });
+    const html = injectBaseHref(renderHtml(req.body), baseUrl);
+    log('debug', 'render_html_built', {
+      report_id: reportId,
+      html_bytes: Buffer.byteLength(html),
+      base_url: baseUrl ?? null,
+    });
     const browser = await getBrowser();
     page = await browser.newPage();
     page.on('pageerror', (e) =>
@@ -145,7 +169,10 @@ app.post('/render', requireServiceToken, async (req, res) => {
         reason: r.failure()?.errorText,
       }),
     );
-    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30_000 });
+    // 'load' waits for top-level + sub-resources to finish (including <img>) but doesn't require
+    // networkidle — failed image requests don't stall the wait. networkidle0 was hanging on
+    // local-disk screenshot URLs with no resolvable host.
+    await page.setContent(html, { waitUntil: 'load', timeout: 30_000 });
     const pdf = await page.pdf({
       format: 'Letter',
       printBackground: true,
