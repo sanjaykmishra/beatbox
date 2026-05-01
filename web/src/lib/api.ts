@@ -155,6 +155,7 @@ export const api = {
   login: (b: { email: string; password: string }) =>
     request<AuthResponse>('POST', '/v1/auth/login', b),
   logout: () => request<void>('POST', '/v1/auth/logout'),
+  me: () => request<User>('GET', '/v1/auth/me'),
   workspace: () => request<Workspace>('GET', '/v1/workspace'),
   updateWorkspace: (
     b: Partial<{ name: string; logo_url: string; primary_color: string; default_template_id: string }>,

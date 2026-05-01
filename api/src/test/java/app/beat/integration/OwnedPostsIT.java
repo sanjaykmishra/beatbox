@@ -99,27 +99,32 @@ class OwnedPostsIT extends IntegrationTestBase {
     JsonNode items = json.readTree(list.getResponse().getContentAsByteArray()).get("items");
     assertThat(items.size()).isGreaterThanOrEqualTo(1);
 
-    // Reject without a reason should 400.
+    // Authorship guard: the author can't approve / reject / send-to-client their own post.
     mvc.perform(
-            MockMvcRequestBuilders.post("/v1/posts/" + postId + "/transitions/reject")
+            MockMvcRequestBuilders.post("/v1/posts/" + postId + "/transitions/approve")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
-        .andExpect(MockMvcResultMatchers.status().isBadRequest());
-
-    // Reject WITH a reason should succeed.
+        .andExpect(MockMvcResultMatchers.status().isForbidden());
     mvc.perform(
             MockMvcRequestBuilders.post("/v1/posts/" + postId + "/transitions/reject")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json.writeValueAsString(Map.of("reason", "Wrong tone for client."))))
-        .andExpect(MockMvcResultMatchers.status().isOk())
-        .andExpect(MockMvcResultMatchers.jsonPath("$.status").value("rejected"));
+                .content(json.writeValueAsString(Map.of("reason", "Wrong tone."))))
+        .andExpect(MockMvcResultMatchers.status().isForbidden());
 
-    // Disallowed transition (rejected -> internal_review) should 400.
+    // Author CAN reopen their own post back to draft.
     mvc.perform(
-            MockMvcRequestBuilders.post(
-                    "/v1/posts/" + postId + "/transitions/submit_for_internal_review")
+            MockMvcRequestBuilders.post("/v1/posts/" + postId + "/transitions/reopen")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+        .andExpect(MockMvcResultMatchers.status().isOk())
+        .andExpect(MockMvcResultMatchers.jsonPath("$.status").value("draft"));
+
+    // Disallowed transition (draft -> mark_posted aliases to 'posted', not allowed) -> 400.
+    mvc.perform(
+            MockMvcRequestBuilders.post("/v1/posts/" + postId + "/transitions/mark_posted")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))

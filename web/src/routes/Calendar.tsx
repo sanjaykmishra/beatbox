@@ -1087,8 +1087,8 @@ function NewCalendarEvent({
         all_day: allDay,
         url: url.trim() || undefined,
       }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['calendar-feed'] });
+    onSuccess: async () => {
+      await qc.refetchQueries({ queryKey: ['calendar-feed'], type: 'active' });
       onClose();
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Create failed'),
@@ -1263,17 +1263,21 @@ function EditCalendarEvent({
         all_day: allDay,
         url: url.trim() || undefined,
       }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['calendar-feed'] });
-      void qc.invalidateQueries({ queryKey: ['calendar-event', eventId] });
+    onSuccess: async () => {
+      await qc.refetchQueries({ queryKey: ['calendar-feed'], type: 'active' });
+      await qc.invalidateQueries({ queryKey: ['calendar-event', eventId] });
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
   });
 
   const remove = useMutation({
     mutationFn: () => api.deleteCalendarEvent(eventId),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['calendar-feed'] });
+    onSuccess: async () => {
+      // Drop the per-event cache so a stale GET can't repopulate the deleted row, then await
+      // the feed refetch before the drawer unmounts so the calendar grid is up-to-date when
+      // the user lands back on it.
+      qc.removeQueries({ queryKey: ['calendar-event', eventId] });
+      await qc.refetchQueries({ queryKey: ['calendar-feed'], type: 'active' });
       onClose();
     },
   });
@@ -1572,7 +1576,10 @@ function EditComposer({
   onClose: () => void;
 }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const postQ = useQuery({ queryKey: ['post', postId], queryFn: () => api.getPost(postId) });
+  const membersQ = useQuery({ queryKey: ['members'], queryFn: api.listMembers });
+  const otherMembersCount = (membersQ.data ?? []).filter((m) => m.user_id !== user?.id).length;
 
   const [title, setTitle] = useState('');
   const [master, setMaster] = useState('');
@@ -1787,7 +1794,11 @@ function EditComposer({
 
       <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-100">
         <div className="flex flex-wrap gap-1.5">
-          {transitionOptionsFor(post.status).map((opt) => (
+          {transitionOptionsFor(post.status, {
+            isAuthor:
+              !!user && post.drafted_by_user_id != null && post.drafted_by_user_id === user.id,
+            otherMembersCount,
+          }).map((opt) => (
             <button
               key={opt.transition}
               onClick={() => {
@@ -1878,30 +1889,67 @@ function VariantEditor({
   );
 }
 
-function transitionOptionsFor(status: PostStatus): {
+function transitionOptionsFor(
+  status: PostStatus,
+  ctx: { isAuthor: boolean; otherMembersCount: number },
+): {
   transition: PostTransition;
   label: string;
   primary?: boolean;
 }[] {
+  // Authorship guard: an author can't review their own post (no approve / reject / send-to-
+  // client during a review pass). They can still reopen back to draft. Mirrors the backend
+  // OwnedPostController.transition guard.
+  const canReview = !ctx.isAuthor;
+  const canSubmitForReview = ctx.otherMembersCount > 0;
   switch (status) {
-    case 'draft':
-      return [
-        { transition: 'submit_for_internal_review', label: 'Submit for review', primary: true },
-        { transition: 'request_client_approval', label: 'Send to client' },
-      ];
-    case 'internal_review':
-      return [
-        { transition: 'request_client_approval', label: 'Send to client', primary: true },
-        { transition: 'approve', label: 'Approve' },
-        { transition: 'reject', label: 'Reject' },
-        { transition: 'reopen', label: 'Back to draft' },
-      ];
-    case 'client_review':
-      return [
-        { transition: 'approve', label: 'Approve', primary: true },
-        { transition: 'reject', label: 'Reject' },
-        { transition: 'reopen', label: 'Back to draft' },
-      ];
+    case 'draft': {
+      const opts: {
+        transition: PostTransition;
+        label: string;
+        primary?: boolean;
+      }[] = [];
+      if (canSubmitForReview) {
+        opts.push({
+          transition: 'submit_for_internal_review',
+          label: 'Submit for review',
+          primary: true,
+        });
+      }
+      opts.push({ transition: 'request_client_approval', label: 'Send to client' });
+      return opts;
+    }
+    case 'internal_review': {
+      const opts: {
+        transition: PostTransition;
+        label: string;
+        primary?: boolean;
+      }[] = [];
+      if (canReview) {
+        opts.push({
+          transition: 'request_client_approval',
+          label: 'Send to client',
+          primary: true,
+        });
+        opts.push({ transition: 'approve', label: 'Approve' });
+        opts.push({ transition: 'reject', label: 'Reject' });
+      }
+      opts.push({ transition: 'reopen', label: 'Back to draft' });
+      return opts;
+    }
+    case 'client_review': {
+      const opts: {
+        transition: PostTransition;
+        label: string;
+        primary?: boolean;
+      }[] = [];
+      if (canReview) {
+        opts.push({ transition: 'approve', label: 'Approve', primary: true });
+        opts.push({ transition: 'reject', label: 'Reject' });
+      }
+      opts.push({ transition: 'reopen', label: 'Back to draft' });
+      return opts;
+    }
     case 'approved':
       return [
         { transition: 'mark_posted', label: 'Mark posted', primary: true },
