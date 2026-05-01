@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /** Builds the wire payload from in-DB rows. Pure logic; deterministic. */
@@ -20,9 +21,12 @@ import org.springframework.stereotype.Component;
 public class RenderPayloadBuilder {
 
   private final OutletRepository outlets;
+  private final String internalApiUrl;
 
-  public RenderPayloadBuilder(OutletRepository outlets) {
+  public RenderPayloadBuilder(
+      OutletRepository outlets, @Value("${beat.render.internal-api-url:}") String internalApiUrl) {
     this.outlets = outlets;
+    this.internalApiUrl = internalApiUrl == null ? "" : internalApiUrl;
   }
 
   public RenderPayload build(
@@ -43,7 +47,8 @@ public class RenderPayloadBuilder {
             .map(c -> toHighlight(c, outletCache))
             .toList();
     var itemDtos = items.stream().map(c -> toItem(c, outletCache)).toList();
-    return new RenderPayload(branding, clientDto, reportDto, glance, highlights, itemDtos);
+    String baseUrl = internalApiUrl.isBlank() ? null : internalApiUrl;
+    return new RenderPayload(branding, clientDto, reportDto, glance, highlights, itemDtos, baseUrl);
   }
 
   private RenderPayload.Branding buildBranding(Workspace ws, Client client) {

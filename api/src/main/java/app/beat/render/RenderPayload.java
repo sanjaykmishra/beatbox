@@ -2,14 +2,22 @@ package app.beat.render;
 
 import java.util.List;
 
-/** Wire shape for render service /render and /preview. Mirror in render/templates/standard.hbs. */
+/**
+ * Wire shape for render service /render and /preview. Mirror in render/templates/standard.hbs.
+ *
+ * <p>{@code base_url} is consumed only by /render to inject {@code <base href>} so relative
+ * screenshot URLs (the local-disk fallback shape, {@code /v1/screenshots/...}) resolve from
+ * puppeteer's {@code about:blank} context. Production R2 URLs are absolute, so {@code base_url} is
+ * unused there and may be null.
+ */
 public record RenderPayload(
     Branding branding,
     Client client,
     Report report,
     Glance glance,
     List<Highlight> highlights,
-    List<Item> coverage_items) {
+    List<Item> coverage_items,
+    String base_url) {
 
   public record Branding(String agency_name, String logo_url, String primary_color) {}
 

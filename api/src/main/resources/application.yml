@@ -39,6 +39,12 @@ beat:
     # screenshots fallback above. When empty AND R2 is empty, report generation fails with
     # object_storage_not_configured.
     local-dir: ${LOCAL_PDFS_DIR:}
+  render:
+    # Base URL the render container uses to resolve relative resource URLs in the rendered HTML
+    # (the /v1/screenshots/... shape that comes out of LocalScreenshotStore). In Docker compose
+    # this is the api service's internal hostname. Production R2 URLs are absolute, so this can
+    # be empty there.
+    internal-api-url: ${RENDER_INTERNAL_API_URL:}
   admin:
     # Comma-separated list of user emails allowed to view /v1/admin/*. Empty = nobody.
     emails: ${ADMIN_EMAILS:}

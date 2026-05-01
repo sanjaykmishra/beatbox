@@ -63,13 +63,16 @@ public class AlertEngine {
     // 2. report.overdue — cadence-derived. Only if a cadence is set.
     overdueAlert(client).ifPresent(out::add);
 
-    // 3. extraction.failed — count items in 'failed' status across this client's articles AND
-    // social mentions. Per CLAUDE.md guardrail #8, "what's been written about a client" must
-    // include both streams; a failed Twitter scrape is just as much a failed extraction as a
-    // failed article fetch.
-    int failed = failedCount(client.id());
-    if (failed > 0) {
-      out.add(extractionFailed(client, failed, reportWithMostFailures(client.id()).orElse(null)));
+    // 3. extraction.failed — scope to the latest non-deleted report for this client. Counting
+    // across all historical reports compounds noise as the user generates more reports; what they
+    // care about is "this run still has problems." Per CLAUDE.md guardrail #8, "what's been
+    // written about a client" must include both articles AND social mentions in that report.
+    Optional<java.util.UUID> latestReport = latestReportId(client.id());
+    if (latestReport.isPresent()) {
+      int failed = failedCountInReport(latestReport.get());
+      if (failed > 0) {
+        out.add(extractionFailed(client, failed, latestReport.get()));
+      }
     }
 
     // 4. context.stale — context older than threshold (skip if never set).
@@ -111,61 +114,40 @@ public class AlertEngine {
     return Boolean.TRUE.equals(hasMention);
   }
 
-  private int failedCount(java.util.UUID clientId) {
+  /** Failed coverage_items + social_mentions in a single report. */
+  private int failedCountInReport(java.util.UUID reportId) {
     Integer articleFails =
         jdbc.sql(
                 """
-                SELECT count(*) FROM coverage_items ci
-                JOIN reports r ON r.id = ci.report_id
-                WHERE r.client_id = :c
-                  AND r.deleted_at IS NULL
-                  AND ci.extraction_status = 'failed'
+                SELECT count(*) FROM coverage_items
+                WHERE report_id = :r AND extraction_status = 'failed'
                 """)
-            .param("c", clientId)
+            .param("r", reportId)
             .query(Integer.class)
             .single();
     Integer socialFails =
         jdbc.sql(
                 """
                 SELECT count(*) FROM social_mentions
-                WHERE client_id = :c AND extraction_status = 'failed'
+                WHERE report_id = :r AND extraction_status = 'failed'
                 """)
-            .param("c", clientId)
+            .param("r", reportId)
             .query(Integer.class)
             .single();
     return (articleFails == null ? 0 : articleFails) + (socialFails == null ? 0 : socialFails);
   }
 
-  /**
-   * Returns the report id that owns the most failed coverage items for this client (across both
-   * articles and social mentions). Drives the {@code Review →} link on the {@code
-   * extraction.failed} alert so the user lands on the report builder for the report they actually
-   * need to fix, not on client settings. Empty when no report has failures (e.g., social-only
-   * failures with no report attached, or all failures already resolved).
-   */
-  private Optional<java.util.UUID> reportWithMostFailures(java.util.UUID clientId) {
+  /** Most recent non-deleted report for the client; the one the user is currently working on. */
+  private Optional<java.util.UUID> latestReportId(java.util.UUID clientId) {
     return jdbc.sql(
             """
-            SELECT report_id, count(*) AS n FROM (
-              SELECT r.id AS report_id
-                FROM coverage_items ci
-                JOIN reports r ON r.id = ci.report_id
-               WHERE r.client_id = :c
-                 AND r.deleted_at IS NULL
-                 AND ci.extraction_status = 'failed'
-              UNION ALL
-              SELECT report_id
-                FROM social_mentions
-               WHERE client_id = :c
-                 AND extraction_status = 'failed'
-                 AND report_id IS NOT NULL
-            ) f
-            GROUP BY report_id
-            ORDER BY n DESC, report_id
+            SELECT id FROM reports
+            WHERE client_id = :c AND deleted_at IS NULL
+            ORDER BY created_at DESC
             LIMIT 1
             """)
         .param("c", clientId)
-        .query((rs, i) -> rs.getObject("report_id", java.util.UUID.class))
+        .query((rs, i) -> rs.getObject("id", java.util.UUID.class))
         .optional();
   }
 

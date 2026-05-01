@@ -201,6 +201,8 @@ export const api = {
     b: { title?: string; period_start: string; period_end: string; template_id?: string },
   ) => request<Report>('POST', `/v1/clients/${clientId}/reports`, b),
   getReport: (id: string) => request<Report>('GET', `/v1/reports/${id}`),
+  listClientReports: (clientId: string) =>
+    request<ReportSummary[]>('GET', `/v1/clients/${clientId}/reports`),
   addCoverage: (reportId: string, urls: string[]) =>
     request<{
       items: {
@@ -633,6 +635,16 @@ export type ReportStatusCounts = {
   failed: number;
   articles: number;
   social: number;
+};
+
+export type ReportSummary = {
+  id: string;
+  title: string;
+  period_start: string;
+  period_end: string;
+  status: 'draft' | 'processing' | 'ready' | 'failed';
+  generated_at: string | null;
+  created_at: string;
 };
 
 export type Report = {

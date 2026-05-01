@@ -87,6 +87,20 @@ public class ReportRepository {
         .optional();
   }
 
+  /** All non-deleted reports for a client, newest first. */
+  public java.util.List<Report> listForClient(UUID workspaceId, UUID clientId) {
+    return jdbc.sql(
+            """
+            SELECT * FROM reports
+            WHERE workspace_id = :w AND client_id = :c AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            """)
+        .param("w", workspaceId)
+        .param("c", clientId)
+        .query(MAPPER)
+        .list();
+  }
+
   /** Latest report for a client whose period_end is on or before the given date. */
   public Optional<Report> findLatestForClientUpTo(UUID clientId, java.time.LocalDate ceiling) {
     return jdbc.sql(

@@ -25,6 +25,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/v1/screenshots")
 public class ScreenshotController {
 
+  private static final org.slf4j.Logger log =
+      org.slf4j.LoggerFactory.getLogger(ScreenshotController.class);
+
   private final LocalScreenshotStore store;
 
   public ScreenshotController(@Autowired(required = false) LocalScreenshotStore store) {
@@ -49,6 +52,12 @@ public class ScreenshotController {
     }
     Path file = store.resolve(parsedWorkspace.toString(), filename);
     if (file == null || !Files.isRegularFile(file)) {
+      log.warn(
+          "screenshot 404: workspace={} filename={} resolved={} exists={}",
+          workspaceId,
+          filename,
+          file == null ? "null" : file.toAbsolutePath(),
+          file != null && Files.exists(file));
       throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     }
     try {
