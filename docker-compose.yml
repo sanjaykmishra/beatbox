@@ -82,6 +82,7 @@ services:
     environment:
       RENDER_PORT: "3000"
       RENDER_SERVICE_TOKEN: ${RENDER_SERVICE_TOKEN:-dev-shared-secret}
+      RENDER_LOG_LEVEL: ${RENDER_LOG_LEVEL:-debug}
     ports:
       - "3000:3000"
     healthcheck:
