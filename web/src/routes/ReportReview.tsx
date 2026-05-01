@@ -65,7 +65,21 @@ export function ReportReview() {
       </BrowserFrame>
     );
   }
-  if (report.error || !r) return <p className="text-red-600">Failed to load report.</p>;
+  if (report.error || !r) {
+    return (
+      <BrowserFrame
+        crumbs={[{ label: `${slug}.beat.app`, to: '/clients' }, { label: 'reports' }]}
+      >
+        <Alert
+          tone="danger"
+          title="Couldn't load report"
+          action={{ label: 'Retry', onClick: () => report.refetch() }}
+        >
+          The report data didn't come back. Check your connection or try again in a moment.
+        </Alert>
+      </BrowserFrame>
+    );
+  }
 
   return (
     <BrowserFrame

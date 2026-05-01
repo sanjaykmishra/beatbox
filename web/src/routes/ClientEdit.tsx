@@ -65,7 +65,25 @@ export function ClientEdit() {
       </BrowserFrame>
     );
   }
-  if (q.error) return <p className="text-red-600">Failed to load client.</p>;
+  if (q.error) {
+    return (
+      <BrowserFrame
+        crumbs={[
+          { label: `${slug}.beat.app`, to: '/clients' },
+          { label: 'clients', to: '/clients' },
+          { label: '…' },
+        ]}
+      >
+        <Alert
+          tone="danger"
+          title="Couldn't load client"
+          action={{ label: 'Retry', onClick: () => q.refetch() }}
+        >
+          Something went wrong fetching this client. Check your connection and try again.
+        </Alert>
+      </BrowserFrame>
+    );
+  }
   if (!q.data) return null;
   const c = q.data;
 

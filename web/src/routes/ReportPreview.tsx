@@ -70,7 +70,21 @@ export function ReportPreview() {
       </BrowserFrame>
     );
   }
-  if (report.error || !report.data) return <p className="text-red-600">Failed to load report.</p>;
+  if (report.error || !report.data) {
+    return (
+      <BrowserFrame
+        crumbs={[{ label: `${slug}.beat.app`, to: '/clients' }, { label: 'reports' }]}
+      >
+        <Alert
+          tone="danger"
+          title="Couldn't load report"
+          action={{ label: 'Retry', onClick: () => report.refetch() }}
+        >
+          The report data didn't come back. Check your connection or try again.
+        </Alert>
+      </BrowserFrame>
+    );
+  }
   const r = report.data;
 
   const ready = r.status === 'ready';
@@ -190,7 +204,14 @@ export function ReportPreview() {
             {previewHtml.isLoading ? (
               <ProcessingSkeleton />
             ) : previewHtml.error ? (
-              <p className="text-red-600 text-sm">Failed to load preview.</p>
+              <Alert
+                tone="danger"
+                title="Couldn't render preview"
+                action={{ label: 'Retry', onClick: () => previewHtml.refetch() }}
+              >
+                The render service didn't return preview HTML. Try again, or check the server
+                logs.
+              </Alert>
             ) : (
               <iframe
                 title="Report preview"
@@ -231,9 +252,10 @@ function ProcessingSkeleton() {
 
 function FailedNotice() {
   return (
-    <div className="bg-red-100/70 border border-red-200 rounded-xl p-6 text-sm text-red-700">
-      Generation failed. Check the report's failure_reason or try again.
-    </div>
+    <Alert tone="danger" title="Generation failed">
+      Check the report's failure_reason in the activity feed, or try again from the report
+      builder.
+    </Alert>
   );
 }
 

@@ -150,7 +150,15 @@ function MembersSection() {
           <div className="p-5 text-sm text-gray-500">Loading members…</div>
         )}
         {members.error && (
-          <div className="p-5 text-sm text-red-600">Failed to load members.</div>
+          <div className="p-3">
+            <Alert
+              tone="danger"
+              title="Couldn't load members"
+              action={{ label: 'Retry', onClick: () => members.refetch() }}
+            >
+              The members list didn't come back. Check your connection or try again.
+            </Alert>
+          </div>
         )}
         {members.data && (
           <ul className="divide-y divide-gray-100">
@@ -238,7 +246,18 @@ function BillingSection() {
 
   if (billing.isLoading) return null;
   if (billing.error || !billing.data) {
-    return <p className="text-sm text-red-600">Failed to load billing.</p>;
+    return (
+      <section>
+        <Eyebrow className="mb-3">Billing</Eyebrow>
+        <Alert
+          tone="danger"
+          title="Couldn't load billing"
+          action={{ label: 'Retry', onClick: () => billing.refetch() }}
+        >
+          Stripe data didn't come back. Check your connection or try again.
+        </Alert>
+      </section>
+    );
   }
   const b = billing.data;
   const onPaidPlan =

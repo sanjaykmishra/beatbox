@@ -2,7 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Eyebrow, Pill, PrimaryLink, SecondaryLink, type PillTone } from '../components/ui';
+import {
+  Alert,
+  Eyebrow,
+  Pill,
+  PrimaryLink,
+  SecondaryLink,
+  type PillTone,
+} from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import {
   api,
@@ -43,7 +50,23 @@ export function ClientDashboard() {
     );
   }
   if (dashboard.error || !dashboard.data) {
-    return <p className="text-red-600">Failed to load client.</p>;
+    return (
+      <BrowserFrame
+        crumbs={[
+          { label: `${slug}.beat.app`, to: '/clients' },
+          { label: 'clients', to: '/clients' },
+          { label: '…' },
+        ]}
+      >
+        <Alert
+          tone="danger"
+          title="Couldn't load this client"
+          action={{ label: 'Retry', onClick: () => dashboard.refetch() }}
+        >
+          The dashboard data didn't come back. Check your connection or try again in a moment.
+        </Alert>
+      </BrowserFrame>
+    );
   }
   const d = dashboard.data;
   const setupAlert = d.alerts.find((a) => a.alert_type === 'client.setup_incomplete');
