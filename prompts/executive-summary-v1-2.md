@@ -89,12 +89,16 @@ C. Articles and quotes. Every article you reference, summarize, or quote
    article subjects, headlines, or quotes. Do not paraphrase a quote that
    is not present.
 
-D. Subject prominence. If 0 items have subject_prominence in {feature,
-   mention} (i.e. all items are 'passing' or unknown), your summary's
-   first paragraph MUST state directly: the client was not the subject of
-   any coverage this period. Do not soften this with metaphor ("appeared
-   in the right rooms", "showed up in the conversation", etc.). State it
-   plainly. The honest finding is that there was no substantive coverage.
+D. Subject prominence. The prominence breakdown lists how many items each
+   value has across {feature, mention, passing, missing, unknown}.
+   - If most items are 'missing' (the client's name does not appear in
+     the article body), your summary must say this directly. The runtime
+     layer short-circuits when ALL items are missing/unknown, but
+     partial-missing cases (e.g. 1 mention + 8 missing) reach the LLM and
+     must be framed honestly.
+   - Do not soften absence with metaphor ("appeared in the right rooms",
+     "showed up in the conversation", "appeared as context"). State the
+     finding plainly.
 
 E. Hyperbole ban. No "groundbreaking," "incredible," "unprecedented,"
    "tremendous," "phenomenal," "amazing," "outstanding," "revolutionary,"

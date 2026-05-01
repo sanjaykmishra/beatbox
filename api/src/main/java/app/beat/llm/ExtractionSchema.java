@@ -14,7 +14,10 @@ import java.util.Set;
 public final class ExtractionSchema {
 
   public static final Set<String> SENTIMENT = Set.of("positive", "neutral", "negative", "mixed");
-  public static final Set<String> PROMINENCE = Set.of("feature", "mention", "passing");
+  // v1.3 added "missing" — used when the subject's name does not appear in the article body at
+  // all (off-topic article, industry-adjacent piece that doesn't name the client). v1.0–v1.2
+  // outputs never produce "missing"; existing rows are still valid under this validator.
+  public static final Set<String> PROMINENCE = Set.of("feature", "mention", "passing", "missing");
 
   private ExtractionSchema() {}
 

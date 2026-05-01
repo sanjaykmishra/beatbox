@@ -43,6 +43,7 @@ public class TwoTierExtractionService {
   private final ObjectMapper json;
   private final String haikuModelOverride;
   private final String sonnetModelOverride;
+  private final String promptStem;
 
   public TwoTierExtractionService(
       PromptLoader prompts,
@@ -51,7 +52,8 @@ public class TwoTierExtractionService {
       UrlPrefilter urlPrefilter,
       ObjectMapper json,
       @Value("${ANTHROPIC_MODEL_EXTRACTION_HAIKU:}") String haikuModelOverride,
-      @Value("${ANTHROPIC_MODEL_EXTRACTION_SONNET:}") String sonnetModelOverride) {
+      @Value("${ANTHROPIC_MODEL_EXTRACTION_SONNET:}") String sonnetModelOverride,
+      @Value("${beat.prompts.extraction.version:v1_3}") String version) {
     this.prompts = prompts;
     this.anthropic = anthropic;
     this.cache = cache;
@@ -59,6 +61,21 @@ public class TwoTierExtractionService {
     this.json = json;
     this.haikuModelOverride = haikuModelOverride;
     this.sonnetModelOverride = sonnetModelOverride;
+    this.promptStem = resolvePromptStem(version);
+    log.info("TwoTierExtractionService prompt = {}", this.promptStem);
+  }
+
+  /**
+   * Resolve a config value to the prompt-stem PromptLoader uses. {@code v1_2} → legacy 3-value
+   * prominence enum; {@code v1_3} → adds {@code missing}. Defaults to v1_3 (current production).
+   */
+  private static String resolvePromptStem(String configured) {
+    if (configured == null) return "extraction-v1-3";
+    return switch (configured.trim().toLowerCase()) {
+      case "v1_2", "extraction-v1-2", "extraction_v1.2" -> "extraction-v1-2";
+      case "v1_3", "extraction-v1-3", "extraction_v1.3" -> "extraction-v1-3";
+      default -> "extraction-v1-3";
+    };
   }
 
   public boolean isEnabled() {
@@ -85,14 +102,14 @@ public class TwoTierExtractionService {
       ClientContext context) {
     if (!isEnabled()) return Optional.empty();
 
+    PromptTemplate t = prompts.get(promptStem);
+    String version = t.version();
+
     var rejected = urlPrefilter.reject(url);
     if (rejected.isPresent()) {
       log.info("extraction_v12: prefilter rejected url={} reason={}", url, rejected.get());
-      return Optional.of(new V12Outcome(null, "extraction_v1.2", null, rejected.get()));
+      return Optional.of(new V12Outcome(null, version, null, rejected.get()));
     }
-
-    PromptTemplate t = prompts.get("extraction-v1-2");
-    String version = t.version();
 
     // Cache hit — same content + same prompt version → reuse the cached extraction.
     String contentHash = ExtractionCacheRepository.hashContent(articleText);
