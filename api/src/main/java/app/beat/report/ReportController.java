@@ -370,14 +370,26 @@ public class ReportController {
           "Report not in draft",
           "Only draft reports can be generated.");
     }
+    // Per CLAUDE.md guardrail #8 ("social mentions are first-class"), the generate gate considers
+    // both articles and social mentions when deciding whether anything is in-flight or has been
+    // successfully extracted. A report with one Bluesky post and zero articles is still
+    // generatable.
     var items = coverage.listByReport(r.id());
+    var mentions = socialMentions.listByReport(ctx.workspaceId(), r.id());
     boolean anyInflight =
         items.stream()
-            .anyMatch(
-                i ->
-                    "queued".equals(i.extractionStatus())
-                        || "running".equals(i.extractionStatus()));
-    long doneCount = items.stream().filter(i -> "done".equals(i.extractionStatus())).count();
+                .anyMatch(
+                    i ->
+                        "queued".equals(i.extractionStatus())
+                            || "running".equals(i.extractionStatus()))
+            || mentions.stream()
+                .anyMatch(
+                    m ->
+                        "queued".equals(m.extractionStatus())
+                            || "running".equals(m.extractionStatus()));
+    long doneCount =
+        items.stream().filter(i -> "done".equals(i.extractionStatus())).count()
+            + mentions.stream().filter(m -> "done".equals(m.extractionStatus())).count();
     if (anyInflight) {
       throw AppException.badRequest(
           "/errors/extraction-pending",
@@ -388,7 +400,7 @@ public class ReportController {
       throw AppException.badRequest(
           "/errors/no-done-items",
           "No done items",
-          "At least one coverage item must be successfully extracted.");
+          "At least one coverage item or social mention must be successfully extracted.");
     }
     reports.setStatus(r.id(), "processing");
     renderJobs.enqueue(r.id());

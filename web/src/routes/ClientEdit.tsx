@@ -3,7 +3,8 @@ import { useState, type ChangeEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Eyebrow, PrimaryLink, SecondaryLink } from '../components/ui';
+import { useToast } from '../components/Toast';
+import { Alert, Eyebrow, PrimaryLink, SecondaryLink } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import { api, ApiError, uploadLogo } from '../lib/api';
 
@@ -16,12 +17,14 @@ export function ClientEdit() {
   const q = useQuery({ queryKey: ['client', id], queryFn: () => api.getClient(id) });
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const toast = useToast();
 
   const update = useMutation({
     mutationFn: (b: Parameters<typeof api.updateClient>[1]) => api.updateClient(id, b),
     onSuccess: (data) => {
       qc.setQueryData(['client', id], data);
       void qc.invalidateQueries({ queryKey: ['clients'] });
+      toast.success('Client updated.');
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : 'Update failed'),
   });
@@ -62,7 +65,25 @@ export function ClientEdit() {
       </BrowserFrame>
     );
   }
-  if (q.error) return <p className="text-red-600">Failed to load client.</p>;
+  if (q.error) {
+    return (
+      <BrowserFrame
+        crumbs={[
+          { label: `${slug}.beat.app`, to: '/clients' },
+          { label: 'clients', to: '/clients' },
+          { label: '…' },
+        ]}
+      >
+        <Alert
+          tone="danger"
+          title="Couldn't load client"
+          action={{ label: 'Retry', onClick: () => q.refetch() }}
+        >
+          Something went wrong fetching this client. Check your connection and try again.
+        </Alert>
+      </BrowserFrame>
+    );
+  }
   if (!q.data) return null;
   const c = q.data;
 
@@ -124,7 +145,11 @@ export function ClientEdit() {
           <NotesField value={c.notes} onSave={(v) => update.mutate({ notes: v })} />
         </Section>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
         <Section title="Danger zone">
           <div className="flex items-center justify-between gap-4">

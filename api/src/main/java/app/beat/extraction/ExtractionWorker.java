@@ -57,7 +57,10 @@ public class ExtractionWorker {
   private final OutletTierClassifier tierClassifier;
   private final ActivityRecorder activity;
   private final AlertService alertService;
-  private final ObjectMapper json = new ObjectMapper();
+  // Spring-managed ObjectMapper has JavaTimeModule registered (Spring Boot auto-config);
+  // a fresh `new ObjectMapper()` would fail when serializing ExtractionResult.publishDate
+  // (LocalDate) into raw_extracted with "Java 8 date/time type ... not supported by default".
+  private final ObjectMapper json;
   private final boolean enabled;
 
   private final ExecutorService pool = Executors.newFixedThreadPool(BATCH_SIZE);
@@ -76,6 +79,7 @@ public class ExtractionWorker {
       OutletTierClassifier tierClassifier,
       ActivityRecorder activity,
       AlertService alertService,
+      ObjectMapper json,
       @Value("${beat.extraction.enabled:true}") boolean enabled) {
     this.jobs = jobs;
     this.coverage = coverage;
@@ -90,6 +94,7 @@ public class ExtractionWorker {
     this.tierClassifier = tierClassifier;
     this.activity = activity;
     this.alertService = alertService;
+    this.json = json;
     this.enabled = enabled;
   }
 
@@ -142,12 +147,19 @@ public class ExtractionWorker {
               .map(c -> c.name())
               .orElse("the subject");
 
-      var fetched = fetcher.fetch(item.sourceUrl());
-      if (fetched.isEmpty()) {
-        retryOrFail(job, "fetch_returned_empty");
+      var fetchOutcome = fetcher.fetchWithReason(item.sourceUrl());
+      if (fetchOutcome.article().isEmpty()) {
+        // Bare reason from the fetcher is short
+        // ("readability_empty_then_scrapingbee_unconfigured");
+        // wrap it with a fixed prefix so the failed_reason column still self-identifies.
+        String reason =
+            fetchOutcome.reason() == null
+                ? "fetch_returned_empty"
+                : "fetch_returned_empty (" + fetchOutcome.reason() + ")";
+        retryOrFail(job, reason);
         return;
       }
-      var article = fetched.get();
+      var article = fetchOutcome.article().get();
 
       // Outlet: upsert by domain, then classify tier if it's still default.
       String domain = Domains.apexFromUrl(item.sourceUrl()).orElse("");

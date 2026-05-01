@@ -86,6 +86,12 @@ beat/
 
 **UI page chrome.** Every protected route in `web/src/routes/` wraps its content in `BrowserFrame` with a `crumbs` array. Every intermediate crumb has a `to:` field so users can navigate up the hierarchy (e.g. `[{label: '${slug}.beat.app', to: '/clients'}, {label: 'clients', to: '/clients'}, {label: clientName}]`); the final crumb (the current page) has no `to`. The chrome strip is the canonical breadcrumb; do not also render an in-body `<nav>` breadcrumb. Each page's `<h1>` is followed by a one-line muted help subtitle (`<p className="mt-1 text-xs text-gray-500">…</p>`) explaining what the page does and any non-obvious behavior (e.g. "Field changes save automatically when you click away.", "Click any item to edit before generating. Edits stick across re-runs."). Auth pages (`AuthShell`) and the 404 are exempt — they're outside the workspace shell.
 
+**User-visible feedback.** Two primitives:
+- **`<Alert tone="danger|warning|success|info" title=… onDismiss=… action=…>`** in `web/src/components/ui.tsx` — banner shape, persistent until dismissed. Use for backend rejections, validation errors, non-blocking concerns (trial ending, grandfathered pricing), and page-level guidance. Anchor it inside the page near the action that produced it.
+- **`useToast()` from `web/src/components/Toast.tsx`** — transient confirmations (`toast.success('Saved.')`, `toast.error('Couldn\'t save.')`). Top-right stack, auto-dismisses after ~3.5 seconds (errors get 6s). Mounted once via `<ToastProvider>` at the app root in `main.tsx`.
+
+Never use a bare `<p className="text-red-600">` or similar for user-facing feedback — those are easy to miss, don't dismiss, and don't stack. Pick `Alert` for "this needs attention" and `useToast()` for "this just happened."
+
 **Migrations.** Flyway. Numbered files (`V001__init.sql`). Migrations are forward-only; never edit a merged migration.
 
 **Tests.** Unit tests next to code. Integration tests in `src/test/integration/`. The LLM eval harness lives in `src/test/eval/` and runs nightly + on every PR that touches `prompts/` or LLM client code. See `docs/06-evals.md`.

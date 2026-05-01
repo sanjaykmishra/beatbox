@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Eyebrow, Pill, type PillTone } from '../components/ui';
+import { useToast } from '../components/Toast';
+import { Alert, Eyebrow, Pill, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import {
   api,
@@ -64,7 +65,21 @@ export function ReportReview() {
       </BrowserFrame>
     );
   }
-  if (report.error || !r) return <p className="text-red-600">Failed to load report.</p>;
+  if (report.error || !r) {
+    return (
+      <BrowserFrame
+        crumbs={[{ label: `${slug}.beat.app`, to: '/clients' }, { label: 'reports' }]}
+      >
+        <Alert
+          tone="danger"
+          title="Couldn't load report"
+          action={{ label: 'Retry', onClick: () => report.refetch() }}
+        >
+          The report data didn't come back. Check your connection or try again in a moment.
+        </Alert>
+      </BrowserFrame>
+    );
+  }
 
   return (
     <BrowserFrame
@@ -157,7 +172,20 @@ export function ReportReview() {
           </span>
         </div>
 
-        {generateError && <p className="text-sm text-red-600">{generateError}</p>}
+        {generateError && (
+          <Alert
+            tone="danger"
+            title="Can't generate this report yet"
+            action={
+              (counts?.failed ?? 0) > 0
+                ? { label: 'Show failed', onClick: () => setFilter('articles') }
+                : undefined
+            }
+            onDismiss={() => setGenerateError(null)}
+          >
+            {generateError}
+          </Alert>
+        )}
 
         {/* Unified items list. */}
         {unified.length === 0 ? (
@@ -294,12 +322,13 @@ function matchesFilter(it: UnifiedItem, f: FilterKey): boolean {
       return it.kind === 'social';
     case 'tier1':
       return it.kind === 'article' && (it.data.tier_at_extraction ?? 99) === 1;
-    case 'high_engagement':
+    case 'high_engagement': {
       // Social mentions only; "high engagement" is a heuristic on likes + reposts.
       if (it.kind !== 'social') return false;
       const likes = it.data.likes_count ?? 0;
       const reposts = it.data.reposts_count ?? 0;
       return likes + reposts >= 100;
+    }
   }
 }
 
@@ -639,6 +668,7 @@ function ArticleEditDrawer({
   const [lede, setLede] = useState(item.lede ?? '');
   const [publishDate, setPublishDate] = useState(item.publish_date ?? '');
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -657,9 +687,10 @@ function ArticleEditDrawer({
       if (Object.keys(edits).length === 0) return null;
       return api.patchCoverage(reportId, item.id, edits);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       onSaved();
       onClose();
+      if (result) toast.success('Coverage edits saved.');
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
   });
@@ -690,7 +721,11 @@ function ArticleEditDrawer({
         />
       </Field>
       <EditedFieldsNote fields={item.edited_fields} />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <Alert tone="danger" onDismiss={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
       <DrawerFooter onClose={onClose} onSave={() => save.mutate()} saving={save.isPending} />
     </DrawerShell>
   );
@@ -717,6 +752,7 @@ function SocialEditDrawer({
   >(item.subject_prominence ?? '');
   const [topics, setTopics] = useState((item.topics ?? []).join(', '));
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -744,9 +780,10 @@ function SocialEditDrawer({
       if (Object.keys(edits).length === 0) return null;
       return api.patchSocialMention(reportId, item.id, edits);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       onSaved();
       onClose();
+      if (result) toast.success('Social mention edits saved.');
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
   });
@@ -801,7 +838,11 @@ function SocialEditDrawer({
         />
       </Field>
       <EditedFieldsNote fields={item.edited_fields} />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <Alert tone="danger" onDismiss={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
       <DrawerFooter onClose={onClose} onSave={() => save.mutate()} saving={save.isPending} />
     </DrawerShell>
   );

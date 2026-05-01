@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Eyebrow, Pill, type PillTone } from '../components/ui';
+import { useToast } from '../components/Toast';
+import { Alert, Eyebrow, Pill, type PillTone } from '../components/ui';
 import { api, ApiError, uploadLogo, type Billing, type Member } from '../lib/api';
 import { useAuth } from '../lib/useAuth';
 
@@ -12,6 +13,7 @@ export function Settings() {
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const toast = useToast();
   // Branding-only updates (logo) reload the page so the avatar in the header refreshes.
   // Inline edits like the workspace name use update.mutate directly + refreshWorkspace.
   const update = useMutation({
@@ -19,6 +21,7 @@ export function Settings() {
     onSuccess: async () => {
       await refreshWorkspace();
       void qc.invalidateQueries({ queryKey: ['workspace'] });
+      toast.success('Workspace updated.');
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : 'Update failed'),
   });
@@ -115,7 +118,11 @@ export function Settings() {
           </div>
         </Section>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
         <MembersSection />
         <BillingSection />
@@ -143,7 +150,15 @@ function MembersSection() {
           <div className="p-5 text-sm text-gray-500">Loading members…</div>
         )}
         {members.error && (
-          <div className="p-5 text-sm text-red-600">Failed to load members.</div>
+          <div className="p-3">
+            <Alert
+              tone="danger"
+              title="Couldn't load members"
+              action={{ label: 'Retry', onClick: () => members.refetch() }}
+            >
+              The members list didn't come back. Check your connection or try again.
+            </Alert>
+          </div>
         )}
         {members.data && (
           <ul className="divide-y divide-gray-100">
@@ -187,11 +202,25 @@ function MemberRow({ member }: { member: Member }) {
 }
 
 function BillingSection() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const billing = useQuery({ queryKey: ['billing'], queryFn: () => api.getBilling() });
-  const [error, setError] = useState<string | null>(
-    params.get('billing') === 'cancelled' ? 'Checkout cancelled — try again any time.' : null,
+  const [error, setError] = useState<string | null>(null);
+  const [cancelledNotice, setCancelledNotice] = useState(
+    () => params.get('billing') === 'cancelled',
   );
+  const toast = useToast();
+
+  // Stripe redirects back with ?billing=ok on a successful checkout. Surface that as a toast and
+  // strip the param so a refresh doesn't re-fire the toast.
+  useEffect(() => {
+    if (params.get('billing') === 'ok') {
+      toast.success('Subscription updated.');
+      const next = new URLSearchParams(params);
+      next.delete('billing');
+      setParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const checkout = useMutation({
     mutationFn: ({
@@ -217,7 +246,18 @@ function BillingSection() {
 
   if (billing.isLoading) return null;
   if (billing.error || !billing.data) {
-    return <p className="text-sm text-red-600">Failed to load billing.</p>;
+    return (
+      <section>
+        <Eyebrow className="mb-3">Billing</Eyebrow>
+        <Alert
+          tone="danger"
+          title="Couldn't load billing"
+          action={{ label: 'Retry', onClick: () => billing.refetch() }}
+        >
+          Stripe data didn't come back. Check your connection or try again.
+        </Alert>
+      </section>
+    );
   }
   const b = billing.data;
   const onPaidPlan =
@@ -239,13 +279,25 @@ function BillingSection() {
               : b.plan_limit_reports_monthly
           } reports / month`}
         />
-        {b.plan === 'trial' && (
-          <p className={trialDaysLeft <= 3 ? 'text-sm text-amber-700' : 'text-sm text-gray-600'}>
-            {trialDaysLeft > 0
-              ? `Trial: ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining.`
-              : 'Trial ended. Add a card to continue creating reports.'}
-          </p>
-        )}
+        {b.plan === 'trial' &&
+          (trialDaysLeft <= 3 ? (
+            <Alert
+              tone={trialDaysLeft <= 0 ? 'danger' : 'warning'}
+              title={
+                trialDaysLeft > 0
+                  ? `Trial ends in ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'}`
+                  : 'Trial ended'
+              }
+            >
+              {trialDaysLeft > 0
+                ? 'Add a card to keep generating reports after your trial ends.'
+                : 'Add a card to continue creating reports.'}
+            </Alert>
+          ) : (
+            <p className="text-sm text-gray-600">
+              Trial: {trialDaysLeft} days remaining.
+            </p>
+          ))}
         {!b.stripe_configured && (
           <p className="text-xs text-gray-500">
             Billing isn't configured on the server. Set Stripe env vars to enable upgrades.
@@ -299,7 +351,20 @@ function BillingSection() {
             {portal.isPending ? 'Opening…' : 'Manage subscription'}
           </button>
         )}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {cancelledNotice && (
+          <Alert
+            tone="warning"
+            title="Checkout cancelled"
+            onDismiss={() => setCancelledNotice(false)}
+          >
+            You can pick up where you left off any time — your account is unchanged.
+          </Alert>
+        )}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
       </div>
     </section>
   );

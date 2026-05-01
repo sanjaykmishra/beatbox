@@ -68,7 +68,9 @@ public class AlertEngine {
     // include both streams; a failed Twitter scrape is just as much a failed extraction as a
     // failed article fetch.
     int failed = failedCount(client.id());
-    if (failed > 0) out.add(extractionFailed(client, failed));
+    if (failed > 0) {
+      out.add(extractionFailed(client, failed, reportWithMostFailures(client.id()).orElse(null)));
+    }
 
     // 4. context.stale — context older than threshold (skip if never set).
     contexts
@@ -132,6 +134,39 @@ public class AlertEngine {
             .query(Integer.class)
             .single();
     return (articleFails == null ? 0 : articleFails) + (socialFails == null ? 0 : socialFails);
+  }
+
+  /**
+   * Returns the report id that owns the most failed coverage items for this client (across both
+   * articles and social mentions). Drives the {@code Review →} link on the {@code
+   * extraction.failed} alert so the user lands on the report builder for the report they actually
+   * need to fix, not on client settings. Empty when no report has failures (e.g., social-only
+   * failures with no report attached, or all failures already resolved).
+   */
+  private Optional<java.util.UUID> reportWithMostFailures(java.util.UUID clientId) {
+    return jdbc.sql(
+            """
+            SELECT report_id, count(*) AS n FROM (
+              SELECT r.id AS report_id
+                FROM coverage_items ci
+                JOIN reports r ON r.id = ci.report_id
+               WHERE r.client_id = :c
+                 AND r.deleted_at IS NULL
+                 AND ci.extraction_status = 'failed'
+              UNION ALL
+              SELECT report_id
+                FROM social_mentions
+               WHERE client_id = :c
+                 AND extraction_status = 'failed'
+                 AND report_id IS NOT NULL
+            ) f
+            GROUP BY report_id
+            ORDER BY n DESC, report_id
+            LIMIT 1
+            """)
+        .param("c", clientId)
+        .query((rs, i) -> rs.getObject("report_id", java.util.UUID.class))
+        .optional();
   }
 
   private static long ageDays(Instant t) {
@@ -209,7 +244,12 @@ public class AlertEngine {
     return reports.findLatestForClientUpTo(clientId, ceiling);
   }
 
-  private ComputedAlert extractionFailed(Client c, int failed) {
+  private ComputedAlert extractionFailed(Client c, int failed, java.util.UUID reportId) {
+    // Prefer linking to the report builder for the report that owns most of the failed items —
+    // that's where the FailedPanel UI lets the user click Retry / Edit / Remove on each row. Fall
+    // back to the client-edit page when no report-attached failures exist (e.g., social mentions
+    // captured into the client pool with no report yet).
+    String actionPath = reportId != null ? "/reports/" + reportId : "/clients/" + c.id() + "/edit";
     return new ComputedAlert(
         AlertTypes.EXTRACTION_FAILED,
         AlertTypes.AMBER,
@@ -218,7 +258,7 @@ public class AlertEngine {
         failed + " extraction" + (failed == 1 ? "" : "s") + " failed",
         "Tap to review and retry.",
         "Review →",
-        "/clients/" + c.id() + "/edit");
+        actionPath);
   }
 
   private ComputedAlert contextStale(Client c, long days) {

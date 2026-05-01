@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Pill, type PillTone } from '../components/ui';
+import { useToast } from '../components/Toast';
+import { Alert, Pill, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import { api, ApiError, type Report } from '../lib/api';
 
@@ -14,6 +15,7 @@ export function ReportPreview() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const report = useQuery({
     queryKey: ['report', id],
@@ -44,6 +46,7 @@ export function ReportPreview() {
     onSuccess: () => {
       setShareUrl(null);
       qc.invalidateQueries({ queryKey: ['report', id] });
+      toast.success('Share link revoked.');
     },
   });
 
@@ -67,7 +70,21 @@ export function ReportPreview() {
       </BrowserFrame>
     );
   }
-  if (report.error || !report.data) return <p className="text-red-600">Failed to load report.</p>;
+  if (report.error || !report.data) {
+    return (
+      <BrowserFrame
+        crumbs={[{ label: `${slug}.beat.app`, to: '/clients' }, { label: 'reports' }]}
+      >
+        <Alert
+          tone="danger"
+          title="Couldn't load report"
+          action={{ label: 'Retry', onClick: () => report.refetch() }}
+        >
+          The report data didn't come back. Check your connection or try again.
+        </Alert>
+      </BrowserFrame>
+    );
+  }
   const r = report.data;
 
   const ready = r.status === 'ready';
@@ -146,7 +163,11 @@ export function ReportPreview() {
           </p>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
         {shareUrl && (
           <div className="bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-3">
@@ -183,7 +204,14 @@ export function ReportPreview() {
             {previewHtml.isLoading ? (
               <ProcessingSkeleton />
             ) : previewHtml.error ? (
-              <p className="text-red-600 text-sm">Failed to load preview.</p>
+              <Alert
+                tone="danger"
+                title="Couldn't render preview"
+                action={{ label: 'Retry', onClick: () => previewHtml.refetch() }}
+              >
+                The render service didn't return preview HTML. Try again, or check the server
+                logs.
+              </Alert>
             ) : (
               <iframe
                 title="Report preview"
@@ -224,9 +252,10 @@ function ProcessingSkeleton() {
 
 function FailedNotice() {
   return (
-    <div className="bg-red-100/70 border border-red-200 rounded-xl p-6 text-sm text-red-700">
-      Generation failed. Check the report's failure_reason or try again.
-    </div>
+    <Alert tone="danger" title="Generation failed">
+      Check the report's failure_reason in the activity feed, or try again from the report
+      builder.
+    </Alert>
   );
 }
 
@@ -244,12 +273,14 @@ function SummaryEditor({
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(initial);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const save = useMutation({
     mutationFn: () => api.editSummary(reportId, text),
     onSuccess: () => {
       setOpen(false);
       onSaved();
+      toast.success('Executive summary saved.');
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
   });

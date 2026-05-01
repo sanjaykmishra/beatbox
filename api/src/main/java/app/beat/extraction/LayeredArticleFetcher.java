@@ -31,9 +31,23 @@ public class LayeredArticleFetcher implements ArticleFetcher {
 
   @Override
   public Optional<FetchedArticle> fetch(String url) {
+    return fetchWithReason(url).article();
+  }
+
+  @Override
+  public FetchOutcome fetchWithReason(String url) {
     Optional<FetchedArticle> r = readability.fetch(url);
-    if (r.isPresent()) return r;
-    log.info("readability empty for {}, falling through to scrapingbee", url);
-    return scrapingBee.fetch(url);
+    if (r.isPresent()) return new FetchOutcome(r, null);
+    log.info(
+        "readability empty for {}, falling through to scrapingbee (configured={})",
+        url,
+        scrapingBee.isConfigured());
+    FetchOutcome sb = scrapingBee.fetchWithReason(url);
+    if (sb.article().isPresent()) return sb;
+    String reason =
+        sb.reason() == null
+            ? "readability_empty_and_scrapingbee_empty"
+            : "readability_empty_then_" + sb.reason();
+    return new FetchOutcome(Optional.empty(), reason);
   }
 }

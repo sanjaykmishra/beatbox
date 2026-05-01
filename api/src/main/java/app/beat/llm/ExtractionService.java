@@ -32,7 +32,7 @@ public class ExtractionService {
   private final AnthropicClient anthropic;
   private final ExtractionCacheRepository cache;
   private final TwoTierExtractionService twoTier;
-  private final ObjectMapper json = new ObjectMapper();
+  private final ObjectMapper json;
   private final String modelOverride;
   private final String mode;
 
@@ -41,12 +41,14 @@ public class ExtractionService {
       AnthropicClient anthropic,
       ExtractionCacheRepository cache,
       TwoTierExtractionService twoTier,
+      ObjectMapper json,
       @Value("${ANTHROPIC_MODEL_EXTRACTION:}") String modelOverride,
       @Value("${beat.prompts.extraction.tier:single}") String mode) {
     this.prompts = prompts;
     this.anthropic = anthropic;
     this.cache = cache;
     this.twoTier = twoTier;
+    this.json = json;
     this.modelOverride = modelOverride;
     this.mode = normalizeMode(mode);
     log.info("ExtractionService tier mode = {}", this.mode);

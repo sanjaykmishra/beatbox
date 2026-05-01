@@ -37,7 +37,10 @@ public class TwoTierExtractionService {
   private final AnthropicClient anthropic;
   private final ExtractionCacheRepository cache;
   private final UrlPrefilter urlPrefilter;
-  private final ObjectMapper json = new ObjectMapper(); // for serializing results into the cache
+  // Spring-managed ObjectMapper has JavaTimeModule registered (Spring Boot auto-config);
+  // a fresh `new ObjectMapper()` does not, and serializing ExtractionResult.publishDate
+  // (LocalDate) would throw "Java 8 date/time type ... not supported by default".
+  private final ObjectMapper json;
   private final String haikuModelOverride;
   private final String sonnetModelOverride;
 
@@ -46,12 +49,14 @@ public class TwoTierExtractionService {
       AnthropicClient anthropic,
       ExtractionCacheRepository cache,
       UrlPrefilter urlPrefilter,
+      ObjectMapper json,
       @Value("${ANTHROPIC_MODEL_EXTRACTION_HAIKU:}") String haikuModelOverride,
       @Value("${ANTHROPIC_MODEL_EXTRACTION_SONNET:}") String sonnetModelOverride) {
     this.prompts = prompts;
     this.anthropic = anthropic;
     this.cache = cache;
     this.urlPrefilter = urlPrefilter;
+    this.json = json;
     this.haikuModelOverride = haikuModelOverride;
     this.sonnetModelOverride = sonnetModelOverride;
   }

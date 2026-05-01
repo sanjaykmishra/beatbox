@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Eyebrow, PrimaryLink, SecondaryLink } from '../components/ui';
+import { useToast } from '../components/Toast';
+import { Alert, Eyebrow, PrimaryLink, SecondaryLink } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import { ApiError, api } from '../lib/api';
 
@@ -42,6 +43,7 @@ export function ClientContextEditor() {
   const [styleNotes, setStyleNotes] = useState('');
   const [notesMarkdown, setNotesMarkdown] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (!ctx.data) return;
@@ -65,6 +67,7 @@ export function ClientContextEditor() {
       }),
     onSuccess: (data) => {
       qc.setQueryData(['client-context', clientId], data);
+      toast.success('Client context saved.');
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
   });
@@ -193,7 +196,11 @@ export function ClientContextEditor() {
               Heads-up: content here is sent to our AI processing pipeline and stored. Don't paste
               passwords, contracts, or anything you wouldn't want logged.
             </p>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && (
+              <Alert tone="danger" onDismiss={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
             <div className="flex justify-end pt-2 border-t border-gray-100">
               <button
                 onClick={() => save.mutate()}

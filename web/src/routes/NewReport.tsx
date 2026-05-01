@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
+import { Alert } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import { api, ApiError } from '../lib/api';
 
@@ -118,7 +119,11 @@ export function NewReport() {
           />
         </Field>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
         <div className="flex items-center justify-between pt-2 border-t border-gray-100">
           <p className="text-sm text-gray-500">

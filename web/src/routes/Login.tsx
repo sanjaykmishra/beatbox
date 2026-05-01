@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Alert } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/useAuth';
 import { AuthShell } from './Signup';
@@ -51,7 +52,11 @@ export function Login() {
             autoComplete="current-password"
           />
         </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
         <button
           type="submit"
           disabled={busy}
