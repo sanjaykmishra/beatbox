@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css"></head>
+<body>
+<div class="page">
+  <div class="shell">
+    <div class="chrome">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="crumb">beat.app / acme corp / april 2026 report / <span class="here">coverage</span></div>
+    </div>
+    <div class="body" style="padding: 28px 40px;">
+
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+        <div>
+          <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Acme Corp &middot; April 2026</div>
+          <h1>Coverage</h1>
+        </div>
+        <div style="display: flex; gap: 24px; align-items: center;">
+          <div style="font-size: 13px;">
+            <span style="font-weight: 600;">22</span>
+            <span class="muted"> done</span>
+            <span style="margin-left: 14px; color: #2563eb; font-weight: 500;">3 extracting</span>
+          </div>
+          <button class="btn btn-primary">Generate report &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Filter pills -->
+      <div style="display: flex; gap: 8px; margin: 18px 0 22px;">
+        <span class="badge" style="padding: 6px 12px; font-size: 12px; background: #0f172a; color: white;">All &middot; 25</span>
+        <span class="badge badge-gray" style="padding: 6px 12px; font-size: 12px; background: white; border: 1px solid #e5e5e3; color: #475569;">Articles &middot; 14</span>
+        <span class="badge badge-gray" style="padding: 6px 12px; font-size: 12px; background: white; border: 1px solid #e5e5e3; color: #475569;">Social &middot; 11</span>
+        <span class="badge badge-gray" style="padding: 6px 12px; font-size: 12px; background: white; border: 1px solid #e5e5e3; color: #475569;">Tier 1</span>
+        <span class="badge badge-gray" style="padding: 6px 12px; font-size: 12px; background: white; border: 1px solid #e5e5e3; color: #475569;">High engagement</span>
+        <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+          <span class="muted" style="font-size: 12px;">Sort by</span>
+          <select class="input" style="font-size: 12px; padding: 5px 10px;">
+            <option>Date &middot; newest first</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+
+        <!-- Article -->
+        <div class="panel" style="padding: 16px 20px; display: flex; gap: 16px; align-items: flex-start;">
+          <div style="width: 86px; height: 64px; background: #fafaf9; border: 1px solid #efefed; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; flex-shrink: 0;">screenshot</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+              <span class="badge badge-gray" style="background: #f1f5f9; padding: 2px 7px;">Article</span>
+              <span style="font-size: 12px; color: #64748b; font-weight: 500;">TechCrunch</span>
+              <span class="badge badge-blue">Tier 1</span>
+              <span class="badge badge-green">Positive</span>
+              <span class="muted" style="font-size: 11px;">&middot; Apr 28</span>
+            </div>
+            <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">Acme Corp raises $30M Series B led by Sequoia</div>
+            <div class="muted" style="font-size: 12px;">Funding will accelerate AI product roadmap and expand engineering team to 80.</div>
+          </div>
+          <div style="flex-shrink: 0;"><span class="btn-link">Edit &rsaquo;</span></div>
+        </div>
+
+        <!-- Social: LinkedIn -->
+        <div class="panel" style="padding: 16px 20px; display: flex; gap: 16px; align-items: flex-start;">
+          <div style="width: 86px; height: 64px; background: #fafaf9; border: 1px solid #efefed; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; padding: 6px;">
+            <div style="width: 28px; height: 28px; background: #0a66c2; color: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">in</div>
+            <div class="muted" style="font-size: 9px; margin-top: 4px;">LinkedIn</div>
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+              <span class="badge" style="background: #dbeafe; color: #0a66c2; padding: 2px 7px;">LinkedIn</span>
+              <span style="font-size: 12px; color: #64748b; font-weight: 500;">Maya Rodriguez &middot; CTO at Acme Corp</span>
+              <span class="badge badge-green">Positive</span>
+              <span class="badge badge-blue">Feature</span>
+              <span class="muted" style="font-size: 11px;">&middot; Apr 28 &middot; 47K followers</span>
+            </div>
+            <div style="font-size: 13px; margin-bottom: 6px; color: #1a1a1a; line-height: 1.5;">
+              Today we're announcing our Series B and the team that's going to build the next chapter of Acme. The product roadmap going forward is the most ambitious thing I've worked on. Big thanks to&hellip;
+            </div>
+            <div style="display: flex; gap: 18px; font-size: 11px; color: #64748b;">
+              <span><strong style="color: #1a1a1a;">2,847</strong> reactions</span>
+              <span><strong style="color: #1a1a1a;">312</strong> comments</span>
+              <span><strong style="color: #1a1a1a;">189</strong> reposts</span>
+              <span><strong style="color: #1a1a1a;">~284K</strong> reach</span>
+            </div>
+          </div>
+          <div style="flex-shrink: 0;"><span class="btn-link">Edit &rsaquo;</span></div>
+        </div>
+
+        <!-- Social: X / Twitter -->
+        <div class="panel" style="padding: 16px 20px; display: flex; gap: 16px; align-items: flex-start;">
+          <div style="width: 86px; height: 64px; background: #fafaf9; border: 1px solid #efefed; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; padding: 6px;">
+            <div style="width: 28px; height: 28px; background: #0f172a; color: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">X</div>
+            <div class="muted" style="font-size: 9px; margin-top: 4px;">X</div>
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+              <span class="badge" style="background: #f1f5f9; color: #0f172a; padding: 2px 7px;">X</span>
+              <span style="font-size: 12px; color: #64748b; font-weight: 500;">@erinmendell &middot; WSJ tech reporter</span>
+              <span class="badge badge-yellow">Mixed</span>
+              <span class="muted" style="font-size: 11px;">&middot; Apr 28 &middot; 184K followers</span>
+            </div>
+            <div style="font-size: 13px; margin-bottom: 6px; color: #1a1a1a; line-height: 1.5;">
+              Acme's $30M Series B is real but the AI claims in the press release deserve scrutiny &mdash; their public benchmarks are 6 months old and the field has moved meaningfully since. Reporting on this&hellip;
+            </div>
+            <div style="display: flex; gap: 18px; font-size: 11px; color: #64748b;">
+              <span><strong style="color: #1a1a1a;">487</strong> likes</span>
+              <span><strong style="color: #1a1a1a;">94</strong> replies</span>
+              <span><strong style="color: #1a1a1a;">68</strong> reposts</span>
+              <span><strong style="color: #1a1a1a;">~52K</strong> impressions</span>
+            </div>
+          </div>
+          <div style="flex-shrink: 0;"><span class="btn-link">Edit &rsaquo;</span></div>
+        </div>
+
+        <!-- Article -->
+        <div class="panel" style="padding: 16px 20px; display: flex; gap: 16px; align-items: flex-start;">
+          <div style="width: 86px; height: 64px; background: #fafaf9; border: 1px solid #efefed; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; flex-shrink: 0;">screenshot</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+              <span class="badge badge-gray" style="background: #f1f5f9; padding: 2px 7px;">Article</span>
+              <span style="font-size: 12px; color: #64748b; font-weight: 500;">The Wall Street Journal</span>
+              <span class="badge badge-blue">Tier 1</span>
+              <span class="badge badge-yellow">Mixed</span>
+              <span class="muted" style="font-size: 11px;">&middot; Apr 26</span>
+            </div>
+            <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">Acme acquires Foo Corp in surprise consolidation move</div>
+            <div class="muted" style="font-size: 12px;">Analysts question integration timeline; Acme defends thesis as long-term play.</div>
+          </div>
+          <div style="flex-shrink: 0;"><span class="btn-link">Edit &rsaquo;</span></div>
+        </div>
+
+        <!-- Social: Bluesky -->
+        <div class="panel" style="padding: 16px 20px; display: flex; gap: 16px; align-items: flex-start;">
+          <div style="width: 86px; height: 64px; background: #fafaf9; border: 1px solid #efefed; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; padding: 6px;">
+            <div style="width: 28px; height: 28px; background: #1185fe; color: white; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">B</div>
+            <div class="muted" style="font-size: 9px; margin-top: 4px;">Bluesky</div>
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+              <span class="badge" style="background: #dbeafe; color: #1185fe; padding: 2px 7px;">Bluesky</span>
+              <span style="font-size: 12px; color: #64748b; font-weight: 500;">@analystjones.bsky.social</span>
+              <span class="badge badge-green">Positive</span>
+              <span class="badge badge-gray">Mention</span>
+              <span class="muted" style="font-size: 11px;">&middot; Apr 27 &middot; 12K followers</span>
+            </div>
+            <div style="font-size: 13px; margin-bottom: 6px; color: #1a1a1a; line-height: 1.5;">
+              Interesting move from Acme acquiring Foo. The complementary infrastructure stack means they can ship AI-native workflows without rewriting the platform. Underrated deal&hellip;
+            </div>
+            <div style="display: flex; gap: 18px; font-size: 11px; color: #64748b;">
+              <span><strong style="color: #1a1a1a;">214</strong> likes</span>
+              <span><strong style="color: #1a1a1a;">47</strong> reposts</span>
+              <span><strong style="color: #1a1a1a;">12</strong> replies</span>
+              <span><strong style="color: #1a1a1a;">~1.8K</strong> reach</span>
+            </div>
+          </div>
+          <div style="flex-shrink: 0;"><span class="btn-link">Edit &rsaquo;</span></div>
+        </div>
+
+        <!-- Extraction in progress -->
+        <div class="panel" style="padding: 16px 20px; display: flex; gap: 16px; align-items: center; background: #fafaf9;">
+          <div style="width: 86px; height: 64px; background: white; border: 1px solid #efefed; border-radius: 4px; flex-shrink: 0;"></div>
+          <div style="flex: 1;">
+            <div class="mono" style="font-size: 12px; color: #64748b; margin-bottom: 6px;">linkedin.com/posts/sequoia_announcing-acme-series-b&hellip;</div>
+            <div style="background: #efefed; height: 5px; width: 70%; border-radius: 3px;"></div>
+            <div style="background: #efefed; height: 5px; width: 40%; border-radius: 3px; margin-top: 4px;"></div>
+          </div>
+          <div style="color: #2563eb; font-size: 12px; font-weight: 500;">Extracting&hellip;</div>
+        </div>
+
+        <!-- Social: Reddit -->
+        <div class="panel" style="padding: 16px 20px; display: flex; gap: 16px; align-items: flex-start;">
+          <div style="width: 86px; height: 64px; background: #fafaf9; border: 1px solid #efefed; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; padding: 6px;">
+            <div style="width: 28px; height: 28px; background: #ff4500; color: white; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">r/</div>
+            <div class="muted" style="font-size: 9px; margin-top: 4px;">Reddit</div>
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+              <span class="badge" style="background: #fee2e2; color: #ff4500; padding: 2px 7px;">r/SaaS</span>
+              <span style="font-size: 12px; color: #64748b; font-weight: 500;">u/saasthinker &middot; thread starter</span>
+              <span class="badge badge-yellow">Mixed</span>
+              <span class="muted" style="font-size: 11px;">&middot; Apr 25 &middot; 412 upvotes</span>
+            </div>
+            <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">Anyone else getting Acme Corp emails twice a week now?</div>
+            <div class="muted" style="font-size: 12px;">Discussion thread: 87 comments, mostly mixed sentiment about Acme's outbound cadence post-Series B. Two top comments defending the product&hellip;</div>
+          </div>
+          <div style="flex-shrink: 0;"><span class="btn-link">Edit &rsaquo;</span></div>
+        </div>
+
+        <!-- Show more callout -->
+        <div style="text-align: center; padding: 14px 0;">
+          <span class="btn-link">Show 18 more items &rarr;</span>
+        </div>
+
+      </div>
+
+      <!-- Footer note -->
+      <div class="panel-sub" style="padding: 12px 16px; border-radius: 6px; font-size: 12px; color: #475569; line-height: 1.55; margin-top: 6px;">
+        <strong style="color: #0f172a;">Engagement at extraction time.</strong> Likes, reposts, and replies are snapshotted when a mention is added. Numbers in the final report reflect that snapshot, not live values &mdash; reports are historical artifacts.
+      </div>
+
+    </div>
+  </div>
+</div>
+</body></html>
