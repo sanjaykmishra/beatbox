@@ -22,10 +22,26 @@ public class SocialExtractionJobRepository {
 
   public record QueuedJob(UUID id, UUID socialMentionId, int attemptCount) {}
 
-  /** Idempotent enqueue (one job per mention). Second enqueue while a job exists is a no-op. */
+  /**
+   * Enqueue (or re-enqueue) a job. The {@code social_mention_id} column is unique, so we UPSERT: a
+   * fresh paste creates a new row in {@code queued}; a Retry on a previously-{@code failed} row
+   * resets it to {@code queued} with last_error cleared and started/completed_at NULL. Returns true
+   * on insert, false on update (kept for backward-compat with prior callers that checked the
+   * boolean).
+   */
   public boolean enqueue(UUID socialMentionId) {
     try {
-      jdbc.sql("INSERT INTO social_extraction_jobs (social_mention_id) VALUES (:m)")
+      jdbc.sql(
+              """
+              INSERT INTO social_extraction_jobs (social_mention_id)
+              VALUES (:m)
+              ON CONFLICT (social_mention_id) DO UPDATE SET
+                status = 'queued',
+                last_error = NULL,
+                started_at = NULL,
+                completed_at = NULL,
+                queued_at = now()
+              """)
           .param("m", socialMentionId)
           .update();
       return true;
