@@ -93,6 +93,20 @@ public class AnthropicClient {
   }
 
   /**
+   * Models known to reject the {@code temperature} parameter. Anthropic deprecated temperature on
+   * its newer reasoning-tier models (Opus 4.7+, etc.), returning HTTP 400 with {@code "temperature"
+   * is deprecated for this model}. We learn the rejection lazily on the first 400 and cache it
+   * process-wide so subsequent calls omit the param up front. Pre-seed known offenders so the first
+   * call doesn't need a retry round-trip.
+   */
+  private static final java.util.Set<String> TEMPERATURE_REJECTED =
+      java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+  static {
+    TEMPERATURE_REJECTED.add("claude-opus-4-7");
+  }
+
+  /**
    * Single message call with optional cached system block. Per docs/18-cost-engineering.md, large
    * stable instructions (style guidance, schema rules, brand-voice context) belong in the system
    * block with caching enabled — the first call writes the cache (1.25× input rate), subsequent
@@ -110,11 +124,23 @@ public class AnthropicClient {
       boolean cacheSystem,
       String userMessage) {
     if (!isConfigured()) throw new IllegalStateException("ANTHROPIC_API_KEY not configured");
+    return callWithBody(
+        model, temperature, maxTokens, systemBlock, cacheSystem, userMessage, /*omitTemp*/ false);
+  }
 
+  private Result callWithBody(
+      String model,
+      double temperature,
+      int maxTokens,
+      String systemBlock,
+      boolean cacheSystem,
+      String userMessage,
+      boolean omitTemperature) {
+    boolean omit = omitTemperature || TEMPERATURE_REJECTED.contains(model);
     ObjectNode body = json.createObjectNode();
     body.put("model", model);
     body.put("max_tokens", maxTokens);
-    body.put("temperature", temperature);
+    if (!omit) body.put("temperature", temperature);
     if (systemBlock != null && !systemBlock.isEmpty()) {
       var sysArr = body.putArray("system");
       var sys = sysArr.addObject();
@@ -166,6 +192,17 @@ public class AnthropicClient {
           }
           return r;
         }
+        // 400 with the temperature-deprecated payload is a one-time retry without temperature;
+        // remember the decision so subsequent calls for this model don't pay the extra round-trip.
+        if (status == 400 && !omit && temperatureDeprecated(res.body())) {
+          TEMPERATURE_REJECTED.add(model);
+          log.info(
+              "anthropic: model {} rejected temperature parameter; retrying without it (cached"
+                  + " for future calls)",
+              model);
+          return callWithBody(
+              model, temperature, maxTokens, systemBlock, cacheSystem, userMessage, true);
+        }
         boolean retryable = status == 429 || status / 100 == 5;
         if (retryable && attempt < backoffMs.length) {
           Thread.sleep(backoffMs[attempt]);
@@ -190,6 +227,13 @@ public class AnthropicClient {
       }
     }
     throw new RuntimeException("anthropic: exhausted retries");
+  }
+
+  /** Heuristic: 400 body mentions deprecation of {@code temperature}. */
+  private static boolean temperatureDeprecated(String body) {
+    if (body == null) return false;
+    String lower = body.toLowerCase();
+    return lower.contains("temperature") && lower.contains("deprecated");
   }
 
   private Result parseResult(String model, String responseBody) {
