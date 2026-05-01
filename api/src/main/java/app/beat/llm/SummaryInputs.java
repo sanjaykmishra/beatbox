@@ -136,4 +136,53 @@ public record SummaryInputs(
     m.put("up_to_5_headlines", headlines == null ? "" : headlines);
     return m;
   }
+
+  /** Human-readable period label, e.g. "January 2026" when one calendar month is covered. */
+  public String reportPeriodLabel() {
+    if (periodStart == null || periodEnd == null) return "";
+    boolean fullMonth =
+        periodStart.getDayOfMonth() == 1
+            && periodEnd.equals(periodStart.withDayOfMonth(periodStart.lengthOfMonth()))
+            && periodStart.getMonth() == periodEnd.getMonth();
+    if (fullMonth) {
+      return periodStart.format(java.time.format.DateTimeFormatter.ofPattern("LLLL yyyy"));
+    }
+    return periodStart + " to " + periodEnd;
+  }
+
+  /**
+   * Multi-line structured summary suitable for the {@code {{coverage_items_summary}}} placeholder
+   * in executive-summary-v1.1. Keeps the LLM grounded in the same data v1.0 received but in a
+   * single block the prompt can quote.
+   */
+  public String coverageItemsSummary() {
+    StringBuilder b = new StringBuilder();
+    b.append("Total coverage items: ").append(count).append('\n');
+    b.append("Tier breakdown — Tier 1: ")
+        .append(tier1)
+        .append(", Tier 2: ")
+        .append(tier2)
+        .append(", Tier 3: ")
+        .append(tier3)
+        .append('\n');
+    b.append("Sentiment — positive: ")
+        .append(positive)
+        .append(", neutral: ")
+        .append(neutral)
+        .append(", mixed: ")
+        .append(mixed)
+        .append(", negative: ")
+        .append(negative)
+        .append('\n');
+    if (outletList != null && !outletList.isBlank()) {
+      b.append("Top outlets by reach: ").append(outletList).append('\n');
+    }
+    if (topicList != null && !topicList.isBlank()) {
+      b.append("Most-mentioned topics: ").append(topicList).append('\n');
+    }
+    if (headlines != null && !headlines.isBlank()) {
+      b.append("Notable headlines:\n").append(headlines);
+    }
+    return b.toString();
+  }
 }

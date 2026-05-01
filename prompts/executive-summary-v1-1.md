@@ -1,6 +1,6 @@
 ---
 version: executive_summary_v1.1
-model: claude-sonnet-4
+model: claude-sonnet-4-6
 temperature: 0.3
 max_tokens: 1500
 expected_output_format: text
