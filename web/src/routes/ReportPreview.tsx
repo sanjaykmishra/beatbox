@@ -184,7 +184,7 @@ export function ReportPreview() {
             <h1 className="text-lg font-semibold tracking-tightish text-ink">{r.title}</h1>
             <StatusPill status={r.status} />
             <Link
-              to={`/clients/${r.client_id}#past-reports`}
+              to={`/clients/${r.client_id}/reports`}
               className="ml-auto text-xs text-gray-500 hover:text-gray-800 underline decoration-dotted"
             >
               ← All reports

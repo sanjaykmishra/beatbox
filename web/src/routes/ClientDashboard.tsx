@@ -2,11 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
+import { Dropdown } from '../components/Dropdown';
 import {
   Alert,
   Eyebrow,
   Pill,
-  PrimaryLink,
   SecondaryLink,
   type PillTone,
 } from '../components/ui';
@@ -17,7 +17,6 @@ import {
   type ActivityItem,
   type OwnedPost,
   type PostStatus,
-  type ReportSummary,
   type Severity,
 } from '../lib/api';
 
@@ -30,11 +29,6 @@ export function ClientDashboard() {
   const dashboard = useQuery({
     queryKey: ['dashboard', id],
     queryFn: () => api.getClientDashboard(id),
-  });
-
-  const reportsList = useQuery({
-    queryKey: ['client-reports', id],
-    queryFn: () => api.listClientReports(id),
   });
 
   const dismiss = useMutation({
@@ -154,7 +148,13 @@ export function ClientDashboard() {
 
         {/* Action row */}
         <div className="flex items-center gap-2 flex-wrap">
-          <PrimaryLink to={`/clients/${id}/reports/new`}>+ New report</PrimaryLink>
+          <Dropdown
+            label="Coverage reports"
+            items={[
+              { label: '+ New report', to: `/clients/${id}/reports/new` },
+              { label: 'Past reports', to: `/clients/${id}/reports` },
+            ]}
+          />
           <SecondaryLink to={`/clients/${id}/context`}>View context</SecondaryLink>
         </div>
 
@@ -185,11 +185,6 @@ export function ClientDashboard() {
 
         {/* Upcoming posts (always shown — empty state for new clients is informative) */}
         <UpcomingPosts clientId={id} />
-
-        {/* Past reports — newest first. Only shown when at least one exists. */}
-        {!isNewClient && (reportsList.data?.length ?? 0) > 0 && (
-          <PastReports reports={reportsList.data!} />
-        )}
 
         {/* Recent activity */}
         {!isNewClient && (
@@ -606,54 +601,3 @@ function formatReach(n: number): string {
   return n.toString();
 }
 
-function PastReports({ reports }: { reports: ReportSummary[] }) {
-  const reportTone: Record<ReportSummary['status'], PillTone> = {
-    draft: 'gray',
-    processing: 'amber',
-    ready: 'green',
-    failed: 'red',
-  };
-  return (
-    <section id="past-reports">
-      <Eyebrow className="mb-3">Past reports</Eyebrow>
-      <ul className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
-        {reports.map((r) => {
-          // Ready reports open the rendered preview; everything else (draft / processing /
-          // failed) goes back to the builder where the user can finish or retry.
-          const href = r.status === 'ready' ? `/reports/${r.id}/preview` : `/reports/${r.id}`;
-          return (
-            <li key={r.id}>
-              <Link
-                to={href}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-              >
-                <Pill tone={reportTone[r.status]}>{r.status}</Pill>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-ink truncate">{r.title}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    {formatPeriod(r.period_start, r.period_end)} ·{' '}
-                    {r.generated_at
-                      ? `generated ${relativeTime(r.generated_at)}`
-                      : `created ${relativeTime(r.created_at)}`}
-                  </div>
-                </div>
-                <span className="text-xs text-gray-400 flex-none">Open ›</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
-function formatPeriod(start: string, end: string): string {
-  const s = new Date(start);
-  const e = new Date(end);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth()) {
-    return s.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  }
-  return `${fmt(s)} – ${fmt(e)}`;
-}

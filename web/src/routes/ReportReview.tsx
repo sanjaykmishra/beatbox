@@ -107,7 +107,7 @@ export function ReportReview() {
             <Eyebrow className="mb-1">
               {r.title}
               <Link
-                to={`/clients/${r.client_id}#past-reports`}
+                to={`/clients/${r.client_id}/reports`}
                 className="ml-3 text-xs text-gray-500 hover:text-gray-800 underline decoration-dotted"
               >
                 ← All reports

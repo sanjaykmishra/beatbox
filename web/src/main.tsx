@@ -17,6 +17,7 @@ import { Settings } from './routes/Settings';
 import { NewReport } from './routes/NewReport';
 import { ReportReview } from './routes/ReportReview';
 import { ReportPreview } from './routes/ReportPreview';
+import { ClientReports } from './routes/ClientReports';
 import { ClientContextEditor } from './routes/ClientContextEditor';
 import { Calendar } from './routes/Calendar';
 import { AdminDashboard } from './routes/AdminDashboard';
@@ -54,6 +55,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <Route path="/clients/:id" element={<ClientDashboard />} />
                 <Route path="/clients/:id/edit" element={<ClientEdit />} />
                 <Route path="/clients/:id/context" element={<ClientContextEditor />} />
+                <Route path="/clients/:id/reports" element={<ClientReports />} />
                 <Route path="/clients/:id/reports/new" element={<NewReport />} />
                 <Route path="/reports/:id" element={<ReportReview />} />
                 <Route path="/reports/:id/preview" element={<ReportPreview />} />
