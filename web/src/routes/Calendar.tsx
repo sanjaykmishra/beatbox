@@ -74,7 +74,7 @@ const STATUS_TONE: Record<PostStatus, PillTone> = {
   archived: 'gray',
 };
 
-type CalendarView = 'week' | 'month';
+type CalendarView = 'week' | 'month' | 'list';
 
 export function Calendar() {
   const { workspace } = useAuth();
@@ -178,47 +178,18 @@ export function Calendar() {
   return (
     <BrowserFrame
       crumbs={[{ label: `${slug}.beat.app`, to: '/clients' }, { label: 'calendar' }]}
-      rightSlot={
-        <NewMenu
-          onPickPost={() => setComposer({ open: true, mode: 'new', clientId: clientFilter })}
-          onPickEvent={() => setEventDrawer({ open: true, mode: 'new', clientId: clientFilter })}
-        />
-      }
     >
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tightish text-ink">Editorial calendar</h1>
-          <p className="mt-1 text-xs text-gray-500">
-            Plan owned content across clients and platforms. Beat doesn't publish — when a post
-            ships, click <em>Mark posted</em> to record it. Drafts auto-save in the composer.
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => shift(-1)}
-              className="rounded-md border border-gray-300 bg-white text-gray-700 px-2.5 py-1.5 text-sm hover:border-gray-400 hover:bg-gray-50"
-              aria-label={view === 'week' ? 'Previous week' : 'Previous month'}
-            >
-              ‹
-            </button>
-            <button
-              onClick={() => setAnchor(new Date())}
-              className="rounded-md border border-gray-300 bg-white text-gray-700 px-3 py-1.5 text-sm hover:border-gray-400 hover:bg-gray-50"
-            >
-              {view === 'week' ? 'This week' : 'This month'}
-            </button>
-            <button
-              onClick={() => shift(1)}
-              className="rounded-md border border-gray-300 bg-white text-gray-700 px-2.5 py-1.5 text-sm hover:border-gray-400 hover:bg-gray-50"
-              aria-label={view === 'week' ? 'Next week' : 'Next month'}
-            >
-              ›
-            </button>
-            <span className="ml-3 text-sm text-gray-700 font-medium">
-              {view === 'week' ? formatWeekRange(range.from) : formatMonthLabel(anchor)}
-            </span>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <Eyebrow className="mb-1">Editorial calendar</Eyebrow>
+            <h1 className="text-2xl font-semibold tracking-tightish text-ink">
+              {view === 'week'
+                ? formatWeekRangeLong(range.from)
+                : view === 'month'
+                  ? formatMonthLabelLong(anchor)
+                  : 'All scheduled'}
+            </h1>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -227,7 +198,7 @@ export function Calendar() {
               className={`rounded-md px-3 py-1.5 text-sm font-medium border transition-colors flex items-center gap-1.5 ${
                 needsReview
                   ? 'bg-amber-100 border-amber-200 text-amber-800'
-                  : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+                  : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
               }`}
               title={
                 needsReview
@@ -235,18 +206,48 @@ export function Calendar() {
                   : 'Show only posts submitted for internal review across all weeks.'
               }
             >
-              Needs review
               {reviewCount > 0 && (
-                <span
-                  className={`tabular-nums text-[11px] font-semibold rounded-full px-1.5 py-0.5 ${
-                    needsReview ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800'
-                  }`}
-                >
+                <span className="tabular-nums text-[11px] font-semibold rounded-full bg-amber-700 text-white px-1.5 py-0.5">
                   {reviewCount}
                 </span>
               )}
+              Needs review
             </button>
-            <ViewToggle value={view} onChange={setView} />
+            <NewMenu
+              onPickPost={() => setComposer({ open: true, mode: 'new', clientId: clientFilter })}
+              onPickEvent={() => setEventDrawer({ open: true, mode: 'new', clientId: clientFilter })}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <ViewToggle value={view} onChange={setView} />
+          {view !== 'list' && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => shift(-1)}
+                className="rounded-md border border-gray-300 bg-white text-gray-700 px-2.5 py-1.5 text-sm hover:border-gray-400 hover:bg-gray-50"
+                aria-label={view === 'week' ? 'Previous week' : 'Previous month'}
+              >
+                ←
+              </button>
+              <button
+                onClick={() => setAnchor(new Date())}
+                className="rounded-md border border-gray-300 bg-white text-gray-700 px-3 py-1.5 text-sm hover:border-gray-400 hover:bg-gray-50"
+              >
+                Today
+              </button>
+              <button
+                onClick={() => shift(1)}
+                className="rounded-md border border-gray-300 bg-white text-gray-700 px-2.5 py-1.5 text-sm hover:border-gray-400 hover:bg-gray-50"
+                aria-label={view === 'week' ? 'Next week' : 'Next month'}
+              >
+                →
+              </button>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wider text-gray-500">Filter</span>
             <ClientFilter
               clients={clientsQ.data?.items ?? []}
               value={clientFilter}
@@ -279,7 +280,7 @@ export function Calendar() {
             onSelect={(item) => openItem(item, setComposer, setEventDrawer)}
             onAddOnDay={openDayMenu}
           />
-        ) : (
+        ) : view === 'month' ? (
           <MonthGrid
             anchor={anchor}
             items={feedItems}
@@ -287,6 +288,20 @@ export function Calendar() {
             loading={feedQ.isLoading}
             onSelect={(item) => openItem(item, setComposer, setEventDrawer)}
             onAddOnDay={openDayMenu}
+          />
+        ) : (
+          <FeedListView
+            items={feedItems}
+            clientsById={clientsById}
+            loading={feedQ.isLoading}
+            onSelect={(item) => openItem(item, setComposer, setEventDrawer)}
+          />
+        )}
+
+        {!needsReview && view !== 'list' && (
+          <ClientsLegend
+            clients={clientsQ.data?.items ?? []}
+            view={view}
           />
         )}
       </div>
@@ -408,122 +423,273 @@ function WeekGrid({
   onAddOnDay: (day: Date, button: HTMLElement) => void;
 }) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const byDay = new Map<string, FeedItem[]>();
+  const todayKey = ymd(new Date());
+
+  // Group items by (day, hour). Hours are derived from item occurs_at; an empty week falls back
+  // to a default 9–17 ladder so the grid still shows something to click into.
+  const cellMap = new Map<string, FeedItem[]>();
+  const hoursPresent = new Set<number>();
   for (const it of items) {
-    const k = ymd(new Date(it.occurs_at));
-    const list = byDay.get(k) ?? [];
+    const when = new Date(it.occurs_at);
+    const dayKey = ymd(when);
+    const hour = it.all_day ? -1 : when.getHours();
+    const key = `${dayKey}|${hour}`;
+    const list = cellMap.get(key) ?? [];
     list.push(it);
-    byDay.set(k, list);
+    cellMap.set(key, list);
+    if (hour >= 0) hoursPresent.add(hour);
   }
+  const sortedHours =
+    hoursPresent.size > 0
+      ? Array.from(hoursPresent).sort((a, b) => a - b)
+      : [9, 11, 13, 15, 17];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
-      {days.map((d) => {
-        const k = ymd(d);
-        const list = byDay.get(k) ?? [];
-        const isToday = ymd(new Date()) === k;
-        return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Day-of-week header row */}
+      <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-gray-200 bg-white">
+        <div aria-hidden />
+        {days.map((d) => {
+          const isToday = ymd(d) === todayKey;
+          return (
+            <div
+              key={ymd(d)}
+              className={`px-3 py-3 text-center border-l border-gray-100 ${
+                isToday ? 'bg-blue-50/60' : ''
+              }`}
+            >
+              <div
+                className={`text-[10px] font-semibold uppercase tracking-wider ${
+                  isToday ? 'text-blue-700' : 'text-gray-500'
+                }`}
+              >
+                {d.toLocaleDateString('en-US', { weekday: 'short' })}
+                {isToday && <span className="ml-1">· Today</span>}
+              </div>
+              <div
+                className={`text-lg font-semibold tabular-nums mt-0.5 ${
+                  isToday ? 'text-blue-700' : 'text-ink'
+                }`}
+              >
+                {d.getDate()}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* All-day strip (events with no specific hour, e.g. milestones) */}
+      {days.some((d) => (cellMap.get(`${ymd(d)}|-1`)?.length ?? 0) > 0) && (
+        <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-gray-100">
+          <div className="text-[10px] uppercase tracking-wider text-gray-400 px-2 py-1.5 self-start">
+            All day
+          </div>
+          {days.map((d) => {
+            const key = `${ymd(d)}|-1`;
+            const list = cellMap.get(key) ?? [];
+            const isToday = ymd(d) === todayKey;
+            return (
+              <div
+                key={key}
+                className={`border-l border-gray-100 p-1.5 space-y-1 ${
+                  isToday ? 'bg-blue-50/40' : ''
+                }`}
+              >
+                {list.map((it) => (
+                  <FeedCard
+                    key={it.id}
+                    item={it}
+                    client={it.client_id ? clientsById.get(it.client_id) : undefined}
+                    onClick={() => onSelect(it)}
+                    compact
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Hour rows */}
+      {loading && items.length === 0 ? (
+        <div className="p-6">
+          <div className="h-3 w-1/4 bg-gray-100 rounded animate-pulse" />
+        </div>
+      ) : (
+        sortedHours.map((hour) => (
           <div
-            key={k}
-            className={`min-h-[180px] bg-white rounded-xl border ${
-              isToday ? 'border-ink/60' : 'border-gray-200'
-            } p-3 flex flex-col`}
+            key={hour}
+            className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-gray-100 last:border-b-0"
           >
-            <div className="flex items-baseline justify-between mb-2">
-              <div>
-                <div className="text-[10px] font-semibold uppercase text-gray-500 tracking-wider">
-                  {d.toLocaleDateString('en-US', { weekday: 'short' })}
-                </div>
+            <div className="text-[11px] tabular-nums text-gray-500 px-2 pt-3">
+              {formatHour(hour)}
+            </div>
+            {days.map((d) => {
+              const dayKey = ymd(d);
+              const key = `${dayKey}|${hour}`;
+              const list = (cellMap.get(key) ?? []).sort((a, b) =>
+                a.occurs_at.localeCompare(b.occurs_at),
+              );
+              const isToday = dayKey === todayKey;
+              const past = isPastDay(d);
+              return (
                 <div
-                  className={`text-lg font-semibold tabular-nums ${
-                    isToday ? 'text-ink' : 'text-gray-700'
+                  key={key}
+                  className={`min-h-[88px] border-l border-gray-100 p-1.5 space-y-1 group relative ${
+                    isToday ? 'bg-blue-50/40' : ''
                   }`}
                 >
-                  {d.getDate()}
-                </div>
-              </div>
-              {!isPastDay(d) && (
-                <button
-                  onClick={(e) => onAddOnDay(d, e.currentTarget)}
-                  className="text-gray-400 hover:text-ink text-lg leading-none"
-                  title="Add a post or event on this day"
-                  aria-label="Add a post or event on this day"
-                >
-                  +
-                </button>
-              )}
-            </div>
-            {loading && list.length === 0 ? (
-              <div className="h-3 w-2/3 bg-gray-100 rounded animate-pulse" />
-            ) : list.length === 0 ? (
-              <div className="text-[11px] text-gray-300 italic">Nothing</div>
-            ) : (
-              <ul className="space-y-1.5">
-                {list
-                  .sort((a, b) => a.occurs_at.localeCompare(b.occurs_at) || a.id.localeCompare(b.id))
-                  .map((it) => (
-                    <li key={it.id}>
-                      <FeedCard
-                        item={it}
-                        client={it.client_id ? clientsById.get(it.client_id) : undefined}
-                        onClick={() => onSelect(it)}
-                      />
-                    </li>
+                  {list.map((it) => (
+                    <FeedCard
+                      key={it.id}
+                      item={it}
+                      client={it.client_id ? clientsById.get(it.client_id) : undefined}
+                      onClick={() => onSelect(it)}
+                    />
                   ))}
-              </ul>
-            )}
+                  {!past && (
+                    <button
+                      onClick={(e) => {
+                        const slot = new Date(d);
+                        slot.setHours(hour, 0, 0, 0);
+                        onAddOnDay(slot, e.currentTarget);
+                      }}
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs text-gray-400 hover:text-ink transition-opacity"
+                      title="Add a post or event in this slot"
+                      aria-label="Add a post or event in this slot"
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
+        ))
+      )}
     </div>
   );
 }
+
+function formatHour(h: number): string {
+  if (h === 0) return '12:00';
+  if (h < 12) return `${h}:00`;
+  if (h === 12) return '12:00';
+  return `${h - 12}:00`;
+}
+
+/** Reads the post status / target platforms the backend stuffs into FeedItem.payload. */
+type PostPayload = {
+  status?: string;
+  target_platforms?: string[];
+};
+
+function readPostPayload(item: FeedItem): PostPayload {
+  const p = item.payload ?? {};
+  return {
+    status: typeof p.status === 'string' ? p.status : undefined,
+    target_platforms: Array.isArray(p.target_platforms)
+      ? (p.target_platforms as unknown[]).filter((x): x is string => typeof x === 'string')
+      : undefined,
+  };
+}
+
+const PLATFORM_GLYPH: Record<string, string> = {
+  linkedin: 'in',
+  x: 'X',
+  bluesky: 'BS',
+  threads: 'T',
+  instagram: 'IG',
+  facebook: 'FB',
+  tiktok: 'TT',
+  reddit: 'R',
+  substack: 'SS',
+  youtube: 'YT',
+  mastodon: 'M',
+};
+
+const STATUS_TO_TONE: Record<string, PillTone> = {
+  draft: 'gray',
+  internal_review: 'amber',
+  client_review: 'amber',
+  approved: 'green',
+  scheduled: 'blue',
+  posted: 'gray',
+  rejected: 'red',
+  archived: 'gray',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  internal_review: 'Internal',
+  client_review: 'Client review',
+};
 
 function FeedCard({
   item,
   client,
   onClick,
+  compact = false,
 }: {
   item: FeedItem;
   client: ClientListItem | undefined;
   onClick: () => void;
+  compact?: boolean;
 }) {
-  const time = item.all_day
-    ? null
-    : new Date(item.occurs_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  const dotColor = item.color
-    ? `#${item.color}`
+  const post = item.type === 'post' ? readPostPayload(item) : null;
+  const clientHex = client?.primary_color
+    ? `#${client.primary_color}`
     : FEED_TYPE_DOT[item.type] ?? FEED_TYPE_DOT.other;
+  // Translate the client/event color to a soft tinted background. We use 18% opacity in hex
+  // (`2e`) for a wash that reads on white and works across the deterministic client palette.
+  const cardBg = `${clientHex}1f`;
+  const cardBorder = `${clientHex}66`;
+
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-gray-50 hover:bg-white border border-gray-200 hover:border-gray-300 rounded-md p-2 transition-colors"
+      style={{ background: cardBg, borderColor: cardBorder }}
+      className={`w-full text-left rounded-md border hover:brightness-95 transition-all ${
+        compact ? 'p-1.5' : 'p-2'
+      }`}
     >
-      <div className="flex items-center gap-1.5 mb-1">
-        <span
-          className="h-1.5 w-1.5 rounded-full flex-none"
-          style={{ background: dotColor }}
-          aria-hidden
-        />
-        {client && (
-          <Avatar
-            name={client.name}
-            logoUrl={client.logo_url}
-            primaryColor={client.primary_color}
-            size="sm"
-          />
-        )}
-        {time && <span className="text-[10px] text-gray-500 tabular-nums">{time}</span>}
+      {client && (
+        <div
+          className="text-[11px] font-semibold leading-tight truncate"
+          style={{ color: clientHex }}
+        >
+          {client.name}
+        </div>
+      )}
+      <div
+        className={`text-[11px] text-ink leading-snug ${compact ? 'truncate' : 'line-clamp-2'} mt-0.5`}
+      >
+        {item.title}
       </div>
-      <div className="text-xs font-medium text-ink line-clamp-2">{item.title}</div>
-      <div className="mt-1.5 flex items-center justify-between gap-1">
-        <span className="text-[9px] uppercase tracking-wider text-gray-500">
+      {!compact && (post?.target_platforms?.length || post?.status) && (
+        <div className="mt-1.5 flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-0.5">
+            {(post?.target_platforms ?? []).slice(0, 4).map((p) => (
+              <span
+                key={p}
+                className="inline-flex items-center justify-center min-w-[18px] h-[16px] px-1 rounded-sm bg-ink text-white text-[9px] font-semibold uppercase tracking-tight"
+                title={p}
+              >
+                {PLATFORM_GLYPH[p] ?? p.slice(0, 2).toUpperCase()}
+              </span>
+            ))}
+          </div>
+          {post?.status && (
+            <Pill tone={STATUS_TO_TONE[post.status] ?? 'neutral'} className="!text-[9px] !px-1.5 !py-0">
+              {STATUS_LABEL[post.status] ?? post.status.replace('_', ' ')}
+            </Pill>
+          )}
+        </div>
+      )}
+      {!compact && !post && item.subtitle && (
+        <div className="mt-1 text-[9px] uppercase tracking-wider text-gray-500">
           {FEED_TYPE_LABELS[item.type]}
-        </span>
-        {item.subtitle && (
-          <span className="text-[9px] text-gray-400 truncate ml-1">{item.subtitle}</span>
-        )}
-      </div>
+        </div>
+      )}
     </button>
   );
 }
@@ -624,6 +790,124 @@ function ReviewList({
   );
 }
 
+// --------------------- Footer legend (clients + helper text) ---------------------
+
+function ClientsLegend({
+  clients,
+  view,
+}: {
+  clients: ClientListItem[];
+  view: CalendarView;
+}) {
+  const helper =
+    view === 'week'
+      ? 'Drag any post to reschedule. Click an empty cell to draft.'
+      : 'Click a day to draft. Click any item to edit.';
+  return (
+    <div className="flex items-center justify-between gap-3 flex-wrap text-xs">
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="uppercase tracking-wider text-gray-500">Clients</span>
+        {clients.map((c) => (
+          <span key={c.id} className="inline-flex items-center gap-1.5 text-gray-700">
+            <span
+              className="h-2.5 w-2.5 rounded-sm flex-none"
+              style={{ background: c.primary_color ? `#${c.primary_color}` : '#9ca3af' }}
+              aria-hidden
+            />
+            {c.name}
+          </span>
+        ))}
+      </div>
+      <span className="text-gray-400">{helper}</span>
+    </div>
+  );
+}
+
+// --------------------- List view ---------------------
+
+function FeedListView({
+  items,
+  clientsById,
+  loading,
+  onSelect,
+}: {
+  items: FeedItem[];
+  clientsById: Map<string, ClientListItem>;
+  loading: boolean;
+  onSelect: (item: FeedItem) => void;
+}) {
+  if (loading && items.length === 0) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="h-3 w-1/3 bg-gray-100 rounded animate-pulse" />
+      </div>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
+        <p className="text-sm font-medium text-ink">Nothing scheduled in this window</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Click <strong>+ New post</strong> to draft your first item.
+        </p>
+      </div>
+    );
+  }
+  const sorted = [...items].sort((a, b) => a.occurs_at.localeCompare(b.occurs_at));
+  return (
+    <ul className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
+      {sorted.map((it) => {
+        const client = it.client_id ? clientsById.get(it.client_id) : undefined;
+        const when = new Date(it.occurs_at);
+        const dotColor = it.color
+          ? `#${it.color}`
+          : client?.primary_color
+            ? `#${client.primary_color}`
+            : FEED_TYPE_DOT[it.type] ?? FEED_TYPE_DOT.other;
+        return (
+          <li key={it.id}>
+            <button
+              onClick={() => onSelect(it)}
+              className="w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
+            >
+              <span
+                className="h-2 w-2 rounded-full flex-none"
+                style={{ background: dotColor }}
+                aria-hidden
+              />
+              <div className="w-32 flex-none text-xs text-gray-500 tabular-nums">
+                {when.toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+                {!it.all_day && (
+                  <>
+                    <span className="mx-1 text-gray-300">·</span>
+                    {when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                  </>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-ink truncate">{it.title}</div>
+                {(client || it.subtitle) && (
+                  <div className="text-xs text-gray-500 truncate mt-0.5">
+                    {client?.name}
+                    {client && it.subtitle && <span className="mx-1.5 text-gray-300">·</span>}
+                    {it.subtitle}
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] uppercase tracking-wider text-gray-500 flex-none">
+                {FEED_TYPE_LABELS[it.type]}
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function relativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(ms / 60_000);
@@ -653,15 +937,16 @@ function MonthGrid({
   onSelect: (item: FeedItem) => void;
   onAddOnDay: (day: Date, button: HTMLElement) => void;
 }) {
-  const gridStart = mondayOf(firstOfMonth(anchor));
-  // Render until we've passed the end of the month, padded to a full week.
+  // The wireframe (33-calendar-month) uses Sun→Sat columns matching US convention. The grid
+  // begins on the Sunday on or before the first of the month; we render full weeks until the
+  // month is covered.
+  const gridStart = sundayOf(firstOfMonth(anchor));
   const monthIdx = anchor.getMonth();
   const cells: Date[] = [];
   for (let i = 0; i < 42; i++) {
     const d = addDays(gridStart, i);
     cells.push(d);
-    // Stop after we've covered the month *and* completed the week (Sunday).
-    if (i >= 27 && d.getMonth() !== monthIdx && d.getDay() === 0) break;
+    if (i >= 27 && d.getMonth() !== monthIdx && d.getDay() === 6) break;
   }
   const byDay = new Map<string, FeedItem[]>();
   for (const it of items) {
@@ -670,14 +955,15 @@ function MonthGrid({
     list.push(it);
     byDay.set(k, list);
   }
+  const todayKey = ymd(new Date());
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+      <div className="grid grid-cols-7 border-b border-gray-200">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
           <div
             key={d}
-            className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 px-3 py-2"
+            className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 px-3 py-2 text-center border-l border-gray-100 first:border-l-0"
           >
             {d}
           </div>
@@ -690,32 +976,35 @@ function MonthGrid({
             a.occurs_at.localeCompare(b.occurs_at),
           );
           const inMonth = d.getMonth() === monthIdx;
-          const isToday = ymd(new Date()) === k;
+          const isToday = k === todayKey;
           const visible = list.slice(0, 3);
           const overflow = list.length - visible.length;
           return (
             <div
               key={k}
-              className={`min-h-[110px] border-r border-b border-gray-100 p-1.5 flex flex-col gap-1 ${
+              className={`min-h-[120px] border-l border-b border-gray-100 p-1.5 flex flex-col gap-1 group relative ${
                 inMonth ? 'bg-white' : 'bg-gray-50/60'
               }`}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-baseline justify-between">
                 <span
-                  className={`text-[11px] font-semibold tabular-nums ${
+                  className={`text-[12px] tabular-nums ${
                     isToday
-                      ? 'text-white bg-ink rounded-full px-1.5 py-0.5'
+                      ? 'font-semibold text-blue-700'
                       : inMonth
-                        ? 'text-gray-700'
+                        ? 'text-gray-600'
                         : 'text-gray-400'
                   }`}
                 >
                   {d.getDate()}
+                  {isToday && (
+                    <span className="ml-1 text-[10px] font-semibold text-blue-700">· today</span>
+                  )}
                 </span>
                 {!isPastDay(d) && (
                   <button
                     onClick={(e) => onAddOnDay(d, e.currentTarget)}
-                    className="text-gray-300 hover:text-ink text-sm leading-none px-1"
+                    className="text-gray-300 group-hover:text-ink text-sm leading-none px-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Add a post or event on this day"
                     aria-label="Add a post or event on this day"
                   >
@@ -726,26 +1015,28 @@ function MonthGrid({
               {loading && list.length === 0 ? null : (
                 <ul className="space-y-0.5 flex-1">
                   {visible.map((it) => {
-                    const clientPrimary = it.client_id
-                      ? clientsById.get(it.client_id)?.primary_color
-                      : null;
-                    const dot = it.color
+                    const client = it.client_id ? clientsById.get(it.client_id) : undefined;
+                    const accent = it.color
                       ? `#${it.color}`
-                      : clientPrimary
-                        ? `#${clientPrimary}`
+                      : client?.primary_color
+                        ? `#${client.primary_color}`
                         : FEED_TYPE_DOT[it.type] ?? FEED_TYPE_DOT.other;
                     return (
                       <li key={it.id}>
                         <button
                           onClick={() => onSelect(it)}
-                          className="w-full text-left flex items-center gap-1 px-1 py-0.5 rounded hover:bg-gray-100 transition-colors"
+                          className="w-full text-left flex items-baseline gap-1.5 pl-1.5 pr-1 py-0.5 rounded hover:bg-gray-100 transition-colors border-l-2"
+                          style={{ borderLeftColor: accent }}
                           title={it.title}
                         >
-                          <span
-                            className="h-1.5 w-1.5 rounded-full flex-none"
-                            style={{ background: dot }}
-                            aria-hidden
-                          />
+                          {client && (
+                            <span
+                              className="text-[11px] font-semibold flex-none"
+                              style={{ color: accent }}
+                            >
+                              {client.name.split(' ')[0]}
+                            </span>
+                          )}
                           <span className="text-[11px] text-ink truncate">{it.title}</span>
                         </button>
                       </li>
@@ -755,7 +1046,7 @@ function MonthGrid({
                     <li>
                       <button
                         onClick={() => onSelect(list[3])}
-                        className="text-[10px] text-gray-500 hover:text-ink hover:underline"
+                        className="text-[10px] text-gray-500 hover:text-ink hover:underline pl-1.5"
                       >
                         + {overflow} more
                       </button>
@@ -781,8 +1072,9 @@ function ViewToggle({
   onChange: (v: CalendarView) => void;
 }) {
   const options: { id: CalendarView; label: string }[] = [
-    { id: 'week', label: 'Week' },
     { id: 'month', label: 'Month' },
+    { id: 'week', label: 'Week' },
+    { id: 'list', label: 'List' },
   ];
   return (
     <div className="inline-flex rounded-md border border-gray-300 bg-white p-0.5">
@@ -791,9 +1083,7 @@ function ViewToggle({
           key={o.id}
           onClick={() => onChange(o.id)}
           className={`px-3 py-1 text-sm font-medium rounded ${
-            value === o.id
-              ? 'bg-gray-900 text-white'
-              : 'text-gray-600 hover:text-gray-900'
+            value === o.id ? 'bg-gray-100 text-ink' : 'text-gray-500 hover:text-gray-900'
           }`}
         >
           {o.label}
@@ -2020,6 +2310,13 @@ function mondayOf(d: Date): Date {
   return out;
 }
 
+function sundayOf(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  out.setDate(out.getDate() - out.getDay()); // 0=Sun..6=Sat → distance back to Sunday
+  return out;
+}
+
 function firstOfMonth(d: Date): Date {
   const out = new Date(d);
   out.setHours(0, 0, 0, 0);
@@ -2044,37 +2341,38 @@ function visibleRange(view: CalendarView, anchor: Date): { from: Date; to: Date 
     const from = mondayOf(anchor);
     return { from, to: addDays(from, 7) };
   }
-  // Month: render the grid which can extend a few days into the prior and next month.
-  const from = mondayOf(firstOfMonth(anchor));
-  return { from, to: addDays(from, 42) };
+  if (view === 'month') {
+    // The month grid in this UI starts on Sunday (US convention); pull the grid back to the
+    // Sunday on or before the first of the month and run 42 days from there.
+    const from = sundayOf(firstOfMonth(anchor));
+    return { from, to: addDays(from, 42) };
+  }
+  // List view: a 90-day window centered on today is a reasonable default.
+  const from = addDays(new Date(), -30);
+  return { from, to: addDays(new Date(), 60) };
 }
 
-function formatMonthLabel(d: Date): string {
-  return d.toLocaleDateString('en-US', {
-    month: 'long',
-    year: d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+/** "May 2026" — always year-qualified, used as an h1 in the calendar header. */
+function formatMonthLabelLong(d: Date): string {
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+/** "Apr 28 — May 4, 2026" — always year-qualified, used as an h1 in the calendar header. */
+function formatWeekRangeLong(start: Date): string {
+  const end = addDays(start, 6);
+  const sameMonth = start.getMonth() === end.getMonth();
+  const startFmt = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const endFmt = end.toLocaleDateString('en-US', {
+    month: sameMonth ? undefined : 'short',
+    day: 'numeric',
   });
+  return `${startFmt} — ${endFmt}, ${end.getFullYear()}`;
 }
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
     d.getDate(),
   ).padStart(2, '0')}`;
-}
-
-function formatWeekRange(start: Date): string {
-  const end = addDays(start, 6);
-  const sameMonth = start.getMonth() === end.getMonth();
-  const startFmt = start.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-  const endFmt = end.toLocaleDateString('en-US', {
-    month: sameMonth ? undefined : 'short',
-    day: 'numeric',
-    year: end.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
-  });
-  return `${startFmt} – ${endFmt}`;
 }
 
 function isPastDay(d: Date): boolean {
