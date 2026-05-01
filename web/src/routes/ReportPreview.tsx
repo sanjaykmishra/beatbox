@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { useToast } from '../components/Toast';
@@ -70,6 +70,17 @@ export function ReportPreview() {
       navigate(`/reports/${reportId}`, { replace: true });
     }
   }, [status, reportId, navigate]);
+
+  // Surface the processing → failed transition as a toast so the user catches it even if their
+  // attention drifted. The body Alert (FailedNotice) handles the persistent banner.
+  const lastStatus = useRef<Report['status'] | null>(null);
+  useEffect(() => {
+    if (!status) return;
+    if (lastStatus.current === 'processing' && status === 'failed') {
+      toast.error('Report generation failed.');
+    }
+    lastStatus.current = status;
+  }, [status, toast]);
 
   if (report.isLoading) {
     return (
@@ -213,7 +224,12 @@ export function ReportPreview() {
           </Alert>
         )}
         {r.status === 'processing' && <ProcessingSkeleton />}
-        {r.status === 'failed' && <FailedNotice />}
+        {r.status === 'failed' && (
+          <FailedNotice
+            reason={r.failure_reason}
+            onTryAgain={() => navigate(`/reports/${r.id}`)}
+          />
+        )}
         {r.status === 'ready' && (
           <div className="space-y-4">
             <SummaryEditor
@@ -274,13 +290,38 @@ function ProcessingSkeleton() {
   );
 }
 
-function FailedNotice() {
+function FailedNotice({
+  reason,
+  onTryAgain,
+}: {
+  reason: string | null;
+  onTryAgain: () => void;
+}) {
+  // Map machine-shaped reasons we ship from the worker into something a human can act on.
+  const friendly = friendlyFailureReason(reason);
   return (
-    <Alert tone="danger" title="Generation failed">
-      Check the report's failure_reason in the activity feed, or try again from the report
-      builder.
+    <Alert
+      tone="danger"
+      title="Generation failed"
+      action={{ label: 'Back to builder', onClick: onTryAgain }}
+    >
+      {friendly}
+      {reason && reason !== friendly && (
+        <span className="block mt-1 text-xs text-red-600/80 font-mono">{reason}</span>
+      )}
     </Alert>
   );
+}
+
+function friendlyFailureReason(reason: string | null): string {
+  if (!reason) return 'Something went wrong rendering the PDF. Try again from the report builder.';
+  if (reason === 'object_storage_not_configured') {
+    return "The server can't store the PDF — neither R2 nor a local-disk fallback is configured. Set R2_* env vars or LOCAL_PDFS_DIR.";
+  }
+  if (reason.toLowerCase().includes('render')) {
+    return 'The render service failed to produce the PDF. Check that the render container is running and reachable.';
+  }
+  return 'Something went wrong rendering the PDF. Try again from the report builder.';
 }
 
 function SummaryEditor({

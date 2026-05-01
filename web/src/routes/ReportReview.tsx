@@ -465,17 +465,7 @@ function CoverageCard({
       onClick={onEdit}
       className="text-left w-full bg-white border border-gray-200 rounded-lg px-5 py-4 hover:border-gray-300 transition-colors flex items-start gap-4"
     >
-      {item.screenshot_url ? (
-        <img
-          src={item.screenshot_url}
-          alt=""
-          className="h-16 w-[86px] object-cover rounded border border-gray-100 flex-none"
-        />
-      ) : (
-        <div className="h-16 w-[86px] bg-gray-50 border border-gray-100 rounded flex-none flex items-center justify-center text-[11px] text-gray-400">
-          screenshot
-        </div>
-      )}
+      <Thumbnail src={item.screenshot_url} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <Pill tone="gray">Article</Pill>
@@ -633,6 +623,28 @@ function formatCount(n: number | null | undefined): string | null {
   if (n >= 10_000) return `${Math.round(n / 1_000)}K`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
   return n.toLocaleString();
+}
+
+/** Article thumbnail with graceful fallback when the image fails to load (broken URL, R2 misconfig,
+ * stale row from a previous data shape). Matches the placeholder size + chrome so layout doesn't
+ * shift when the load fails. */
+function Thumbnail({ src }: { src: string | null }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <div className="h-16 w-[86px] bg-gray-50 border border-gray-100 rounded flex-none flex items-center justify-center text-[11px] text-gray-400">
+        screenshot
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      onError={() => setFailed(true)}
+      className="h-16 w-[86px] object-cover rounded border border-gray-100 flex-none bg-gray-50"
+    />
+  );
 }
 
 // --------------------- Shared panel states ---------------------

@@ -10,6 +10,7 @@ import app.beat.coverage.CoverageItemRepository;
 import app.beat.infra.AppException;
 import app.beat.infra.RequestContext;
 import app.beat.outlet.OutletRepository;
+import app.beat.render.LocalPdfStore;
 import app.beat.render.RenderClient;
 import app.beat.render.RenderJobRepository;
 import app.beat.render.RenderPayloadBuilder;
@@ -60,6 +61,7 @@ public class ReportController {
   private final RenderClient renderClient;
   private final RenderPayloadBuilder renderPayloads;
   private final PlanGuard guard;
+  private final LocalPdfStore localPdfs;
   private final String appBaseUrl;
 
   public ReportController(
@@ -75,6 +77,8 @@ public class ReportController {
       RenderClient renderClient,
       RenderPayloadBuilder renderPayloads,
       PlanGuard guard,
+      @org.springframework.beans.factory.annotation.Autowired(required = false)
+          LocalPdfStore localPdfs,
       @Value("${APP_BASE_URL:}") String appBaseUrl) {
     this.reports = reports;
     this.clients = clients;
@@ -88,6 +92,7 @@ public class ReportController {
     this.renderClient = renderClient;
     this.renderPayloads = renderPayloads;
     this.guard = guard;
+    this.localPdfs = localPdfs;
     this.appBaseUrl = appBaseUrl;
   }
 
@@ -168,6 +173,7 @@ public class ReportController {
       String executive_summary,
       String pdf_url,
       String share_token,
+      String failure_reason,
       Instant generated_at,
       Instant created_at,
       List<CoverageItemDto> coverage_items,
@@ -338,6 +344,7 @@ public class ReportController {
         r.executiveSummary(),
         r.pdfUrl(),
         r.shareToken(),
+        r.failureReason(),
         r.generatedAt(),
         r.createdAt(),
         items,
@@ -427,7 +434,7 @@ public class ReportController {
   // ---------- GET /v1/reports/:id/pdf ----------
 
   @GetMapping("/v1/reports/{id}/pdf")
-  public ResponseEntity<Void> downloadPdf(@PathVariable UUID id, HttpServletRequest req) {
+  public ResponseEntity<?> downloadPdf(@PathVariable UUID id, HttpServletRequest req) {
     RequestContext ctx = RequestContext.require(req);
     Report r =
         reports
@@ -441,6 +448,18 @@ public class ReportController {
         "report",
         r.id(),
         Map.of());
+    // Local-disk fallback (R2 not configured): stream the PDF directly. The 302-redirect path used
+    // for R2 public URLs would lose the auth header, so we read here instead.
+    if (localPdfs != null && r.pdfUrl().startsWith(LocalPdfStore.URL_PREFIX)) {
+      byte[] bytes =
+          localPdfs.read(r.pdfUrl()).orElseThrow(() -> AppException.notFound("PDF file missing"));
+      return ResponseEntity.ok()
+          .contentType(MediaType.APPLICATION_PDF)
+          .header(
+              org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+              "inline; filename=\"report-" + r.id() + ".pdf\"")
+          .body(bytes);
+    }
     return ResponseEntity.status(HttpStatus.FOUND).header("Location", r.pdfUrl()).build();
   }
 
