@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css"></head>
+<body>
+<div class="page">
+  <div class="shell">
+    <div class="chrome">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="crumb">beat.app / templates / <span class="here">hayworth standard / edit</span></div>
+    </div>
+    <div style="display: flex; flex: 1; overflow: hidden;">
+
+      <!-- Left: section library -->
+      <div style="width: 240px; background: #fafaf9; border-right: 1px solid #efefed; padding: 24px 18px; overflow-y: auto;">
+        <div class="eyebrow" style="margin-bottom: 12px;">Drag a section</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="panel-tight" style="background: white; border: 1px solid #e5e5e3; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: grab;">
+            <div style="font-weight: 500; margin-bottom: 2px;">Cover</div>
+            <div style="font-size: 11px; color: #94a3b8;">Title, period, branding</div>
+          </div>
+          <div class="panel-tight" style="background: white; border: 1px solid #e5e5e3; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: grab;">
+            <div style="font-weight: 500; margin-bottom: 2px;">Exec summary</div>
+            <div style="font-size: 11px; color: #94a3b8;">AI-written, editable</div>
+          </div>
+          <div class="panel-tight" style="background: white; border: 1px solid #e5e5e3; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: grab;">
+            <div style="font-weight: 500; margin-bottom: 2px;">Stats grid</div>
+            <div style="font-size: 11px; color: #94a3b8;">Pick 4 metrics</div>
+          </div>
+          <div class="panel-tight" style="background: white; border: 1px solid #e5e5e3; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: grab;">
+            <div style="font-weight: 500; margin-bottom: 2px;">Highlights</div>
+            <div style="font-size: 11px; color: #94a3b8;">Top N coverage cards</div>
+          </div>
+          <div class="panel-tight" style="background: white; border: 1px solid #e5e5e3; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: grab;">
+            <div style="font-weight: 500; margin-bottom: 2px;">All coverage</div>
+            <div style="font-size: 11px; color: #94a3b8;">Full table, configurable cols</div>
+          </div>
+          <div class="panel-tight" style="background: white; border: 1px solid #e5e5e3; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: grab;">
+            <div style="font-weight: 500; margin-bottom: 2px;">Sentiment chart</div>
+            <div style="font-size: 11px; color: #94a3b8;">Donut or bar</div>
+          </div>
+          <div class="panel-tight" style="background: white; border: 1px solid #e5e5e3; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: grab;">
+            <div style="font-weight: 500; margin-bottom: 2px;">Share of voice</div>
+            <div style="font-size: 11px; color: #94a3b8;">vs. competitor set</div>
+          </div>
+          <div class="panel-tight" style="background: white; border: 1px solid #e5e5e3; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: grab;">
+            <div style="font-weight: 500; margin-bottom: 2px;">Custom text</div>
+            <div style="font-size: 11px; color: #94a3b8;">Free markdown block</div>
+          </div>
+          <div class="panel-tight" style="background: white; border: 1px solid #e5e5e3; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: grab;">
+            <div style="font-weight: 500; margin-bottom: 2px;">Page break</div>
+            <div style="font-size: 11px; color: #94a3b8;">Force a new PDF page</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: canvas (live preview) -->
+      <div style="flex: 1; padding: 24px 32px; background: #f7f7f5; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+          <div>
+            <div style="font-size: 12px; color: #64748b; margin-bottom: 2px;">Editing template &middot; live preview</div>
+            <h2 style="font-size: 16px; margin: 0;">Hayworth Standard <span class="muted" style="font-weight: 400;">&middot; v3</span></h2>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="muted" style="font-size: 12px;">Saved 2s ago</span>
+            <button class="btn btn-secondary">Preview as PDF</button>
+            <button class="btn btn-primary">Done</button>
+          </div>
+        </div>
+
+        <div style="background: white; border: 1px solid #e5e5e3; border-radius: 6px; padding: 28px; max-width: 720px; margin: 0 auto;">
+          <!-- Cover section -->
+          <div style="position: relative; padding: 8px; border: 2px solid #2563eb; border-radius: 4px; margin-bottom: 14px; background: #f7faff;">
+            <div style="position: absolute; top: -10px; left: 8px; background: #2563eb; color: white; font-size: 10px; padding: 1px 6px; border-radius: 3px;">COVER</div>
+            <div style="text-align: center; padding: 20px 0 24px;">
+              <div style="background: #0f172a; color: white; font-size: 11px; padding: 4px 12px; display: inline-block; border-radius: 3px; margin-bottom: 14px; letter-spacing: 0.08em;">HAYWORTH PR</div>
+              <div style="font-size: 22px; font-weight: 600; margin-bottom: 4px;">Acme Corp</div>
+              <div style="font-size: 12px; color: #64748b;">Coverage Report &middot; December 2025</div>
+            </div>
+          </div>
+
+          <!-- Exec summary -->
+          <div style="position: relative; padding: 8px; border: 1px dashed #d4d4d2; border-radius: 4px; margin-bottom: 14px;">
+            <div style="position: absolute; top: -8px; left: 8px; background: white; font-size: 10px; padding: 0 4px; color: #94a3b8;">EXEC SUMMARY</div>
+            <div style="padding: 10px 4px 4px;">
+              <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">EXECUTIVE SUMMARY</div>
+              <div style="background: #f4f4f2; height: 6px; margin-bottom: 4px; border-radius: 1px;"></div>
+              <div style="background: #f4f4f2; height: 6px; margin-bottom: 4px; border-radius: 1px;"></div>
+              <div style="background: #f4f4f2; height: 6px; width: 75%; border-radius: 1px;"></div>
+            </div>
+          </div>
+
+          <!-- Stats grid (selected) -->
+          <div style="position: relative; padding: 8px; border: 2px solid #2563eb; border-radius: 4px; margin-bottom: 14px; background: #f7faff;">
+            <div style="position: absolute; top: -10px; left: 8px; background: #2563eb; color: white; font-size: 10px; padding: 1px 6px; border-radius: 3px;">STATS GRID &middot; SELECTED</div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px 4px 4px;">
+              <div style="background: #fafaf9; border: 1px solid #efefed; border-radius: 3px; padding: 8px;">
+                <div style="font-size: 9px; color: #94a3b8;">Total</div>
+                <div style="font-size: 16px; font-weight: 600;">14</div>
+              </div>
+              <div style="background: #fafaf9; border: 1px solid #efefed; border-radius: 3px; padding: 8px;">
+                <div style="font-size: 9px; color: #94a3b8;">Tier 1</div>
+                <div style="font-size: 16px; font-weight: 600;">4</div>
+              </div>
+              <div style="background: #fafaf9; border: 1px solid #efefed; border-radius: 3px; padding: 8px;">
+                <div style="font-size: 9px; color: #94a3b8;">Positive</div>
+                <div style="font-size: 16px; font-weight: 600;">9</div>
+              </div>
+              <div style="background: #fafaf9; border: 1px solid #efefed; border-radius: 3px; padding: 8px;">
+                <div style="font-size: 9px; color: #94a3b8;">Reach</div>
+                <div style="font-size: 16px; font-weight: 600;">28M</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Highlights -->
+          <div style="position: relative; padding: 8px; border: 1px dashed #d4d4d2; border-radius: 4px; margin-bottom: 14px;">
+            <div style="position: absolute; top: -8px; left: 8px; background: white; font-size: 10px; padding: 0 4px; color: #94a3b8;">HIGHLIGHTS &middot; 2&times;2</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px 4px 4px;">
+              <div style="background: #f4f4f2; height: 36px; border-radius: 2px;"></div>
+              <div style="background: #f4f4f2; height: 36px; border-radius: 2px;"></div>
+              <div style="background: #f4f4f2; height: 36px; border-radius: 2px;"></div>
+              <div style="background: #f4f4f2; height: 36px; border-radius: 2px;"></div>
+            </div>
+          </div>
+
+          <!-- All coverage -->
+          <div style="position: relative; padding: 8px; border: 1px dashed #d4d4d2; border-radius: 4px;">
+            <div style="position: absolute; top: -8px; left: 8px; background: white; font-size: 10px; padding: 0 4px; color: #94a3b8;">ALL COVERAGE</div>
+            <div style="padding: 10px 4px 4px;">
+              <div style="background: #f4f4f2; height: 5px; margin-bottom: 4px; border-radius: 1px;"></div>
+              <div style="background: #f4f4f2; height: 5px; margin-bottom: 4px; border-radius: 1px;"></div>
+              <div style="background: #f4f4f2; height: 5px; margin-bottom: 4px; border-radius: 1px;"></div>
+              <div style="background: #f4f4f2; height: 5px; margin-bottom: 4px; border-radius: 1px;"></div>
+              <div style="background: #f4f4f2; height: 5px; width: 80%; border-radius: 1px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: properties panel for selected section -->
+      <div style="width: 280px; background: white; border-left: 1px solid #efefed; padding: 24px 20px; overflow-y: auto;">
+        <div class="eyebrow" style="margin-bottom: 14px;">Section properties</div>
+        <div style="font-size: 13px; font-weight: 600; color: #0f172a; margin-bottom: 4px;">Stats grid</div>
+        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 18px;">Pick the four metrics to display.</div>
+
+        <div style="margin-bottom: 18px;">
+          <label class="label">Metrics &middot; choose 4</label>
+          <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+              <span style="width: 14px; height: 14px; background: #2563eb; border-radius: 3px; display: inline-block; position: relative;"></span>
+              Total coverage
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+              <span style="width: 14px; height: 14px; background: #2563eb; border-radius: 3px; display: inline-block;"></span>
+              Tier 1 count
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+              <span style="width: 14px; height: 14px; background: #2563eb; border-radius: 3px; display: inline-block;"></span>
+              Positive sentiment
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+              <span style="width: 14px; height: 14px; background: #2563eb; border-radius: 3px; display: inline-block;"></span>
+              Reach
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #94a3b8;">
+              <span style="width: 14px; height: 14px; border: 1.5px solid #d4d4d2; border-radius: 3px; display: inline-block;"></span>
+              Share of voice
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #94a3b8;">
+              <span style="width: 14px; height: 14px; border: 1.5px solid #d4d4d2; border-radius: 3px; display: inline-block;"></span>
+              Tier 2 count
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 18px;">
+          <label class="label">Layout</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+            <div style="border: 2px solid #2563eb; background: #f7faff; padding: 8px; border-radius: 6px; font-size: 11px; text-align: center;">
+              <div style="font-weight: 500;">Row of 4</div>
+              <div style="color: #94a3b8;">Default</div>
+            </div>
+            <div style="border: 1px solid #e5e5e3; padding: 8px; border-radius: 6px; font-size: 11px; text-align: center; color: #64748b;">
+              <div style="font-weight: 500;">2&times;2 grid</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid #efefed; padding-top: 14px; font-size: 11px; color: #94a3b8;">
+          Changes save automatically. Reports already generated from this template are unaffected.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body></html>

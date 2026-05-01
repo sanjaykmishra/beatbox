@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css"></head>
+<body>
+<div class="page">
+  <div class="shell">
+    <div class="chrome">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="crumb">beat.app / <span class="here">templates</span></div>
+    </div>
+    <div class="body" style="padding: 28px 40px;">
+
+      <!-- Header row -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <div>
+          <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Templates</div>
+          <h1>Report templates</h1>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary">Duplicate from gallery</button>
+          <button class="btn btn-primary">+ New template</button>
+        </div>
+      </div>
+
+      <p class="muted" style="margin: 8px 0 24px; max-width: 560px; font-size: 13px;">
+        Templates control the layout of generated PDF reports. Editing a template doesn't change reports already generated from it &mdash; reports are historical artifacts.
+      </p>
+
+      <!-- Section: System templates -->
+      <div class="eyebrow" style="margin-bottom: 14px;">System templates &middot; included with all plans</div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 36px;">
+        <div class="panel" style="padding: 0; overflow: hidden;">
+          <div style="background: #fafaf9; border-bottom: 1px solid #efefed; height: 200px; padding: 18px; position: relative;">
+            <!-- mini preview -->
+            <div style="background: white; border: 1px solid #efefed; border-radius: 4px; height: 100%; padding: 14px;">
+              <div style="font-size: 8px; color: #94a3b8; text-align: center; margin-bottom: 6px;">PREPARED BY ACME PR</div>
+              <div style="text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 4px;">Client Name</div>
+              <div style="text-align: center; font-size: 8px; color: #64748b; margin-bottom: 12px;">Coverage Report &middot; December 2025</div>
+              <div style="background: #f4f4f2; height: 4px; margin-bottom: 6px;"></div>
+              <div style="background: #f4f4f2; height: 4px; width: 80%; margin-bottom: 12px;"></div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; margin-bottom: 8px;">
+                <div style="background: #f4f4f2; height: 18px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 18px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 18px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 18px; border-radius: 2px;"></div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                <div style="background: #f4f4f2; height: 24px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 24px; border-radius: 2px;"></div>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 14px 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div style="font-weight: 600; font-size: 14px;">Standard</div>
+              <span class="badge badge-gray">System</span>
+            </div>
+            <div style="font-size: 12px; color: #64748b;">Cover, exec summary, stats grid, highlights, full coverage table.</div>
+          </div>
+        </div>
+
+        <div class="panel" style="padding: 0; overflow: hidden;">
+          <div style="background: #fafaf9; border-bottom: 1px solid #efefed; height: 200px; padding: 18px;">
+            <div style="background: white; border: 1px solid #efefed; border-radius: 4px; height: 100%; padding: 14px;">
+              <div style="text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 12px;">Quarterly Review</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 8px;">
+                <div style="background: #f4f4f2; height: 26px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 26px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 26px; border-radius: 2px;"></div>
+              </div>
+              <div style="background: #f4f4f2; height: 50px; border-radius: 2px; margin-bottom: 6px;"></div>
+              <div style="background: #f4f4f2; height: 30px; border-radius: 2px;"></div>
+            </div>
+          </div>
+          <div style="padding: 14px 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div style="font-weight: 600; font-size: 14px;">Quarterly Review</div>
+              <span class="badge badge-gray">System</span>
+            </div>
+            <div style="font-size: 12px; color: #64748b;">3-month rollup with sentiment trend and tier mix charts.</div>
+          </div>
+        </div>
+
+        <div class="panel" style="padding: 0; overflow: hidden;">
+          <div style="background: #fafaf9; border-bottom: 1px solid #efefed; height: 200px; padding: 18px;">
+            <div style="background: white; border: 1px solid #efefed; border-radius: 4px; height: 100%; padding: 14px;">
+              <div style="text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 8px;">Single-Highlight</div>
+              <div style="background: #f4f4f2; height: 90px; border-radius: 2px; margin-bottom: 8px;"></div>
+              <div style="background: #f4f4f2; height: 4px; margin-bottom: 4px;"></div>
+              <div style="background: #f4f4f2; height: 4px; width: 70%; margin-bottom: 4px;"></div>
+              <div style="background: #f4f4f2; height: 4px; width: 50%;"></div>
+            </div>
+          </div>
+          <div style="padding: 14px 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div style="font-weight: 600; font-size: 14px;">Single-Highlight</div>
+              <span class="badge badge-gray">System</span>
+            </div>
+            <div style="font-size: 12px; color: #64748b;">For one-off announcement reports &mdash; one big hero piece.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Workspace templates -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div class="eyebrow" style="margin-bottom: 0;">Your templates &middot; Hayworth PR</div>
+        <span class="muted" style="font-size: 12px;">3 of 10 used &middot; agency tier</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;">
+        <div class="panel" style="padding: 0; overflow: hidden; border-color: #cbd5e1;">
+          <div style="background: #fafaf9; border-bottom: 1px solid #efefed; height: 200px; padding: 18px;">
+            <div style="background: white; border: 1px solid #efefed; border-radius: 4px; height: 100%; padding: 14px;">
+              <div style="height: 20px; background: #0f172a; border-radius: 2px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 8px; font-weight: 600;">HAYWORTH PR</div>
+              <div style="text-align: center; font-size: 11px; font-weight: 600; margin-bottom: 4px;">Acme Corp</div>
+              <div style="text-align: center; font-size: 7px; color: #64748b; margin-bottom: 12px;">December 2025</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; margin-bottom: 8px;">
+                <div style="background: #f4f4f2; height: 18px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 18px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 18px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 18px; border-radius: 2px;"></div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                <div style="background: #f4f4f2; height: 24px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 24px; border-radius: 2px;"></div>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 14px 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div style="font-weight: 600; font-size: 14px;">Hayworth Standard</div>
+              <span class="badge badge-blue">Default</span>
+            </div>
+            <div style="font-size: 12px; color: #64748b;">Brand-matched standard. Used for 8 active retainers.</div>
+            <div style="margin-top: 10px; display: flex; gap: 12px; font-size: 12px;">
+              <span class="btn-link">Edit</span>
+              <span class="btn-link">Preview</span>
+              <span class="btn-link">Duplicate</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="padding: 0; overflow: hidden;">
+          <div style="background: #fafaf9; border-bottom: 1px solid #efefed; height: 200px; padding: 18px;">
+            <div style="background: white; border: 1px solid #efefed; border-radius: 4px; height: 100%; padding: 14px;">
+              <div style="text-align: center; font-size: 11px; font-weight: 600; margin-bottom: 4px;">Acme Corp Q4</div>
+              <div style="text-align: center; font-size: 7px; color: #64748b; margin-bottom: 12px;">Special quarterly review</div>
+              <div style="background: #f4f4f2; height: 50px; border-radius: 2px; margin-bottom: 6px;"></div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+                <div style="background: #f4f4f2; height: 32px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 32px; border-radius: 2px;"></div>
+                <div style="background: #f4f4f2; height: 32px; border-radius: 2px;"></div>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 14px 18px;">
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Acme Q4 Special</div>
+            <div style="font-size: 12px; color: #64748b;">One-off: includes share-of-voice section. Used 1 time.</div>
+            <div style="margin-top: 10px; display: flex; gap: 12px; font-size: 12px;">
+              <span class="btn-link">Edit</span>
+              <span class="btn-link">Preview</span>
+              <span class="btn-link">Duplicate</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="padding: 0; overflow: hidden;">
+          <div style="background: #fafaf9; border-bottom: 1px solid #efefed; height: 200px; padding: 18px;">
+            <div style="background: white; border: 1px solid #efefed; border-radius: 4px; height: 100%; padding: 14px;">
+              <div style="background: #2563eb; height: 14px; border-radius: 2px; margin-bottom: 14px;"></div>
+              <div style="background: #f4f4f2; height: 4px; margin-bottom: 4px;"></div>
+              <div style="background: #f4f4f2; height: 4px; width: 75%; margin-bottom: 14px;"></div>
+              <div style="background: #f4f4f2; height: 64px; border-radius: 2px;"></div>
+            </div>
+          </div>
+          <div style="padding: 14px 18px;">
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Mercury (B2B SaaS)</div>
+            <div style="font-size: 12px; color: #64748b;">Vertical-specific layout. Used for 3 SaaS retainers.</div>
+            <div style="margin-top: 10px; display: flex; gap: 12px; font-size: 12px;">
+              <span class="btn-link">Edit</span>
+              <span class="btn-link">Preview</span>
+              <span class="btn-link">Duplicate</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body></html>

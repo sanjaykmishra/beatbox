@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css"></head>
+<body>
+<div class="page">
+  <div class="shell">
+    <div class="chrome">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="crumb">beat.app / settings / <span class="here">billing</span></div>
+    </div>
+    <div style="display: flex; flex: 1; overflow: hidden;">
+
+      <div class="sidenav">
+        <div class="section-label">Settings</div>
+        <div class="nav-item">Workspace</div>
+        <div class="nav-item">Branding</div>
+        <div class="nav-item">Team &amp; roles</div>
+        <div class="nav-item">Activity</div>
+        <div class="nav-item">Inbox &amp; integrations</div>
+        <div class="nav-item active">Billing</div>
+        <div class="nav-item">Referrals</div>
+        <div class="section-label">Workspace</div>
+        <div class="nav-item">Templates</div>
+        <div class="nav-item">Stock prompts</div>
+      </div>
+
+      <div style="flex: 1; padding: 32px 48px; overflow-y: auto;">
+        <div style="max-width: 880px;">
+          <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Settings &middot; Hayworth PR</div>
+          <h1>Billing</h1>
+          <p class="muted" style="margin: 8px 0 28px; font-size: 13px;">Manage your plan, payment method, and renewal interval.</p>
+
+          <!-- Current plan -->
+          <div class="panel" style="padding: 0; margin-bottom: 22px;">
+            <div style="padding: 18px 22px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #efefed;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                  <h2>Agency plan</h2>
+                  <span class="badge badge-green">Active</span>
+                  <span class="badge badge-gray">Annual</span>
+                </div>
+                <div class="muted" style="font-size: 13px;">5 users &middot; 15 client workspaces &middot; unlimited reports &middot; renews Mar 14, 2027</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 22px; font-weight: 600;">$152</div>
+                <div class="muted" style="font-size: 12px;">/mo when billed annually <span style="color: #16a34a;">&middot; saving 15%</span></div>
+              </div>
+            </div>
+
+            <!-- Interval toggle -->
+            <div style="padding: 22px;">
+              <div class="eyebrow" style="margin-bottom: 14px;">Renewal interval</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div style="border: 1px solid #e5e5e3; border-radius: 8px; padding: 18px 20px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                    <div>
+                      <div style="font-weight: 600; font-size: 14px;">Monthly</div>
+                      <div class="muted" style="font-size: 12px; margin-top: 2px;">Billed every month, cancel anytime</div>
+                    </div>
+                    <span style="width: 18px; height: 18px; border: 1.5px solid #d4d4d2; border-radius: 50%; display: inline-block;"></span>
+                  </div>
+                  <div style="font-size: 22px; font-weight: 600; margin-top: 4px;">$179<span style="font-size: 13px; font-weight: 400; color: #94a3b8;">/mo</span></div>
+                </div>
+
+                <div style="border: 2px solid #2563eb; background: #f7faff; border-radius: 8px; padding: 18px 20px; position: relative;">
+                  <div style="position: absolute; top: -10px; right: 18px; background: #16a34a; color: white; font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 600;">SAVE 15%</div>
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                    <div>
+                      <div style="font-weight: 600; font-size: 14px;">Annual</div>
+                      <div class="muted" style="font-size: 12px; margin-top: 2px;">Billed once per year &middot; current plan</div>
+                    </div>
+                    <span style="width: 18px; height: 18px; background: #2563eb; border-radius: 50%; display: inline-block; position: relative;">
+                      <span style="position: absolute; top: 4px; left: 4px; width: 8px; height: 8px; background: white; border-radius: 50%;"></span>
+                    </span>
+                  </div>
+                  <div style="font-size: 22px; font-weight: 600; margin-top: 4px;">$152<span style="font-size: 13px; font-weight: 400; color: #94a3b8;">/mo</span></div>
+                  <div style="font-size: 12px; color: #16a34a; margin-top: 2px;">$1,824 billed once / year</div>
+                </div>
+              </div>
+              <div style="margin-top: 14px; font-size: 12px; color: #64748b;">
+                Annual customers churn at roughly a third the rate of monthly customers. The 15% discount reflects that retention.
+              </div>
+            </div>
+          </div>
+
+          <!-- Tier comparison -->
+          <div class="panel" style="padding: 0; margin-bottom: 22px;">
+            <div style="padding: 14px 22px; border-bottom: 1px solid #efefed; display: flex; justify-content: space-between; align-items: center;">
+              <h2>Plans</h2>
+              <span class="muted" style="font-size: 12px;">Change plan anytime &middot; prorated</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 0;">
+              <div style="padding: 22px 24px; border-right: 1px solid #efefed;">
+                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">Solo</div>
+                <div style="font-size: 28px; font-weight: 700; margin-bottom: 4px;">$59<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">/mo</span></div>
+                <div class="muted" style="font-size: 12px; margin-bottom: 14px;">For independent PR consultants</div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.7;">
+                  &bull; 1 user<br>
+                  &bull; 5 client workspaces<br>
+                  &bull; 50 reports / mo<br>
+                  &bull; Email forwarding inbox<br>
+                  &bull; Standard templates
+                </div>
+              </div>
+              <div style="padding: 22px 24px; background: #fafaf9; border-right: 1px solid #efefed; border-left: 1px solid #efefed; position: relative;">
+                <div style="position: absolute; top: 0; right: 22px; background: #2563eb; color: white; font-size: 10px; padding: 3px 10px; border-radius: 0 0 3px 3px; font-weight: 600;">CURRENT</div>
+                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">Agency</div>
+                <div style="font-size: 28px; font-weight: 700; margin-bottom: 4px;">$179<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">/mo</span></div>
+                <div class="muted" style="font-size: 12px; margin-bottom: 14px;">For boutique agencies (2&ndash;10)</div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.7;">
+                  &bull; 5 users<br>
+                  &bull; 15 client workspaces<br>
+                  &bull; Unlimited reports<br>
+                  &bull; Custom templates<br>
+                  &bull; Client portal &middot; Activity audit
+                </div>
+              </div>
+              <div style="padding: 22px 24px;">
+                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">Studio</div>
+                <div style="font-size: 28px; font-weight: 700; margin-bottom: 4px;">$349<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">/mo</span></div>
+                <div class="muted" style="font-size: 12px; margin-bottom: 14px;">For larger boutique agencies</div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.7;">
+                  &bull; 15 users<br>
+                  &bull; 40 client workspaces<br>
+                  &bull; Priority support<br>
+                  &bull; Stock prompt library<br>
+                  &bull; Phase 4: monitoring + add-ons
+                </div>
+                <button class="btn btn-secondary" style="margin-top: 14px; font-size: 12px; width: 100%;">Upgrade to Studio</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment method -->
+          <div class="panel" style="padding: 18px 22px; margin-bottom: 22px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 38px; height: 26px; background: #1e3a8a; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: 700;">VISA</div>
+                <div>
+                  <div style="font-weight: 500; font-size: 14px;">Visa ending in 4242</div>
+                  <div class="muted" style="font-size: 12px;">Expires 09/2028 &middot; alex@hayworth.pr</div>
+                </div>
+              </div>
+              <span class="btn-link">Update via Stripe portal &rarr;</span>
+            </div>
+          </div>
+
+          <!-- Recent invoices -->
+          <div class="panel" style="padding: 0;">
+            <div style="padding: 14px 22px; border-bottom: 1px solid #efefed;">
+              <h2>Recent invoices</h2>
+            </div>
+            <div class="row head" style="padding: 10px 22px;">
+              <div style="flex: 1;">Date</div>
+              <div style="flex: 1;">Amount</div>
+              <div style="flex: 1;">Status</div>
+              <div style="width: 100px; text-align: right;"></div>
+            </div>
+            <div class="row" style="padding: 12px 22px;">
+              <div style="flex: 1;">Mar 14, 2026</div>
+              <div style="flex: 1; font-weight: 500;">$1,824.00</div>
+              <div style="flex: 1;"><span class="badge badge-green">Paid</span></div>
+              <div style="width: 100px; text-align: right;"><span class="btn-link">PDF</span></div>
+            </div>
+            <div class="row" style="padding: 12px 22px;">
+              <div style="flex: 1;">Mar 14, 2025</div>
+              <div style="flex: 1; font-weight: 500;">$948.00</div>
+              <div style="flex: 1;"><span class="badge badge-green">Paid</span></div>
+              <div style="width: 100px; text-align: right;"><span class="btn-link">PDF</span></div>
+            </div>
+            <div class="row" style="padding: 12px 22px;">
+              <div style="flex: 1;">Aug 14, 2024</div>
+              <div style="flex: 1; font-weight: 500;">$99.00</div>
+              <div style="flex: 1;"><span class="badge badge-green">Paid</span></div>
+              <div style="width: 100px; text-align: right;"><span class="btn-link">PDF</span></div>
+            </div>
+            <div class="row" style="padding: 12px 22px;">
+              <div style="flex: 1; color: #64748b;">Earlier (5 invoices)</div>
+              <div style="flex: 1;"></div>
+              <div style="flex: 1;"></div>
+              <div style="width: 100px; text-align: right;"><span class="btn-link">View all</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css"></head>
+<body>
+<div class="page">
+  <div class="shell">
+    <div class="chrome">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="crumb">beat.app / settings / <span class="here">referrals</span></div>
+    </div>
+    <div style="display: flex; flex: 1; overflow: hidden;">
+
+      <div class="sidenav">
+        <div class="section-label">Settings</div>
+        <div class="nav-item">Workspace</div>
+        <div class="nav-item">Branding</div>
+        <div class="nav-item">Team &amp; roles</div>
+        <div class="nav-item">Activity</div>
+        <div class="nav-item">Inbox &amp; integrations</div>
+        <div class="nav-item">Billing</div>
+        <div class="nav-item active">Referrals</div>
+        <div class="section-label">Workspace</div>
+        <div class="nav-item">Templates</div>
+        <div class="nav-item">Stock prompts</div>
+      </div>
+
+      <div style="flex: 1; padding: 32px 48px; overflow-y: auto;">
+        <div style="max-width: 880px;">
+          <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Settings &middot; Hayworth PR</div>
+          <h1>Referrals</h1>
+          <p class="muted" style="margin: 8px 0 28px; font-size: 13px; max-width: 540px;">
+            Refer another agency, get a free month. They get one too. Capped at 12 free months per year &mdash; we want this to grow Beat, not break the unit economics.
+          </p>
+
+          <!-- Referral code panel -->
+          <div class="panel" style="padding: 0; margin-bottom: 24px; border-color: #cbd5e1;">
+            <div style="padding: 24px 28px; background: #f7faff; border-bottom: 1px solid #e0e7ff;">
+              <div class="eyebrow" style="margin-bottom: 12px;">Your referral link</div>
+              <div style="display: flex; gap: 10px; align-items: stretch; margin-bottom: 12px;">
+                <div class="mono" style="flex: 1; background: white; border: 1px solid #cbd5e1; padding: 12px 14px; border-radius: 6px; font-size: 14px;">
+                  https://beat.app/?ref=hayworth-pr
+                </div>
+                <button class="btn btn-primary">Copy link</button>
+                <button class="btn btn-secondary">Share via email</button>
+              </div>
+              <div style="font-size: 12px; color: #475569;">
+                Code: <span class="mono" style="font-weight: 500;">hayworth-pr</span> &middot; embed in pitches, emails to agency friends, conference banter.
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px;">
+            <div class="stat">
+              <div class="label">Visits</div>
+              <div class="value">147</div>
+              <div class="delta">via your link</div>
+            </div>
+            <div class="stat">
+              <div class="label">Signups</div>
+              <div class="value">9</div>
+              <div class="delta">started a trial</div>
+            </div>
+            <div class="stat">
+              <div class="label">Converted</div>
+              <div class="value">5</div>
+              <div class="delta up">paid at least once</div>
+            </div>
+            <div class="stat">
+              <div class="label">Credit earned</div>
+              <div class="value" style="color: #16a34a;">$895</div>
+              <div class="delta">5 free months &middot; 7 of cap</div>
+            </div>
+          </div>
+
+          <!-- How it works -->
+          <div class="panel" style="padding: 22px 24px; margin-bottom: 24px;">
+            <div class="eyebrow" style="margin-bottom: 14px;">How it works</div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                  <div style="width: 28px; height: 28px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #475569;">1</div>
+                  <div style="font-weight: 500; font-size: 13px;">Share your link</div>
+                </div>
+                <div class="muted" style="font-size: 12px; line-height: 1.6;">Send your link to another agency owner. They land on Beat with the referral attached.</div>
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                  <div style="width: 28px; height: 28px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #475569;">2</div>
+                  <div style="font-weight: 500; font-size: 13px;">They sign up &amp; pay</div>
+                </div>
+                <div class="muted" style="font-size: 12px; line-height: 1.6;">When their first invoice clears, they get one month free credit on their account too.</div>
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                  <div style="width: 28px; height: 28px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #475569;">3</div>
+                  <div style="font-weight: 500; font-size: 13px;">You get a free month</div>
+                </div>
+                <div class="muted" style="font-size: 12px; line-height: 1.6;">Credit applied automatically against your next renewal. Cap of 12 free months per year.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Referrals table -->
+          <div class="panel" style="padding: 0;">
+            <div style="padding: 14px 22px; border-bottom: 1px solid #efefed;">
+              <h2>Referrals</h2>
+              <div class="muted" style="font-size: 12px; margin-top: 2px;">9 signups &middot; 5 converted to paid</div>
+            </div>
+            <div class="row head" style="padding: 10px 22px;">
+              <div style="flex: 2;">Workspace</div>
+              <div style="flex: 1;">Signed up</div>
+              <div style="flex: 1;">Status</div>
+              <div style="flex: 1;">Credit</div>
+            </div>
+            <div class="row" style="padding: 14px 22px;">
+              <div style="flex: 2; display: flex; align-items: center; gap: 10px;">
+                <div class="avatar" style="width: 28px; height: 28px; font-size: 11px; background: #dcfce7; color: #166534;">CP</div>
+                <div>
+                  <div style="font-weight: 500;">Colossal PR</div>
+                  <div class="muted" style="font-size: 12px;">jamie@colossalpr.com</div>
+                </div>
+              </div>
+              <div style="flex: 1; color: #64748b;">Mar 8, 2026</div>
+              <div style="flex: 1;"><span class="badge badge-green">Converted</span></div>
+              <div style="flex: 1; color: #16a34a; font-weight: 500;">+$179</div>
+            </div>
+            <div class="row" style="padding: 14px 22px;">
+              <div style="flex: 2; display: flex; align-items: center; gap: 10px;">
+                <div class="avatar" style="width: 28px; height: 28px; font-size: 11px; background: #ede9fe; color: #6d28d9;">NS</div>
+                <div>
+                  <div style="font-weight: 500;">Nightshift Studios</div>
+                  <div class="muted" style="font-size: 12px;">priya@nightshift.studio</div>
+                </div>
+              </div>
+              <div style="flex: 1; color: #64748b;">Feb 22, 2026</div>
+              <div style="flex: 1;"><span class="badge badge-green">Converted</span></div>
+              <div style="flex: 1; color: #16a34a; font-weight: 500;">+$179</div>
+            </div>
+            <div class="row" style="padding: 14px 22px;">
+              <div style="flex: 2; display: flex; align-items: center; gap: 10px;">
+                <div class="avatar" style="width: 28px; height: 28px; font-size: 11px; background: #fef3c7; color: #92400e;">AR</div>
+                <div>
+                  <div style="font-weight: 500;">Apex &amp; Rae</div>
+                  <div class="muted" style="font-size: 12px;">rae@apexandrae.com</div>
+                </div>
+              </div>
+              <div style="flex: 1; color: #64748b;">Feb 14, 2026</div>
+              <div style="flex: 1;"><span class="badge badge-green">Converted</span></div>
+              <div style="flex: 1; color: #16a34a; font-weight: 500;">+$179</div>
+            </div>
+            <div class="row" style="padding: 14px 22px;">
+              <div style="flex: 2; display: flex; align-items: center; gap: 10px;">
+                <div class="avatar gray" style="width: 28px; height: 28px; font-size: 11px;">BB</div>
+                <div>
+                  <div style="font-weight: 500;">Bayside Brands</div>
+                  <div class="muted" style="font-size: 12px;">marc@baysidebrands.com</div>
+                </div>
+              </div>
+              <div style="flex: 1; color: #64748b;">Apr 12, 2026</div>
+              <div style="flex: 1;"><span class="badge badge-yellow">Trial</span></div>
+              <div style="flex: 1; color: #94a3b8;">Pending</div>
+            </div>
+            <div class="row" style="padding: 14px 22px;">
+              <div style="flex: 2; display: flex; align-items: center; gap: 10px;">
+                <div class="avatar gray" style="width: 28px; height: 28px; font-size: 11px;">SH</div>
+                <div>
+                  <div style="font-weight: 500;">Stickman House</div>
+                  <div class="muted" style="font-size: 12px;">sara@stickmanhouse.co</div>
+                </div>
+              </div>
+              <div style="flex: 1; color: #64748b;">Apr 18, 2026</div>
+              <div style="flex: 1;"><span class="badge badge-yellow">Trial</span></div>
+              <div style="flex: 1; color: #94a3b8;">Pending</div>
+            </div>
+            <div class="row" style="padding: 14px 22px;">
+              <div style="flex: 2; color: #94a3b8;">3 earlier signups (none converted)</div>
+              <div style="flex: 1;"></div>
+              <div style="flex: 1;"><span class="badge badge-gray">Lapsed</span></div>
+              <div style="flex: 1; color: #94a3b8;">&mdash;</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body></html>
