@@ -93,6 +93,23 @@ public class AnthropicClient {
   }
 
   /**
+   * Opportunistically-cached call. If {@code renderedPrompt} contains a {@code [NOT CACHED — …]}
+   * marker (per docs/18-cost-engineering.md and {@link PromptCacheSplit}), the stable prefix is
+   * sent as a cached system block and only the variable suffix as the user message. Otherwise this
+   * degrades to the un-cached single-message call shape. Use this from call sites that don't want
+   * to know which prompts are structured for caching today vs. tomorrow.
+   */
+  public Result callMaybeCached(
+      String model, double temperature, int maxTokens, String renderedPrompt) {
+    PromptCacheSplit.SystemAndUser split = PromptCacheSplit.split(renderedPrompt);
+    if (split.cacheable()) {
+      return call(
+          model, temperature, maxTokens, split.system(), /* cacheSystem */ true, split.user());
+    }
+    return call(model, temperature, maxTokens, renderedPrompt);
+  }
+
+  /**
    * Models known to reject the {@code temperature} parameter. Anthropic deprecated temperature on
    * its newer reasoning-tier models (Opus 4.7+, etc.), returning HTTP 400 with {@code "temperature"
    * is deprecated for this model}. We learn the rejection lazily on the first 400 and cache it

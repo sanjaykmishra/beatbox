@@ -119,11 +119,13 @@ public class TwoTierExtractionService {
             "client_context",
                 useContext ? ExtractionService.renderClientContext(context, subjectName) : "");
     String renderedHaiku = t.render(vars);
+    PromptCacheSplit.SystemAndUser haikuSplit = PromptCacheSplit.split(renderedHaiku);
 
     String haikuModel = haikuModelOverride.isBlank() ? t.model() : haikuModelOverride;
     AnthropicClient.Result haikuRaw;
     try {
-      haikuRaw = anthropic.call(haikuModel, t.temperature(), t.maxTokens(), renderedHaiku);
+      haikuRaw =
+          anthropic.callMaybeCached(haikuModel, t.temperature(), t.maxTokens(), renderedHaiku);
     } catch (RuntimeException e) {
       log.warn("extraction_v12: haiku call failed: {}", e.toString());
       throw e;
@@ -143,19 +145,31 @@ public class TwoTierExtractionService {
       escalateReason = "haiku_schema_invalid: " + e.getMessage();
     }
 
-    // Sonnet escalation tier. PromptLoader exposes only the first fenced block, so we reuse the
-    // rendered Haiku body and prepend the escalation context (matches the spec in
-    // prompts/extraction-v1-2.md "Prompt — Sonnet escalation tier" without requiring loader
-    // changes).
-    String renderedSonnet =
+    // Sonnet escalation tier. Reuse the same cached instructions block as Haiku (the prompt body
+    // shares the same [CACHED ...] section per prompts/extraction-v1-2.md "Prompt — Sonnet
+    // escalation tier") and only the user portion differs — escalation prefix + the per-article
+    // inputs.
+    String escalationPrefix =
         "The first-pass extraction returned low confidence with this rationale:\n"
             + escalateReason
-            + "\n\nRe-extract with full attention.\n\n"
-            + renderedHaiku;
+            + "\n\nRe-extract with full attention.\n\n";
     String sonnetModel =
         sonnetModelOverride.isBlank() ? DEFAULT_ESCALATION_MODEL : sonnetModelOverride;
-    AnthropicClient.Result sonnetRaw =
-        anthropic.call(sonnetModel, t.temperature(), t.maxTokens(), renderedSonnet);
+    AnthropicClient.Result sonnetRaw;
+    if (haikuSplit.cacheable()) {
+      sonnetRaw =
+          anthropic.call(
+              sonnetModel,
+              t.temperature(),
+              t.maxTokens(),
+              haikuSplit.system(),
+              /* cacheSystem */ true,
+              escalationPrefix + haikuSplit.user());
+    } else {
+      sonnetRaw =
+          anthropic.call(
+              sonnetModel, t.temperature(), t.maxTokens(), escalationPrefix + renderedHaiku);
+    }
     var tiered = ExtractionV12Schema.parseStrict(sonnetRaw.text());
     saveToCache(contentHash, version, sonnetModel, tiered.result(), sonnetRaw);
     log.info("extraction_v12: escalated to sonnet reason={}", escalateReason);

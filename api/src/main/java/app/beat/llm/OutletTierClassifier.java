@@ -50,7 +50,8 @@ public class OutletTierClassifier {
       PromptTemplate t = prompts.get("outlet-tier-v1");
       String rendered = t.render(Map.of("outlet_name", outlet.name(), "domain", outlet.domain()));
       String model = modelOverride.isBlank() ? t.model() : modelOverride;
-      AnthropicClient.Result r = anthropic.call(model, t.temperature(), t.maxTokens(), rendered);
+      AnthropicClient.Result r =
+          anthropic.callMaybeCached(model, t.temperature(), t.maxTokens(), rendered);
       String text = r.text().trim();
       int s = text.indexOf('{');
       int e = text.lastIndexOf('}');

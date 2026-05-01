@@ -91,7 +91,7 @@ public class SocialExtractionService {
 
     AnthropicClient.Result first;
     try {
-      first = anthropic.call(model, t.temperature(), t.maxTokens(), rendered);
+      first = anthropic.callMaybeCached(model, t.temperature(), t.maxTokens(), rendered);
     } catch (RuntimeException e) {
       log.warn("social_extraction: anthropic call failed: {}", e.toString());
       throw e;
@@ -106,7 +106,8 @@ public class SocialExtractionService {
 
     String reprompt =
         rendered + "\n\nYour previous response was not valid JSON. Return ONLY the JSON object.";
-    AnthropicClient.Result second = anthropic.call(model, t.temperature(), t.maxTokens(), reprompt);
+    AnthropicClient.Result second =
+        anthropic.callMaybeCached(model, t.temperature(), t.maxTokens(), reprompt);
     var parsed = SocialExtractionSchema.parseStrict(second.text());
     return Optional.of(new Outcome(parsed, t.version(), normalizeJson(second.text())));
   }
