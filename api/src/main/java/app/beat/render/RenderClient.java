@@ -62,7 +62,14 @@ public class RenderClient {
       }
       return res;
     } catch (java.io.IOException e) {
-      throw new RuntimeException("render transport: " + e.getMessage(), e);
+      // ConnectException / HttpConnectTimeoutException / SocketException may have a null
+      // message — fall back to the exception class name so the operator can tell
+      // "service unreachable" from "service errored." Most common cause in dev: the render
+      // container isn't running, or RENDER_SERVICE_URL points at the wrong host.
+      String reason = e.getMessage();
+      if (reason == null || reason.isBlank()) reason = e.getClass().getSimpleName();
+      throw new RuntimeException(
+          "render service unreachable at " + baseUrl + " (" + reason + ")", e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new RuntimeException("render interrupted", e);

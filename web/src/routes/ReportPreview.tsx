@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { useToast } from '../components/Toast';
 import { Alert, Pill, type PillTone } from '../components/ui';
@@ -10,6 +10,7 @@ import { api, ApiError, type Report } from '../lib/api';
 export function ReportPreview() {
   const { id = '' } = useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { workspace } = useAuth();
   const slug = workspace?.slug ?? 'workspace';
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -58,6 +59,18 @@ export function ReportPreview() {
     });
   }
 
+  // The preview surface only handles processing / ready / failed reports — a draft means the
+  // user navigated here directly (or via a stale link) before generating. Bounce them back to
+  // the report builder where draft editing actually happens. The Alert in the body is a
+  // fallback for the ~one-frame window between effect-fire and navigation.
+  const status = report.data?.status;
+  const reportId = report.data?.id;
+  useEffect(() => {
+    if (status === 'draft' && reportId) {
+      navigate(`/reports/${reportId}`, { replace: true });
+    }
+  }, [status, reportId, navigate]);
+
   if (report.isLoading) {
     return (
       <BrowserFrame
@@ -86,7 +99,6 @@ export function ReportPreview() {
     );
   }
   const r = report.data;
-
   const ready = r.status === 'ready';
   const generatedSecs =
     r.generated_at && r.created_at
@@ -188,6 +200,18 @@ export function ReportPreview() {
           </div>
         )}
 
+        {r.status === 'draft' && (
+          <Alert
+            tone="info"
+            title="This report is still a draft"
+            action={{
+              label: 'Open builder',
+              onClick: () => navigate(`/reports/${r.id}`, { replace: true }),
+            }}
+          >
+            Finish adding coverage and click <strong>Generate report</strong> to produce a PDF.
+          </Alert>
+        )}
         {r.status === 'processing' && <ProcessingSkeleton />}
         {r.status === 'failed' && <FailedNotice />}
         {r.status === 'ready' && (

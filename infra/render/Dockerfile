@@ -19,6 +19,9 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 WORKDIR /app
 COPY --from=build /app/dist ./dist
 COPY render/package.json render/package-lock.json ./
+# server.js reads template files via fs.readFileSync('/app/templates/...'); these aren't compiled
+# into dist, so they must be copied separately or the container crashes at startup with ENOENT.
+COPY render/templates ./templates
 RUN npm ci --omit=dev --ignore-scripts
 EXPOSE 3000
 CMD ["node","dist/server.js"]
