@@ -21,6 +21,7 @@ import { ClientContextEditor } from './routes/ClientContextEditor';
 import { Calendar } from './routes/Calendar';
 import { AdminDashboard } from './routes/AdminDashboard';
 import { NotFound } from './routes/NotFound';
+import { PublicReport } from './routes/PublicReport';
 import './styles.css';
 
 const queryClient = new QueryClient({
@@ -38,6 +39,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Routes>
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />
+              {/* Public share — outside the auth wrapper so external visitors don't bounce
+                  through login. The page-level 404 lives inside PublicReport itself. */}
+              <Route path="/r/:token" element={<PublicReport />} />
               <Route
                 element={
                   <ProtectedRoute>

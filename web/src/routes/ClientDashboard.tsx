@@ -614,7 +614,7 @@ function PastReports({ reports }: { reports: ReportSummary[] }) {
     failed: 'red',
   };
   return (
-    <section>
+    <section id="past-reports">
       <Eyebrow className="mb-3">Past reports</Eyebrow>
       <ul className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
         {reports.map((r) => {

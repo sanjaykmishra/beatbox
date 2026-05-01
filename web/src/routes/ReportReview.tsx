@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmDialog';
@@ -101,7 +101,15 @@ export function ReportReview() {
         {/* Header — eyebrow + h1, status counts + Generate on the right (per wireframe-31). */}
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
-            <Eyebrow className="mb-1">{r.title}</Eyebrow>
+            <Eyebrow className="mb-1">
+              {r.title}
+              <Link
+                to={`/clients/${r.client_id}#past-reports`}
+                className="ml-3 text-xs text-gray-500 hover:text-gray-800 underline decoration-dotted"
+              >
+                ← All reports
+              </Link>
+            </Eyebrow>
             <h1 className="text-2xl font-semibold tracking-tightish text-ink">Coverage</h1>
           </div>
           <div className="flex items-center gap-5">
