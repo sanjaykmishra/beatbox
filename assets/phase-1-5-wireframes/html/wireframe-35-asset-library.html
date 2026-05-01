@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css"></head>
+<body>
+<div class="page">
+  <div class="shell">
+    <div class="chrome">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="crumb">beat.app / clients / acme corp / <span class="here">assets</span></div>
+    </div>
+
+    <!-- Page header -->
+    <div style="padding: 24px 32px; border-bottom: 1px solid #efefed; display: flex; justify-content: space-between; align-items: flex-start;">
+      <div style="display: flex; gap: 14px; align-items: center;">
+        <div class="avatar lg" style="background: #dbeafe; width: 44px; height: 44px; font-size: 14px;">AC</div>
+        <div>
+          <div style="font-size: 13px; color: #64748b; margin-bottom: 2px;">Acme Corp &middot; B2B SaaS</div>
+          <h1 style="font-size: 22px;">Assets</h1>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <span class="muted" style="font-size: 12px;">2.4 GB of 10 GB used</span>
+        <button class="btn btn-secondary">+ New folder</button>
+        <button class="btn btn-primary">Upload</button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex: 1; overflow: hidden;">
+
+      <!-- Folder sidebar -->
+      <div style="width: 220px; background: #fafaf9; border-right: 1px solid #efefed; padding: 22px 16px; overflow-y: auto;">
+        <div class="eyebrow" style="margin-bottom: 10px;">Folders</div>
+
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div style="padding: 8px 12px; border-radius: 6px; font-size: 13px; background: white; color: #0f172a; font-weight: 500; border: 1px solid #efefed; display: flex; justify-content: space-between; align-items: center;">
+            <span>All assets</span>
+            <span class="muted" style="font-size: 11px;">147</span>
+          </div>
+          <div style="padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #475569; display: flex; justify-content: space-between; align-items: center;">
+            <span>Logos</span>
+            <span class="muted" style="font-size: 11px;">8</span>
+          </div>
+          <div style="padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #475569; display: flex; justify-content: space-between; align-items: center;">
+            <span>Photos</span>
+            <span class="muted" style="font-size: 11px;">62</span>
+          </div>
+          <div style="padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #94a3b8; padding-left: 26px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Headshots</span>
+            <span style="font-size: 11px;">14</span>
+          </div>
+          <div style="padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #94a3b8; padding-left: 26px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Product</span>
+            <span style="font-size: 11px;">31</span>
+          </div>
+          <div style="padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #94a3b8; padding-left: 26px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Events</span>
+            <span style="font-size: 11px;">17</span>
+          </div>
+          <div style="padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #475569; display: flex; justify-content: space-between; align-items: center;">
+            <span>Video</span>
+            <span class="muted" style="font-size: 11px;">9</span>
+          </div>
+          <div style="padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #475569; display: flex; justify-content: space-between; align-items: center;">
+            <span>Brand guides</span>
+            <span class="muted" style="font-size: 11px;">3</span>
+          </div>
+          <div style="padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #475569; display: flex; justify-content: space-between; align-items: center;">
+            <span>Series B launch</span>
+            <span class="muted" style="font-size: 11px;">12</span>
+          </div>
+        </div>
+
+        <!-- Brand colors -->
+        <div class="eyebrow" style="margin: 22px 0 10px;">Brand colors</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12px;">
+            <span style="width: 20px; height: 20px; background: #1F2937; border-radius: 4px;"></span>
+            <span style="flex: 1;">Primary</span>
+            <span class="mono muted" style="font-size: 11px;">#1F2937</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12px;">
+            <span style="width: 20px; height: 20px; background: #2563EB; border-radius: 4px;"></span>
+            <span style="flex: 1;">Accent</span>
+            <span class="mono muted" style="font-size: 11px;">#2563EB</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12px;">
+            <span style="width: 20px; height: 20px; background: #F59E0B; border-radius: 4px;"></span>
+            <span style="flex: 1;">Highlight</span>
+            <span class="mono muted" style="font-size: 11px;">#F59E0B</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #94a3b8; padding: 4px 0;">
+            + Add color
+          </div>
+        </div>
+
+        <!-- Storage -->
+        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #efefed;">
+          <div class="eyebrow" style="margin-bottom: 8px;">Storage</div>
+          <div style="background: #efefed; height: 6px; border-radius: 3px; margin-bottom: 6px;">
+            <div style="background: #2563eb; height: 100%; width: 24%; border-radius: 3px;"></div>
+          </div>
+          <div class="muted" style="font-size: 11px;">2.4 GB of 10 GB &middot; agency tier</div>
+        </div>
+      </div>
+
+      <!-- Main grid -->
+      <div style="flex: 1; padding: 24px 28px; overflow-y: auto; background: white;">
+
+        <!-- Toolbar -->
+        <div style="display: flex; gap: 10px; margin-bottom: 18px; align-items: center;">
+          <input class="input" placeholder="Search by filename, title, tag&hellip;" style="flex: 1;">
+          <span class="badge badge-blue" style="padding: 6px 12px; font-size: 11px;">All types</span>
+          <span class="badge badge-gray" style="padding: 6px 12px; font-size: 11px; background: white; border: 1px solid #e5e5e3; color: #475569;">Photos</span>
+          <span class="badge badge-gray" style="padding: 6px 12px; font-size: 11px; background: white; border: 1px solid #e5e5e3; color: #475569;">Logos</span>
+          <span class="badge badge-gray" style="padding: 6px 12px; font-size: 11px; background: white; border: 1px solid #e5e5e3; color: #475569;">Video</span>
+          <span class="badge badge-gray" style="padding: 6px 12px; font-size: 11px; background: white; border: 1px solid #e5e5e3; color: #475569;">Docs</span>
+          <span class="muted" style="font-size: 12px; margin-left: 8px;">Sort:</span>
+          <select class="input" style="font-size: 12px; padding: 5px 10px;">
+            <option>Recently added</option>
+          </select>
+        </div>
+
+        <!-- Section: recently used -->
+        <div class="eyebrow" style="margin-bottom: 12px;">Recently used</div>
+        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 28px;">
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #fafaf9; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px;">hero.png</div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">Series B hero</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">Used 4 times &middot; 2.1 MB</div>
+            </div>
+          </div>
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #fafaf9; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px;">maya.jpg</div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">Maya R. headshot</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">Used 2 times &middot; 540 KB</div>
+            </div>
+          </div>
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #1F2937; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center;">
+              <div style="color: white; font-weight: 700; font-size: 18px; letter-spacing: 0.06em;">ACME</div>
+            </div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">Logo &middot; primary</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">Used 38 times &middot; SVG</div>
+            </div>
+          </div>
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #fafaf9; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px;">team-q1.jpg</div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">Q1 team photo</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">Used 1 time &middot; 3.7 MB</div>
+            </div>
+          </div>
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #0f172a; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center;">
+              <div style="color: white; font-weight: 700; font-size: 16px; letter-spacing: 0.06em;">ACME</div>
+              <div style="position: absolute; bottom: 8px; right: 8px; background: white; color: #0f172a; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600;">DARK</div>
+            </div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">Logo &middot; reverse</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">Used 12 times &middot; SVG</div>
+            </div>
+          </div>
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: linear-gradient(135deg, #2563eb 0%, #1F2937 100%); border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center; position: relative;">
+              <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(255,255,255,0.85); color: #0f172a; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600;">VIDEO</div>
+              <div style="width: 38px; height: 38px; background: rgba(255,255,255,0.95); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0f172a; font-size: 14px;">&#9658;</div>
+            </div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">Series B announcement</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">0:32 &middot; 14.2 MB</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: all -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div class="eyebrow" style="margin-bottom: 0;">All assets &middot; 147 items</div>
+          <span class="muted" style="font-size: 12px;">Drag any file in here to upload</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;">
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #fafaf9; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px;">office-1.jpg</div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">SF office &mdash; lobby</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">2.8 MB &middot; Apr 12</div>
+            </div>
+          </div>
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #fafaf9; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px;">stage.jpg</div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">All-hands stage</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">3.4 MB &middot; Apr 8</div>
+            </div>
+          </div>
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #fafaf9; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px;">eng-team.jpg</div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">Engineering team</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">4.1 MB &middot; Apr 4</div>
+            </div>
+          </div>
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #fafaf9; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px;">guidelines.pdf</div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">Brand guidelines v3</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">PDF &middot; 8.2 MB</div>
+            </div>
+          </div>
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #fafaf9; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px;">ceo-quote.jpg</div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">CEO podium shot</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">2.2 MB &middot; Mar 28</div>
+            </div>
+          </div>
+          <div class="panel" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 1; background: #fafaf9; border-bottom: 1px solid #efefed; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px;">product-ui.png</div>
+            <div style="padding: 8px 10px;">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.3;">Product UI screenshot</div>
+              <div class="muted" style="font-size: 10px; margin-top: 2px;">1.8 MB &middot; Mar 22</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

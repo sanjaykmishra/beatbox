@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css"></head>
+<body>
+<div class="page">
+  <div class="shell">
+    <div class="chrome">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="crumb">beat.app / clients / acme corp / <span class="here">listen</span></div>
+    </div>
+
+    <!-- Page header -->
+    <div style="padding: 22px 32px; border-bottom: 1px solid #efefed; display: flex; justify-content: space-between; align-items: flex-start; background: white;">
+      <div style="display: flex; gap: 14px; align-items: center;">
+        <div class="avatar lg" style="background: #dbeafe; width: 44px; height: 44px; font-size: 14px;">AC</div>
+        <div>
+          <div style="font-size: 13px; color: #64748b; margin-bottom: 2px;">Acme Corp &middot; B2B SaaS</div>
+          <h1 style="font-size: 22px;">Social listening</h1>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <span class="muted" style="font-size: 12px;">8 of 50 runs today</span>
+        <button class="btn btn-secondary">Saved queries</button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex: 1; overflow: hidden;">
+
+      <!-- Left: query panel -->
+      <div style="width: 360px; background: #fafaf9; border-right: 1px solid #efefed; padding: 24px 22px; overflow-y: auto;">
+
+        <div class="eyebrow" style="margin-bottom: 12px;">Run a search</div>
+
+        <div style="margin-bottom: 16px;">
+          <label class="label" style="margin-bottom: 6px;">Search terms</label>
+          <textarea class="input" style="width: 100%; min-height: 70px; resize: vertical; font-family: inherit; font-size: 13px;">Acme Corp OR @acmecorp OR #AcmeAI</textarea>
+          <div class="muted" style="font-size: 11px; margin-top: 4px;">One match per line, or use OR / AND. Quotes for exact phrases.</div>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label class="label" style="margin-bottom: 6px;">Exclude</label>
+          <input class="input" placeholder="Term, hashtag, or @handle" value="@acmecorp_recruiting" style="width: 100%; font-size: 13px;">
+        </div>
+
+        <div style="margin-bottom: 18px;">
+          <label class="label" style="margin-bottom: 6px;">Platforms</label>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+              <span style="width: 14px; height: 14px; background: #2563eb; border-radius: 3px; display: inline-block;"></span>
+              <div style="width: 18px; height: 18px; background: #1185fe; color: white; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 10px;">B</div>
+              Bluesky
+              <span class="muted" style="font-size: 11px; margin-left: auto;">free public API</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+              <span style="width: 14px; height: 14px; background: #2563eb; border-radius: 3px; display: inline-block;"></span>
+              <div style="width: 18px; height: 18px; background: #ff4500; color: white; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 10px;">r/</div>
+              Reddit
+              <span class="muted" style="font-size: 11px; margin-left: auto;">free public API</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #94a3b8;">
+              <span style="width: 14px; height: 14px; border: 1.5px solid #d4d4d2; border-radius: 3px; display: inline-block;"></span>
+              <div style="width: 18px; height: 18px; background: #f4f4f2; color: #64748b; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 10px;">M</div>
+              Mastodon
+              <span class="muted" style="font-size: 11px; margin-left: auto;">opportunistic</span>
+            </label>
+            <div style="font-size: 11px; color: #94a3b8; padding: 6px 0; line-height: 1.5;">
+              X, LinkedIn, and Threads aren't reliable to search publicly &mdash; deferred to Phase 4 with a paid scraping service.
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%;">Run search</button>
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 8px;">Save query as&hellip;</button>
+
+        <!-- Saved queries -->
+        <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid #efefed;">
+          <div class="eyebrow" style="margin-bottom: 12px;">Saved queries</div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="background: white; border: 1px solid #efefed; border-radius: 6px; padding: 10px 12px;">
+              <div style="font-weight: 500; font-size: 13px; margin-bottom: 2px;">Monthly Acme listen</div>
+              <div class="muted" style="font-size: 11px;">Last run today &middot; 47 results</div>
+            </div>
+            <div style="background: white; border: 1px solid #efefed; border-radius: 6px; padding: 10px 12px;">
+              <div style="font-weight: 500; font-size: 13px; margin-bottom: 2px;">Acme &middot; CEO mentions</div>
+              <div class="muted" style="font-size: 11px;">Last run 3 days ago &middot; 12 results</div>
+            </div>
+            <div style="background: white; border: 1px solid #efefed; border-radius: 6px; padding: 10px 12px;">
+              <div style="font-weight: 500; font-size: 13px; margin-bottom: 2px;">Series B reaction</div>
+              <div class="muted" style="font-size: 11px;">Last run yesterday &middot; 23 results</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: results -->
+      <div style="flex: 1; padding: 24px 28px; overflow-y: auto; background: white;">
+
+        <!-- Results header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div>
+            <div style="font-size: 12px; color: #64748b; margin-bottom: 2px;">Results &middot; Bluesky + Reddit</div>
+            <div style="font-size: 16px; font-weight: 600;">47 mentions <span class="muted" style="font-weight: 400; font-size: 13px;">&middot; ran 8 seconds ago</span></div>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <span class="muted" style="font-size: 12px;">2 selected</span>
+            <button class="btn btn-secondary" style="font-size: 12px;">File to inbox</button>
+            <button class="btn btn-primary" style="font-size: 12px;">File to April report &rarr;</button>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <span class="badge badge-blue" style="padding: 5px 11px; font-size: 11px;">All &middot; 47</span>
+          <span class="badge badge-gray" style="padding: 5px 11px; font-size: 11px; background: white; border: 1px solid #e5e5e3; color: #475569;">Bluesky &middot; 28</span>
+          <span class="badge badge-gray" style="padding: 5px 11px; font-size: 11px; background: white; border: 1px solid #e5e5e3; color: #475569;">Reddit &middot; 19</span>
+          <span class="badge badge-gray" style="padding: 5px 11px; font-size: 11px; background: white; border: 1px solid #e5e5e3; color: #475569;">High engagement</span>
+          <span class="badge badge-gray" style="padding: 5px 11px; font-size: 11px; background: white; border: 1px solid #e5e5e3; color: #475569;">Verified</span>
+          <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+            <span class="muted" style="font-size: 12px;">Sort</span>
+            <select class="input" style="font-size: 12px; padding: 4px 8px;">
+              <option>Recency</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Result rows -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+
+          <!-- Selected Bluesky result -->
+          <div class="panel" style="padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start; border-color: #2563eb; background: #f7faff;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;">
+              <span style="width: 18px; height: 18px; background: #2563eb; border-radius: 3px; display: inline-block; position: relative;">
+                <span style="position: absolute; top: 3px; left: 5px; width: 6px; height: 9px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); display: block;"></span>
+              </span>
+            </div>
+            <div style="width: 36px; height: 36px; background: #1185fe; color: white; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0;">B</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                <span class="badge" style="background: #dbeafe; color: #1185fe; padding: 2px 7px;">Bluesky</span>
+                <span style="font-size: 12px; color: #64748b; font-weight: 500;">@analystjones.bsky.social</span>
+                <span class="muted" style="font-size: 11px;">&middot; 12K followers &middot; 3h ago</span>
+              </div>
+              <div style="font-size: 13px; line-height: 1.55; color: #1a1a1a; margin-bottom: 6px;">
+                Interesting move from Acme acquiring Foo. The complementary infrastructure stack means they can ship AI-native workflows without rewriting the platform. Underrated deal.
+              </div>
+              <div style="display: flex; gap: 18px; font-size: 11px; color: #64748b;">
+                <span>214 likes &middot; 47 reposts &middot; 12 replies</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reddit result -->
+          <div class="panel" style="padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;">
+              <span style="width: 18px; height: 18px; border: 1.5px solid #d4d4d2; border-radius: 3px; display: inline-block;"></span>
+            </div>
+            <div style="width: 36px; height: 36px; background: #ff4500; color: white; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0;">r/</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                <span class="badge" style="background: #fee2e2; color: #ff4500; padding: 2px 7px;">r/SaaS</span>
+                <span style="font-size: 12px; color: #64748b; font-weight: 500;">u/saasthinker</span>
+                <span class="muted" style="font-size: 11px;">&middot; 412 upvotes &middot; 87 comments &middot; 2d ago</span>
+              </div>
+              <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">Anyone else getting Acme Corp emails twice a week now?</div>
+              <div class="muted" style="font-size: 12px; line-height: 1.5;">Discussion thread: 87 comments, mostly mixed sentiment about Acme's outbound cadence post-Series B. Two top comments defending the product.</div>
+            </div>
+          </div>
+
+          <!-- Selected Bluesky result 2 -->
+          <div class="panel" style="padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start; border-color: #2563eb; background: #f7faff;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;">
+              <span style="width: 18px; height: 18px; background: #2563eb; border-radius: 3px; display: inline-block; position: relative;">
+                <span style="position: absolute; top: 3px; left: 5px; width: 6px; height: 9px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); display: block;"></span>
+              </span>
+            </div>
+            <div style="width: 36px; height: 36px; background: #1185fe; color: white; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0;">B</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                <span class="badge" style="background: #dbeafe; color: #1185fe; padding: 2px 7px;">Bluesky</span>
+                <span style="font-size: 12px; color: #64748b; font-weight: 500;">@maya.eng</span>
+                <span class="muted" style="font-size: 11px;">&middot; 3.4K followers &middot; 5h ago</span>
+              </div>
+              <div style="font-size: 13px; line-height: 1.55; color: #1a1a1a; margin-bottom: 6px;">
+                Acme's Series B announcement is the most well-written corporate post I've read this year. Honest about the bet, no hyperbole, names every person who matters. Take notes.
+              </div>
+              <div style="display: flex; gap: 18px; font-size: 11px; color: #64748b;">
+                <span>87 likes &middot; 14 reposts</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bluesky result -->
+          <div class="panel" style="padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;">
+              <span style="width: 18px; height: 18px; border: 1.5px solid #d4d4d2; border-radius: 3px; display: inline-block;"></span>
+            </div>
+            <div style="width: 36px; height: 36px; background: #1185fe; color: white; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0;">B</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                <span class="badge" style="background: #dbeafe; color: #1185fe; padding: 2px 7px;">Bluesky</span>
+                <span style="font-size: 12px; color: #64748b; font-weight: 500;">@vcgossip.bsky.social</span>
+                <span class="muted" style="font-size: 11px;">&middot; 22K followers &middot; 8h ago</span>
+              </div>
+              <div style="font-size: 13px; line-height: 1.55; color: #1a1a1a; margin-bottom: 6px;">
+                Heard Acme's Series B was 4&times; oversubscribed and Sequoia bought half the round. The Maya hire was the closing detail. Watch this one.
+              </div>
+              <div style="display: flex; gap: 18px; font-size: 11px; color: #64748b;">
+                <span>523 likes &middot; 89 reposts &middot; 31 replies</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reddit result 2 -->
+          <div class="panel" style="padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;">
+              <span style="width: 18px; height: 18px; border: 1.5px solid #d4d4d2; border-radius: 3px; display: inline-block;"></span>
+            </div>
+            <div style="width: 36px; height: 36px; background: #ff4500; color: white; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0;">r/</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                <span class="badge" style="background: #fee2e2; color: #ff4500; padding: 2px 7px;">r/MachineLearning</span>
+                <span style="font-size: 12px; color: #64748b; font-weight: 500;">u/ml_practitioner_47</span>
+                <span class="muted" style="font-size: 11px;">&middot; 178 upvotes &middot; 3d ago</span>
+              </div>
+              <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">Acme Corp's recent benchmark claims &mdash; what's actually new?</div>
+              <div class="muted" style="font-size: 12px; line-height: 1.5;">Technical thread breaking down which benchmarks Acme cited, what's standard, and what's improved. Mostly fair assessment with some skepticism.</div>
+            </div>
+          </div>
+
+          <div style="text-align: center; padding: 12px 0;">
+            <span class="btn-link">Show 42 more &rarr;</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body></html>
