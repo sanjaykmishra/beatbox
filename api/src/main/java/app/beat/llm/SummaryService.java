@@ -16,17 +16,27 @@ import org.springframework.stereotype.Service;
 /**
  * Generates the executive summary at the top of every report.
  *
- * <p>Two paths exist (see docs/18-cost-engineering.md and prompts/executive-summary-v1-1.md):
+ * <p>Three paths exist (see docs/18-cost-engineering.md and prompts/executive-summary-v1-*.md):
  *
  * <ul>
  *   <li>{@code v1} — Opus, prompts/executive-summary-v1.md, current Phase 1 production.
  *   <li>{@code v1_1} — Sonnet, prompts/executive-summary-v1-1.md, cost-engineered with prompt
  *       caching of the static instructions and workspace style block.
+ *   <li>{@code v1_2} — Sonnet with hardened grounding rules and per-item context, after a real
+ *       dogfood surfaced sev-1 hallucinations on v1.1 (fabricated outlets, fabricated counts,
+ *       softened zero-coverage periods into PR-speak). See prompts/executive-summary-v1-2.md.
  * </ul>
  *
- * <p>Mode is set by {@code beat.prompts.summary.version} ({@code v1} default | {@code v1_1} |
- * {@code shadow}). Shadow mode runs both: returns v1 output to the user, logs v1.1 for telemetry.
- * Hyperbole is detected locally on whichever path returns; the eval harness has the full rubric.
+ * <p>Mode is set by {@code beat.prompts.summary.version}: {@code v1} (default), {@code v1_1},
+ * {@code v1_2}, {@code shadow} (v1 user-facing + v1.1 logged), {@code shadow_v12} (v1.1 user-facing
+ * + v1.2 logged). Hyperbole is detected locally on whichever path returns; the eval harness has the
+ * full rubric.
+ *
+ * <p><b>Runtime short-circuit.</b> Before any LLM call, if the input has 0 items with
+ * subject_prominence in {feature, mention}, the service emits a deterministic "no substantive
+ * coverage" summary and skips the call entirely. This is mode-independent — it fires for v1, v1.1,
+ * v1.2, and shadow modes alike, because no prompt can be trusted to produce a grounded summary with
+ * zero grounded data. See {@link #noSubstantiveCoverageText}.
  */
 @Service
 public class SummaryService {
@@ -35,7 +45,16 @@ public class SummaryService {
 
   static final String MODE_V1 = "v1";
   static final String MODE_V1_1 = "v1_1";
+  static final String MODE_V1_2 = "v1_2";
   static final String MODE_SHADOW = "shadow";
+  static final String MODE_SHADOW_V12 = "shadow_v12";
+
+  /**
+   * Sentinel prompt-version recorded on reports whose summary was produced by the runtime
+   * short-circuit (no LLM call). Distinguishes "we deliberately wrote a deterministic summary
+   * because there was no substantive coverage" from "the v1.x prompt produced this."
+   */
+  static final String VERSION_NO_COVERAGE_GUARD = "no_substantive_coverage_guard_v1";
 
   private final PromptLoader prompts;
   private final AnthropicClient anthropic;
@@ -58,7 +77,7 @@ public class SummaryService {
     if (raw == null) return MODE_V1;
     String m = raw.trim().toLowerCase();
     return switch (m) {
-      case MODE_V1, MODE_V1_1, MODE_SHADOW -> m;
+      case MODE_V1, MODE_V1_1, MODE_V1_2, MODE_SHADOW, MODE_SHADOW_V12 -> m;
       default -> MODE_V1;
     };
   }
@@ -90,8 +109,22 @@ public class SummaryService {
 
     SummaryInputs inputs =
         SummaryInputs.build(clientName, report.periodStart(), report.periodEnd(), items, outlets);
+
+    // Runtime guard: if we have items but none feature/mention the client, the LLM has nothing
+    // grounded to say. Any "summary" it produces is hallucination dressed up as PR analysis (see
+    // the Franklin BBQ dogfood: 3 'passing' items → fabricated outlets + softened "appeared in
+    // the right rooms" instead of the truthful "client was not the subject"). Short-circuit with
+    // a deterministic message and skip the call entirely.
+    if (inputs.hasNoSubstantiveCoverage()) {
+      log.info(
+          "summary: short-circuit — no substantive coverage (items={}, feature=0, mention=0)",
+          inputs.count());
+      return new Outcome(noSubstantiveCoverageText(inputs), VERSION_NO_COVERAGE_GUARD, List.of());
+    }
+
     return switch (mode) {
       case MODE_V1_1 -> generateV11(inputs, clientIndustry, styleNotes);
+      case MODE_V1_2 -> generateV12(inputs, clientIndustry, styleNotes);
       case MODE_SHADOW -> {
         Outcome primary = generateV1(inputs, styleNotes);
         try {
@@ -105,8 +138,57 @@ public class SummaryService {
         }
         yield primary;
       }
+      case MODE_SHADOW_V12 -> {
+        Outcome primary = generateV11(inputs, clientIndustry, styleNotes);
+        try {
+          Outcome shadow = generateV12(inputs, clientIndustry, styleNotes);
+          log.info(
+              "summary_shadow_v12: v1.2 produced {} chars, hyperbole_hits={}",
+              shadow.text().length(),
+              shadow.hyperboleHits().size());
+        } catch (RuntimeException e) {
+          log.warn("summary_shadow_v12: v1.2 path failed (ignored): {}", e.toString());
+        }
+        yield primary;
+      }
       default -> generateV1(inputs, styleNotes);
     };
+  }
+
+  /**
+   * Deterministic summary text used when the report has 0 items with subject_prominence ∈ {feature,
+   * mention}. Honest about the situation, gives the agency owner something useful to tell the
+   * client (review URL choices, prominence audit) rather than fabricated PR analysis.
+   */
+  static String noSubstantiveCoverageText(SummaryInputs in) {
+    String name =
+        in.clientName() == null || in.clientName().isBlank() ? "the client" : in.clientName();
+    String period = in.reportPeriodLabel().isBlank() ? "this period" : in.reportPeriodLabel();
+    return String.join(
+        "\n\n",
+        period
+            + " did not produce substantive coverage of "
+            + name
+            + ". "
+            + in.count()
+            + " "
+            + (in.count() == 1 ? "item was" : "items were")
+            + " logged, but none featured or mentioned "
+            + name
+            + " as a subject — every item was tagged as a passing reference or not "
+            + "tagged at all.",
+        "Before treating this as a 'quiet month' narrative, audit the URLs that were added to "
+            + "the report. The most common cause of an empty subject-prominence pattern is that "
+            + "the URLs were on-topic for "
+            + name
+            + "'s industry but didn't actually mention "
+            + name
+            + ". If that's the case, refine the source list. If the items genuinely should have "
+            + "named the client and didn't, that's the finding to take to the client conversation.",
+        "No newsworthy quote or anomaly to flag — there was no substantive coverage to draw one "
+            + "from. Looking ahead, the priority is securing at least one "
+            + name
+            + "-led story for the next reporting period.");
   }
 
   private Outcome generateV1(SummaryInputs inputs, String styleNotes) {
@@ -133,6 +215,27 @@ public class SummaryService {
     vars.put("client_context", styleNotes == null ? "" : styleNotes);
     // workspace_style_notes is a Phase 2 (per-workspace style guide) input; empty for now so the
     // {{#if}} block in the prompt drops cleanly.
+    vars.put("workspace_style_notes", "");
+
+    String rendered = t.render(vars);
+    String model = modelOverride.isBlank() ? t.model() : modelOverride;
+
+    AnthropicClient.Result r =
+        anthropic.callMaybeCached(model, t.temperature(), t.maxTokens(), rendered);
+    return finish(r.text().trim(), t.version());
+  }
+
+  private Outcome generateV12(SummaryInputs inputs, String clientIndustry, String styleNotes) {
+    PromptTemplate t = prompts.get("executive-summary-v1-2");
+
+    Map<String, String> vars = new HashMap<>();
+    vars.put("client_name", inputs.clientName() == null ? "the client" : inputs.clientName());
+    vars.put("client_industry", clientIndustry == null ? "" : clientIndustry);
+    vars.put("report_period", inputs.reportPeriodLabel());
+    // The richer block — adds prominence breakdown + per-item summaries (which contain the
+    // extraction-side "client not mentioned" notes that v1.1 was missing).
+    vars.put("coverage_items_summary", inputs.coverageItemsSummaryV12());
+    vars.put("client_context", styleNotes == null ? "" : styleNotes);
     vars.put("workspace_style_notes", "");
 
     String rendered = t.render(vars);

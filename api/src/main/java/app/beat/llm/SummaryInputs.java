@@ -3,6 +3,7 @@ package app.beat.llm;
 import app.beat.coverage.CoverageItem;
 import app.beat.outlet.Outlet;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -24,9 +25,19 @@ public record SummaryInputs(
     int neutral,
     int mixed,
     int negative,
+    int featureCount,
+    int mentionCount,
+    int passingCount,
+    int prominenceUnknownCount,
     String outletList,
     String topicList,
-    String headlines) {
+    String headlines,
+    /**
+     * Per-item lines for v1.2 prompt — headline, outlet, prominence, and the extraction-side
+     * summary (which contains "client not mentioned in this article" when applicable). Kept out of
+     * the v1/v1.1 path because those prompts weren't designed for per-item context.
+     */
+    String perItemBlock) {
 
   public static SummaryInputs build(
       String clientName,
@@ -36,6 +47,7 @@ public record SummaryInputs(
       Map<UUID, Outlet> outlets) {
     int t1 = 0, t2 = 0, t3 = 0;
     int pos = 0, neu = 0, mix = 0, neg = 0;
+    int featureN = 0, mentionN = 0, passingN = 0, unknownN = 0;
     Map<UUID, Long> outletReach = new HashMap<>();
     Map<String, Integer> topicCounts = new LinkedHashMap<>();
     List<CoverageItem> ranked = items.stream().filter(c -> c.headline() != null).toList();
@@ -55,6 +67,16 @@ public record SummaryInputs(
           case "negative" -> neg++;
           default -> {}
         }
+      }
+      if (c.subjectProminence() != null) {
+        switch (c.subjectProminence()) {
+          case "feature" -> featureN++;
+          case "mention" -> mentionN++;
+          case "passing" -> passingN++;
+          default -> unknownN++;
+        }
+      } else {
+        unknownN++;
       }
       if (c.outletId() != null) {
         long add = c.estimatedReach() == null ? 1 : Math.max(c.estimatedReach(), 1);
@@ -91,6 +113,8 @@ public record SummaryInputs(
             .map(CoverageItem::headline)
             .collect(Collectors.joining("\n"));
 
+    String perItemBlock = renderPerItem(ranked, outlets);
+
     return new SummaryInputs(
         clientName,
         periodStart,
@@ -103,9 +127,64 @@ public record SummaryInputs(
         neu,
         mix,
         neg,
+        featureN,
+        mentionN,
+        passingN,
+        unknownN,
         outletList,
         topicList,
-        headlines);
+        headlines,
+        perItemBlock);
+  }
+
+  /**
+   * Render every item as one block: headline, outlet, prominence, sentiment, plus the extraction
+   * summary text. The extraction summary is what flags "client not mentioned in this article" —
+   * crucial grounding for v1.2 and absent from v1/v1.1.
+   */
+  private static String renderPerItem(List<CoverageItem> ranked, Map<UUID, Outlet> outlets) {
+    var lines = new ArrayList<String>();
+    int i = 1;
+    for (CoverageItem c :
+        ranked.stream()
+            .sorted(
+                Comparator.comparing((CoverageItem x) -> tierWeight(x.tierAtExtraction()))
+                    .reversed())
+            .toList()) {
+      String outlet =
+          c.outletId() != null && outlets.containsKey(c.outletId())
+              ? outlets.get(c.outletId()).name()
+              : "(unknown outlet)";
+      String tier = c.tierAtExtraction() == null ? "?" : c.tierAtExtraction().toString();
+      String prominence = c.subjectProminence() == null ? "unknown" : c.subjectProminence();
+      String sentiment = c.sentiment() == null ? "unknown" : c.sentiment();
+      lines.add(
+          "Item "
+              + i
+              + ": "
+              + c.headline()
+              + "\n"
+              + "  Outlet: "
+              + outlet
+              + " (Tier "
+              + tier
+              + ")"
+              + "\n"
+              + "  Subject prominence: "
+              + prominence
+              + "  |  Sentiment: "
+              + sentiment);
+      if (c.summary() != null && !c.summary().isBlank()) {
+        lines.add("  Summary: " + truncate(c.summary(), 320));
+      }
+      i++;
+    }
+    return String.join("\n", lines);
+  }
+
+  private static String truncate(String s, int n) {
+    if (s == null || s.length() <= n) return s;
+    return s.substring(0, n - 1) + "…";
   }
 
   private static int tierWeight(Integer t) {
@@ -142,10 +221,15 @@ public record SummaryInputs(
     if (periodStart == null || periodEnd == null) return "";
     boolean fullMonth =
         periodStart.getDayOfMonth() == 1
-            && periodEnd.equals(periodStart.withDayOfMonth(periodStart.lengthOfMonth()))
+            && periodEnd.getDayOfMonth() == periodEnd.lengthOfMonth()
+            && periodStart.getYear() == periodEnd.getYear()
             && periodStart.getMonth() == periodEnd.getMonth();
     if (fullMonth) {
-      return periodStart.format(java.time.format.DateTimeFormatter.ofPattern("LLLL yyyy"));
+      return periodStart
+              .getMonth()
+              .getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)
+          + " "
+          + periodStart.getYear();
     }
     return periodStart + " to " + periodEnd;
   }
@@ -184,5 +268,40 @@ public record SummaryInputs(
       b.append("Notable headlines:\n").append(headlines);
     }
     return b.toString();
+  }
+
+  /**
+   * Richer block for v1.2 — adds the prominence breakdown and the per-item details (extraction
+   * summary, prominence, sentiment) so the LLM has grounding for any subject-prominence claim it
+   * might make and can correctly state "client not mentioned" when extraction said so.
+   */
+  public String coverageItemsSummaryV12() {
+    StringBuilder b = new StringBuilder();
+    b.append(coverageItemsSummary()).append('\n');
+    b.append("Subject prominence — feature: ")
+        .append(featureCount)
+        .append(", mention: ")
+        .append(mentionCount)
+        .append(", passing: ")
+        .append(passingCount)
+        .append(", unknown: ")
+        .append(prominenceUnknownCount)
+        .append('\n');
+    if (perItemBlock != null && !perItemBlock.isBlank()) {
+      b.append("\nPer-item detail (use these summaries — they note when the client is not ")
+          .append("mentioned in an article):\n")
+          .append(perItemBlock);
+    }
+    return b.toString();
+  }
+
+  /**
+   * True iff we have items but none of them feature or mention the client (only passing or
+   * unknown). Drives the runtime short-circuit in SummaryService — we don't ask the LLM to write an
+   * executive summary about a period with no substantive coverage; we write a deterministic one and
+   * skip the call.
+   */
+  public boolean hasNoSubstantiveCoverage() {
+    return count > 0 && featureCount == 0 && mentionCount == 0;
   }
 }
