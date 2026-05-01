@@ -650,6 +650,7 @@ export type ReportSummary = {
 export type Report = {
   id: string;
   client_id: string;
+  client_name: string | null;
   workspace_id: string;
   template_id: string;
   title: string;

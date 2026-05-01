@@ -92,7 +92,10 @@ export function ReportReview() {
       crumbs={[
         { label: `${slug}.beat.app`, to: '/clients' },
         { label: 'clients', to: '/clients' },
-        { label: 'client', to: `/clients/${r.client_id}` },
+        {
+          label: (r.client_name ?? 'client').toLowerCase(),
+          to: `/clients/${r.client_id}`,
+        },
         { label: r.title.toLowerCase() },
         { label: 'coverage' },
       ]}
@@ -120,7 +123,8 @@ export function ReportReview() {
                   <span className="text-gray-500">done</span>
                 </span>
                 {counts.extracting > 0 && (
-                  <span className="text-blue-700 font-medium tabular-nums">
+                  <span className="text-blue-700 font-medium tabular-nums inline-flex items-center gap-1.5">
+                    <Spinner />
                     {counts.extracting} extracting
                   </span>
                 )}
@@ -637,6 +641,28 @@ function formatCount(n: number | null | undefined): string | null {
   return n.toLocaleString();
 }
 
+/** Inline spinner used next to "Extracting…" labels. 12px, currentColor stroke so it inherits
+ * the surrounding text color. */
+function Spinner() {
+  return (
+    <svg
+      className="animate-spin h-3 w-3"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+      <path
+        d="M21 12a9 9 0 0 1-9 9"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
 /** Article thumbnail with graceful fallback when the image fails to load (broken URL, R2 misconfig,
  * stale row from a previous data shape). Matches the placeholder size + chrome so layout doesn't
  * shift when the load fails. */
@@ -694,7 +720,10 @@ function ExtractingPanel({ sourceUrl }: { sourceUrl: string }) {
         <div className="mt-2 h-2 w-2/3 bg-gray-100 rounded animate-pulse" />
         <div className="mt-1.5 h-2 w-2/5 bg-gray-100 rounded animate-pulse" />
       </div>
-      <span className="text-xs text-blue-700 flex-none font-medium">Extracting…</span>
+      <span className="text-xs text-blue-700 flex-none font-medium inline-flex items-center gap-1.5">
+        <Spinner />
+        Extracting…
+      </span>
     </div>
   );
 }

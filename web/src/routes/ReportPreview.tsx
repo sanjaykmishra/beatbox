@@ -169,6 +169,10 @@ export function ReportPreview() {
     <BrowserFrame
       crumbs={[
         { label: `${slug}.beat.app`, to: '/clients' },
+        {
+          label: (r.client_name ?? 'client').toLowerCase(),
+          to: `/clients/${r.client_id}`,
+        },
         { label: r.title.toLowerCase(), to: `/reports/${r.id}` },
         chromeLabel,
       ]}
