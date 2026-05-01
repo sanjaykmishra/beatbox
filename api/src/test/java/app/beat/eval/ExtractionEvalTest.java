@@ -43,6 +43,19 @@ public class ExtractionEvalTest {
     PromptTemplate tmpl11 = loader.get("extraction-v1-1");
     assertThat(tmpl11.body()).contains("{{client_context}}");
 
+    // v1.2 (cost-engineered two-tier) loads the Haiku-tier block as its body. The Sonnet
+    // escalation reason is prepended at call time by TwoTierExtractionService rather than
+    // substituted as a template variable, since PromptLoader exposes only the first fenced block.
+    PromptTemplate tmpl12 = loader.get("extraction-v1-2");
+    assertThat(tmpl12.body())
+        .contains(
+            "{{url}}",
+            "{{outlet_name}}",
+            "{{subject_name}}",
+            "{{article_text}}",
+            "{{client_context}}");
+    assertThat(tmpl12.model()).contains("haiku");
+
     // Validate the comparison logic against a synthetic-but-shape-correct response.
     List<EvalRunner.Outcome> outcomes = new ArrayList<>();
     for (var it : items) {
