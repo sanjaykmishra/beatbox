@@ -57,7 +57,10 @@ public class ExtractionWorker {
   private final OutletTierClassifier tierClassifier;
   private final ActivityRecorder activity;
   private final AlertService alertService;
-  private final ObjectMapper json = new ObjectMapper();
+  // Spring-managed ObjectMapper has JavaTimeModule registered (Spring Boot auto-config);
+  // a fresh `new ObjectMapper()` would fail when serializing ExtractionResult.publishDate
+  // (LocalDate) into raw_extracted with "Java 8 date/time type ... not supported by default".
+  private final ObjectMapper json;
   private final boolean enabled;
 
   private final ExecutorService pool = Executors.newFixedThreadPool(BATCH_SIZE);
@@ -76,6 +79,7 @@ public class ExtractionWorker {
       OutletTierClassifier tierClassifier,
       ActivityRecorder activity,
       AlertService alertService,
+      ObjectMapper json,
       @Value("${beat.extraction.enabled:true}") boolean enabled) {
     this.jobs = jobs;
     this.coverage = coverage;
@@ -90,6 +94,7 @@ public class ExtractionWorker {
     this.tierClassifier = tierClassifier;
     this.activity = activity;
     this.alertService = alertService;
+    this.json = json;
     this.enabled = enabled;
   }
 
