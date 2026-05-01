@@ -10,7 +10,7 @@ This file is the entry point. Read it fully, then read `docs/` in order. Wirefra
 
 **Why we win:** 10x cheaper than Cision/Muck Rack/Meltwater. Reporting-first, not database-first. LLM-native (better summaries, sentiment, narrative arcs).
 
-**Pricing:** $39/mo solo, $99/mo agency. No free tier. 14-day trial.
+**Pricing:** $59/mo solo, $179/mo agency, $349/mo studio. No free tier. 14-day trial. Existing customers grandfathered at $39/$99 for 12 months from price change. See `docs/18-cost-engineering.md` for the cost analysis underpinning these figures.
 
 ## Build context
 
@@ -27,7 +27,7 @@ This file is the entry point. Read it fully, then read `docs/` in order. Wirefra
 | Queue | Postgres LISTEN/NOTIFY for v1; RabbitMQ when we outgrow it | Avoid infra sprawl early |
 | Frontend | React 18 + Vite + TypeScript + Tailwind | Team strength is JS |
 | PDF rendering | Puppeteer microservice (Node) | Best-in-class HTML→PDF; worth the extra service |
-| LLM | Anthropic API. Sonnet for extraction, Opus for executive summary | See `docs/05-llm-prompts.md` |
+| LLM | Anthropic API. Haiku for high-volume mechanical work, Sonnet for judgment, Opus reserved for keystone customer-facing prose. | See `docs/05-llm-prompts.md` and `docs/18-cost-engineering.md` |
 | Article fetching | Mercury Parser → Readability → paid scraper API fallback (e.g. ScrapingBee) | Layered for paywalls |
 | Auth | Email/password + session cookies (no SSO until enterprise tier) | Boring is fine |
 | Billing | Stripe Checkout + Customer Portal | Don't build billing UI |
@@ -126,6 +126,8 @@ These exist because failure here is high-cost. Don't relax them without explicit
 6. **Brand-safe by default.** Every PDF carries the agency's branding (their logo, their colors), never Beat's. Beat is invisible to the agency's clients.
 7. **Activity events fire on every meaningful action.** When adding new mutations, add the corresponding `activity_events` write. The founder dashboard, customer analytics, and Phase 3+ features depend on this discipline. See `docs/15-additions.md` §15.2.
 8. **Social mentions are first-class.** When new features reason about "what's been written about a client," they include both `coverage_items` and `social_mentions`. Don't accidentally regress to article-only logic.
+9. **Pitches never auto-send.** Every individual pitch requires a human click. There is no auto-send mode, no scheduled bulk-send, no "approve and forget" workflow. See `docs/12a-phase-3-campaign-workflow.md` for full reasoning. Non-negotiable.
+10. **Cost engineering disciplines apply across every AI surface.** Model tiering (Haiku/Sonnet/Opus by signal value), prompt caching, context compression, batching async work, and deterministic pre-filters are not optional optimizations — they're how the cost-to-revenue ratio works. See `docs/18-cost-engineering.md`. Eval gates are non-negotiable; quality preservation gates every cost migration.
 
 ## Where to find things
 
@@ -141,9 +143,14 @@ These exist because failure here is high-cost. Don't relax them without explicit
 - **Roadmap overview, phase gates:** `docs/10-roadmap-overview.md`
 - **Phase 1.5 (months 3–4) — social wedge:** `docs/17-phase-1-5-social.md`
 - **Phase 2 (months 4–7) — expand the wedge:** `docs/11-phase-2-features.md`
-- **Phase 3 (months 7–12) — pitch tracker:** `docs/12-phase-3-pitch-tracker.md`
+- **Phase 3 (months 7–12) — pitch tracker (Part 1):** `docs/12-phase-3-pitch-tracker.md`
+- **Phase 3 (months 12–15) — campaign workflow (Part 2):** `docs/12a-phase-3-campaign-workflow.md`
 - **Phase 4 (year 2) — platform:** `docs/13-phase-4-platform.md`
+- **Multi-tenancy rules + new-table pre-flight checklist:** `docs/14-multi-tenancy.md`
 - **Additions to canonical roadmap (client context, instrumentation, digest):** `docs/15-additions.md`
+- **Client dashboard and workspace badges:** `docs/16-client-dashboard.md`
+- **Phase 1.5 (months 3–4) — social wedge:** `docs/17-phase-1-5-social.md`
+- **AI cost engineering across all surfaces:** `docs/18-cost-engineering.md`
 
 ## Getting started with Claude Code
 
@@ -162,4 +169,4 @@ These are things I haven't fully decided. If you hit one, raise it — don't pic
 - **Outlet curation source.** ~500 hand-curated outlets. Where does the seed list come from? Probably scraped from Cision/Muck Rack public lists + manual review.
 - **Sentiment model.** Pure LLM, or LLM + a separate FinBERT-style classifier as a sanity check? Starting LLM-only; revisit if eval scores plateau.
 - **Reach numbers.** Domain Authority (Moz/Ahrefs) vs. SimilarWeb visit estimates. Need to pick one source and stick with it for consistency. Defaulting to DA via DataForSEO until proven inadequate.
-- **Multi-tenant isolation strategy.** Row-level (workspace_id on every table, enforced by app code) for v1. Postgres RLS later if/when enterprise tier demands it.
+- **Multi-tenant isolation strategy.** Row-level (workspace_id on every table, enforced by app code) for v1. Postgres RLS later if/when enterprise tier demands it. See `docs/14-multi-tenancy.md` for current rules and the pre-flight checklist for new tenant tables.

@@ -181,7 +181,7 @@ Acceptance:
 
 Deliverables:
 
-- Stripe products + prices configured (Solo $39/mo, Agency $99/mo, plus annual variants at 15% off).
+- Stripe products + prices configured (Solo $59/mo, Agency $179/mo, Studio $349/mo, plus annual variants at 15% off; design partner SKU at $20/mo locked).
 - `POST /v1/billing/checkout` returns Stripe Checkout session URL.
 - `POST /v1/billing/portal` returns Stripe Customer Portal URL.
 - `POST /v1/webhooks/stripe` handles subscription lifecycle events.
