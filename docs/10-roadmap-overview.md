@@ -37,7 +37,7 @@ If any of these aren't true at month 3, fix them before adding scope. Phase 2 fe
 ### Phase 2 → Phase 3
 
 - $15K+ MRR
-- Average MRR per customer ≥ $99 (i.e. expansion to Agency tier is real)
+- Average MRR per customer ≥ $179 (i.e. expansion to Agency tier is real)
 - Template editor used by 50%+ of agency-tier customers
 - Read-only client portal used by 30%+ of customers (i.e. agencies are inviting their own clients)
 - Founder has heard "I wish you tracked my pitches too" from at least 8 customers without prompting
@@ -51,6 +51,8 @@ That last one is critical. Phase 3 is a major build; we don't start it on a hunc
 - Net revenue retention > 110% (existing customers expand faster than they churn)
 - At least 3 inbound enterprise inquiries that we couldn't fully serve in Phase 3
 - Internal capacity: at least 3 engineers (we cannot ship Phase 4 with two)
+
+Note: Phase 3 is the largest single phase in the roadmap, structured in two parts. Part 1 (months 7–12, ~12 weeks) ships the pitch tracker core: data model, capture, reply tracking, attribution, analytics, journalist DB expansion. See `docs/12-phase-3-pitch-tracker.md`. Part 2 (months 12–15, ~10 weeks) ships the campaign workflow on top: brief → strategy → targets → pitches → send → learn. See `docs/12a-phase-3-campaign-workflow.md`. Part 1 must be stable before Part 2 starts because the AI ranking and drafting in Part 2 cold-start poorly without the data Part 1 accumulates.
 
 ## What each phase delivers (one-line summary)
 
@@ -82,27 +84,36 @@ The discipline of saying no is what makes the wedge strategy work. Items below a
 
 ## Rough cost projection per phase
 
-To inform pricing and runway. Numbers are order-of-magnitude.
+To inform pricing and runway. Numbers are post-cost-engineering (see `docs/18-cost-engineering.md` for the analysis). Phase 1 figures assume the Phase 1 rebuild has absorbed v1.x prompt successors.
 
-| Cost category | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
-|---|---|---|---|---|
-| Anthropic API per customer/mo | $2 | $4 | $8 | $12 |
-| Article scraping per customer/mo | $1 | $2 | $3 | $5 |
-| Hosting/storage per customer/mo | <$1 | $1 | $2 | $3 |
-| **All-in COGS per customer/mo** | **~$4** | **~$7** | **~$13** | **~$20** |
+| Cost category | Phase 1 | Phase 1.5 | Phase 2 | Phase 3 | Phase 4 |
+|---|---|---|---|---|---|
+| Anthropic API per workspace/mo | $2-5 | $4-8 | $6-12 | $25-47 | $40-97* |
+| Article scraping per workspace/mo | $1 | $2 | $3 | $4 | $6 |
+| Hosting/storage per workspace/mo | <$1 | $1 | $2 | $3 | $5 |
+| **All-in COGS per workspace/mo** | **~$4-7** | **~$8-12** | **~$12-18** | **~$32-55** | **~$50-110** |
 
-Gross margins should hold at 80%+ across all phases. If they slip, we're either pricing wrong or under-engineering caching.
+*Phase 4 figure includes the LLM visibility tracking add-on for workspaces that opt into it; without the add-on, Phase 4 stays at Phase 3 levels.
 
-## Pricing evolution
+The Phase 3 cost jump reflects the full campaign workflow (strategy, ranking, tone analysis, drafting, insights). The cost engineering pass in `docs/18-cost-engineering.md` is what makes those numbers achievable; without it the same scope projects at $120-280/workspace/mo.
 
-| Tier | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
-|---|---|---|---|---|
-| Solo | $39/mo | $49/mo | $59/mo | $69/mo |
-| Agency | $99/mo | $149/mo | $199/mo | $249/mo |
-| Pro / Studio | — | $299/mo | $399/mo | $499/mo |
-| Enterprise | — | — | — | $800–2000/mo (custom) |
+Gross margins target: 70%+ across all tiers post-Phase-3. Solo at $59 with $35 mid-Phase-3 COGS → 41% margin (acknowledged tight; solos use less than full Phase 3 volume in practice). Agency at $179 with $40 COGS → 78% margin. Studio at $349 with $50 COGS → 86% margin. Agency tier is the margin engine.
 
-Existing customers grandfathered at their original price for 12 months. New tier between Agency and Enterprise opens up in Phase 2 ("Studio" — for 10–25 person agencies that have outgrown Agency).
+## Pricing
+
+Updated pricing reflects the cost engineering analysis in `docs/18-cost-engineering.md`. The original $39/$99 from Phase 1 was undersold given full Phase 3 + 4 AI volumes.
+
+| Tier | Price | Limits |
+|---|---|---|
+| Solo | $59/mo | 1 user, 5 client workspaces, 50 reports/mo |
+| Agency | $179/mo | 5 users, 15 client workspaces, unlimited reports |
+| Studio | $349/mo | 15 users, 40 client workspaces, unlimited reports, priority support |
+| Enterprise (Phase 4) | $800–2000/mo | custom — SSO, SAML, audit logs, RLS, dedicated support |
+| LLM visibility add-on (Phase 4) | +$49/mo | per workspace, optional |
+
+**Existing customers grandfathered.** Customers who signed up at $39/$99 in Phase 1 stay at their original price for 12 months from the price change. Annual subscribers are locked for the duration of their term.
+
+**Design partners** (first ~10 customers): $20/mo for 6 months, locked-in for life.
 
 ## Sequencing principle
 
@@ -116,11 +127,11 @@ If three customers in a row demand the same feature out of order, ship it. Ignor
 
 ## Reading the phase docs
 
-Each of `docs/11`, `docs/12`, `docs/13` follows the same structure:
+Each of `docs/11`, `docs/12`, `docs/12a`, `docs/13` follows the same structure:
 
 1. **What and why** — the headline change and the customer evidence motivating it.
 2. **Features** — each feature with: motivation, data model additions, API additions, UI surface, LLM/prompt impact, key risks, acceptance criteria.
 3. **Migration / backwards compat** — what existing data needs to be backfilled or restructured.
 4. **Phase gate to next** — repeat of the criteria above for clarity.
 
-Code paths in the phase docs assume the file structure established in `CLAUDE.md`. New tables follow the naming and conventions in `docs/03-data-model.md`. New endpoints follow `docs/04-api-surface.md`. New prompts follow `docs/05-llm-prompts.md`.
+Code paths in the phase docs assume the file structure established in `CLAUDE.md`. New tables follow the naming and conventions in `docs/03-data-model.md` and the multi-tenancy rules in `docs/14-multi-tenancy.md`. New endpoints follow `docs/04-api-surface.md`. New prompts follow `docs/05-llm-prompts.md` and the cost discipline in `docs/18-cost-engineering.md`.

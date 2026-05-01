@@ -35,10 +35,10 @@ Solve only this one job, unreasonably well.
 
 | Segment | Time saved per month | $ value (at $150/hr blended) | Beat price | ROI |
 |---|---|---|---|---|
-| Solo, 5 clients | ~30 hours | $4,500 | $39 | ~115x |
-| Boutique, 12 clients | ~80 hours | $12,000 | $99 | ~120x |
+| Solo, 5 clients | ~30 hours | $4,500 | $59 | ~76x |
+| Boutique, 12 clients | ~80 hours | $12,000 | $179 | ~67x |
 
-ROI is theatrically high on purpose — pricing is set for adoption, not extraction. We can raise it later when expansion features land.
+ROI is theatrically high on purpose — pricing is set for adoption while supporting healthy gross margin given full Phase 3 AI cost. See `docs/18-cost-engineering.md` for the cost analysis.
 
 ## Differentiation
 
@@ -47,20 +47,25 @@ ROI is theatrically high on purpose — pricing is set for adoption, not extract
 | Reporting-native | Bolted on | DIY | Core product |
 | Setup time | Weeks | Minutes | Minutes |
 | Branded output | Limited | None | Per-agency |
-| Price | $10K+/yr | $20/mo | $39–99/mo |
+| Price | $10K+/yr | $20/mo | $59–349/mo |
 | LLM-native quality | No | Yes (DIY) | Yes (productized) |
 
-## Pricing (Phase 1)
+## Pricing
 
 | Plan | Price | Limits |
 |---|---|---|
-| Solo | $39/mo | 1 user, 5 client workspaces, 50 reports/mo |
-| Agency | $99/mo | 5 users, 15 client workspaces, unlimited reports |
+| Solo | $59/mo | 1 user, 5 client workspaces, 50 reports/mo |
+| Agency | $179/mo | 5 users, 15 client workspaces, unlimited reports |
+| Studio | $349/mo | 15 users, 40 client workspaces, unlimited reports, priority support |
 
 - Annual: 15% discount, locked-in pricing for life of subscription.
 - 14-day trial, no credit card. After trial, card required.
 - No free tier. Bootstrapped means no time for free riders.
 - Design partners (first ~10 customers): $20/mo for 6 months, locked-in for life.
+- **Existing customers** (those who signed up at $39/$99 in Phase 1) are grandfathered at their original price for 12 months from the price change date. Price change announcement included.
+- LLM visibility tracking add-on (Phase 4): +$49/mo per workspace. Optional.
+
+Pricing reflects the cost analysis in `docs/18-cost-engineering.md` — at full Phase 3 + 4 AI volumes, the original $39/$99 pricing produced negative gross margin on heavy users. The new tiers preserve 70%+ gross margin even at the most expensive tier of usage.
 
 ## Scope: in vs out
 

@@ -9,7 +9,7 @@ If you're Claude Code: skim this for context on user motivations, then ignore it
 Confirm three things in 15–20 calls:
 
 1. Monthly client reporting is in the top 3 monthly pains for boutique PR teams (not just "annoying").
-2. They would pay $39–99/month for a tool that fully solves it.
+2. They would pay $59–179/month for a tool that fully solves it. (Phase 1 discovery validated $39–99; current pricing is $59/$179/$349 per `docs/01-product-and-users.md`. Future discovery for new segments should reference current tiers.)
 3. At least 5 of them will pay something now to be design partners and shape v1.
 
 If you finish 20 calls without 5 paid LOIs, the wedge is wrong. Stop and re-pick.

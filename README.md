@@ -72,17 +72,32 @@ make api-test       # backend only — integration tests use Testcontainers (nee
 │   ├── 06-evals.md
 │   ├── 07-wireframes.md
 │   ├── 08-build-plan.md
-│   └── 09-discovery-script.md
+│   ├── 09-discovery-script.md
+│   ├── 10-roadmap-overview.md
+│   ├── 11-phase-2-features.md
+│   ├── 12-phase-3-pitch-tracker.md      ← Phase 3 Part 1
+│   ├── 12a-phase-3-campaign-workflow.md ← Phase 3 Part 2
+│   ├── 13-phase-4-platform.md
+│   ├── 14-multi-tenancy.md              ← isolation rules + pre-flight checklist
+│   ├── 15-additions.md
+│   ├── 16-client-dashboard.md
+│   ├── 17-phase-1-5-social.md
+│   └── 18-cost-engineering.md           ← system-wide AI cost discipline
 ├── prompts/                  ← versioned LLM prompts as standalone files
-│   ├── extraction-v1.md
+│   ├── extraction-v1.md, extraction-v1-1.md, extraction-v1-2.md
 │   ├── outlet-tier-v1.md
-│   └── executive-summary-v1.md
-├── assets/                   ← wireframes
-│   ├── wireframe-1-create.png
-│   ├── wireframe-2-review.png
-│   └── wireframe-3-report.png
+│   ├── executive-summary-v1.md, executive-summary-v1-1.md
+│   ├── reply-classification-v1.md, reply-classification-v1-1.md
+│   ├── pitch-attribution-v1.md, pitch-attribution-v1-1.md
+│   ├── post-variant-v1.md, post-variant-v1-1.md
+│   ├── social-extraction-v1.md
+│   ├── campaign-strategy-v1.md          ← Phase 3 Part 2
+│   ├── journalist-ranking-v1.md         ← Phase 3 Part 2 (two-tier)
+│   ├── pitch-tone-analysis-v1.md        ← Phase 3 Part 2
+│   ├── pitch-draft-v1.md                ← Phase 3 Part 2 (confidence-routed)
+│   └── campaign-insights-v1.md          ← Phase 3 Part 2
+├── assets/                   ← wireframes (PNGs)
 ├── migrations/               ← Flyway SQL migrations (forward-only)
-│   └── V001__init.sql
 ├── api/                      ← Spring Boot 3 + Java 21
 ├── web/                      ← Vite + React 18 + TS + Tailwind
 ├── render/                   ← Node + Express + Puppeteer
@@ -92,8 +107,12 @@ make api-test       # backend only — integration tests use Testcontainers (nee
 └── .github/workflows/        ← CI + deploy
 ```
 
+The prompts directory shows the versioning lineage. v1.0 prompts are the originals; v1.1/v1.2 successors are the cost-engineered versions per `docs/18-cost-engineering.md`. Existing rows in `coverage_items`, `pitches`, etc. stay pinned to the prompt version they were created against — never re-extracted retroactively.
+
 ## Phase 1 in one paragraph
 
-Ten weeks. Ship the smallest tool that turns a list of coverage URLs into a polished PDF report. Java + Spring Boot backend, React + Vite frontend, Node + Puppeteer for PDF rendering, Postgres for storage, Anthropic API for extraction and summary. No coverage monitoring, no journalist database, no pitch tracker — those are Phase 2 and 3. Land the first paying customer in week 11–12.
+Ten weeks. Ship the smallest tool that turns a list of coverage URLs into a polished PDF report. Java + Spring Boot backend, React + Vite frontend, Node + Puppeteer for PDF rendering, Postgres for storage, Anthropic API for extraction and summary. No coverage monitoring, no journalist database, no pitch tracker — those are Phase 2 and 3.
 
-Full week-by-week breakdown in `docs/08-build-plan.md`.
+**Phase 1 is built.** Phase 1.5 (social wedge — `docs/17-phase-1-5-social.md`) is also built. Both will need to be rebuilt to absorb the AI cost-engineering migrations described in `docs/18-cost-engineering.md` — the v1.0/v1.1 prompts they shipped against have v1.x successors that materially reduce per-workspace AI cost. The rebuild is sequenced into Phase 3 work so it doesn't block forward progress.
+
+Full roadmap and phase gates in `docs/10-roadmap-overview.md`. Week-by-week Phase 1 build details in `docs/08-build-plan.md`.

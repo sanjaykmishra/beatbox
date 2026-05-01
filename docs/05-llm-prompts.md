@@ -4,22 +4,48 @@ The actual prompt text lives in versioned files under `/prompts/`. This doc cove
 
 ## Model selection
 
+The system tiers models by signal value per the cost engineering discipline in `docs/18-cost-engineering.md`. Three tiers are in active use:
+
 | Use case | Model | Why |
 |---|---|---|
-| Article extraction | Claude Sonnet | Cheap, fast, excellent at structured JSON output |
-| Outlet tier classification (cache miss) | Claude Sonnet | Same |
-| Executive summary | Claude Opus | Prose quality matters most here; this is what the client sees first |
+| Reply classification (post-pre-filter) | Claude Haiku | Bounded 6-class task on short text; Haiku handles confidently with Sonnet escalation only on low-confidence cases |
+| Coverage extraction (first-pass) | Claude Haiku | ~80% of articles are clean professional journalism Haiku extracts reliably; escalates to Sonnet on low confidence or schema fail |
+| Pitch attribution (high-similarity matches) | Claude Haiku | Binary verification on top embedding-similarity matches; deterministic enough for Haiku |
+| Journalist ranking (first-pass) | Claude Haiku | Score the bulk of candidates; escalate borderline (45-80) to Sonnet |
+| Coverage extraction (escalation) | Claude Sonnet | When Haiku flags low confidence or fails schema |
+| Outlet tier classification (cache miss) | Claude Sonnet | Light reasoning; cached forever per domain so volume is low |
+| Pitch tone analysis | Claude Sonnet | Pattern characterization; cached with frequency-tiered TTL |
+| Executive summary | Claude Sonnet | Structured prose; modern Sonnet matches Opus on this task |
+| Pitch draft (medium/low confidence) | Claude Sonnet | Personalized prose; modern Sonnet handles routine pitches at quality indistinguishable from Opus |
+| Reply classification (escalation) | Claude Sonnet | When Haiku confidence is low |
+| Pitch attribution (medium-similarity) | Claude Sonnet | Genuine ambiguity needs reasoning |
+| Campaign insights | Claude Sonnet | Analytical writing on aggregated data |
+| Campaign strategy | Claude Opus | Keystone — drives every downstream step; agency reads aloud to client |
+| Pitch draft (high confidence) | Claude Opus | Highest-stakes pitches go to most-likely-to-respond journalists; quality matters most here |
 
-Exact model versions are env vars (`ANTHROPIC_MODEL_EXTRACTION`, `ANTHROPIC_MODEL_SUMMARY`) so we can pin at deploy time and roll forward intentionally.
+Exact model versions are env vars (`ANTHROPIC_MODEL_HAIKU`, `ANTHROPIC_MODEL_SONNET`, `ANTHROPIC_MODEL_OPUS`) so we can pin at deploy time and roll forward intentionally.
+
+Note that for prompts running on multiple models (extraction, ranking, pitch draft, reply classification, attribution), each prompt file documents which model handles which path and the escalation/routing logic. The orchestration layer decides which to call.
 
 ## Prompt sources
 
 ```
 prompts/
-├── extraction-v1.md          ← see contents
+├── extraction-v1.md, extraction-v1-1.md, extraction-v1-2.md
 ├── outlet-tier-v1.md
-└── executive-summary-v1.md
+├── executive-summary-v1.md, executive-summary-v1-1.md
+├── reply-classification-v1.md, reply-classification-v1-1.md
+├── pitch-attribution-v1.md, pitch-attribution-v1-1.md
+├── post-variant-v1.md, post-variant-v1-1.md
+├── social-extraction-v1.md
+├── campaign-strategy-v1.md          ← Phase 3 Part 2
+├── journalist-ranking-v1.md         ← Phase 3 Part 2
+├── pitch-tone-analysis-v1.md        ← Phase 3 Part 2
+├── pitch-draft-v1.md                ← Phase 3 Part 2
+└── campaign-insights-v1.md          ← Phase 3 Part 2
 ```
+
+Versioning lineage: v1.0 prompts are the originals. v1.1/v1.2 successors are the cost-engineered versions per `docs/18-cost-engineering.md`. Phase 3 Part 2 prompts ship at v1.0 with cost engineering built in (no v1.0-then-v1.1 lineage; the cost-engineered design is the initial release).
 
 Each file:
 1. Starts with frontmatter: `version`, `model`, `temperature`, `max_tokens`, `expected_output_format`.
@@ -70,9 +96,13 @@ public CoverageItem extract(UUID coverageItemId) {
 Enforced in the worker:
 
 - **Hard token cap per article**: 8,000 input + 1,000 output for extraction; truncate article text if needed.
-- **Hard cost cap per workspace per month**: starts at $50 for solo, $200 for agency, configurable per-workspace by ops.
-- **Idempotency cache**: `(article_content_hash, prompt_version) → extracted_json`. If a customer re-pastes the same article URL into a new report, we hit cache.
+- **Hard cost cap per workspace per month**: starts at $150 for solo, $400 for agency, $700 for studio, configurable per-workspace by ops. These ceilings reflect the cost engineering analysis in `docs/18-cost-engineering.md` — typical workspaces run well under these caps; the cap exists to catch runaway-loop bugs and abuse, not to throttle normal usage.
+- **Idempotency cache**: `(article_content_hash, prompt_version) → extracted_json`. If a customer re-pastes the same article URL into a new report, we hit cache. Coverage extraction v1.2 extends this to a cross-customer cache (extraction output is workspace-agnostic) for additional savings.
 - **Workspace metering**: every LLM call writes `extraction.cost_usd` metric tagged by workspace_id. Weekly review for outliers.
+- **Prompt caching**: most prompts use Anthropic's prompt caching for stable instruction blocks and per-workspace context. See individual prompt files for which blocks are cached.
+- **Batch mode**: ranking and drafting (Phase 3 Part 2) run via the Anthropic Batches API for the 50% async discount.
+
+For the system-wide cost discipline (model tiering, caching, context compression, batching, deterministic pre-filters), see `docs/18-cost-engineering.md`. That doc is canonical for cost-related decisions until individual prompt files are updated to match.
 
 ## Output validation
 
