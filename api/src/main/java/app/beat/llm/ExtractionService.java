@@ -209,7 +209,7 @@ public class ExtractionService {
    * Per docs/15-additions.md §15.1, deliberately excludes do_not_pitch and important_dates from the
    * extraction prompt — those are agency-internal and would bias sentiment.
    */
-  static String renderClientContext(ClientContext c, String subjectName) {
+  public static String renderClientContext(ClientContext c, String subjectName) {
     StringBuilder b = new StringBuilder();
     b.append("Relevant context about ").append(subjectName).append(":\n");
     if (c.keyMessages() != null && !c.keyMessages().isBlank()) {

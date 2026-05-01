@@ -202,11 +202,15 @@ export const api = {
   ) => request<Report>('POST', `/v1/clients/${clientId}/reports`, b),
   getReport: (id: string) => request<Report>('GET', `/v1/reports/${id}`),
   addCoverage: (reportId: string, urls: string[]) =>
-    request<{ items: { id: string; source_url: string; extraction_status: string }[] }>(
-      'POST',
-      `/v1/reports/${reportId}/coverage`,
-      { urls },
-    ),
+    request<{
+      items: {
+        id: string;
+        source_url: string;
+        extraction_status: string;
+        kind: 'article' | 'social';
+        platform: SocialPlatformId | null;
+      }[];
+    }>('POST', `/v1/reports/${reportId}/coverage`, { urls }),
   patchCoverage: (
     reportId: string,
     itemId: string,
@@ -228,6 +232,31 @@ export const api = {
     request<void>('POST', `/v1/reports/${reportId}/coverage/${itemId}/retry`),
   deleteCoverage: (reportId: string, itemId: string) =>
     request<void>('DELETE', `/v1/reports/${reportId}/coverage/${itemId}`),
+  patchSocialMention: (
+    reportId: string,
+    itemId: string,
+    edits: Partial<{
+      summary: string;
+      sentiment: 'positive' | 'neutral' | 'negative' | 'mixed';
+      sentiment_rationale: string;
+      subject_prominence: 'feature' | 'mention' | 'passing';
+      topics: string[];
+    }>,
+  ) =>
+    request<{
+      id: string;
+      summary: string | null;
+      sentiment: string | null;
+      sentiment_rationale: string | null;
+      subject_prominence: string | null;
+      topics: string[];
+      is_user_edited: boolean;
+      edited_fields: string[];
+    }>('PATCH', `/v1/reports/${reportId}/social-mentions/${itemId}`, edits),
+  retrySocialMention: (reportId: string, itemId: string) =>
+    request<void>('POST', `/v1/reports/${reportId}/social-mentions/${itemId}/retry`),
+  deleteSocialMention: (reportId: string, itemId: string) =>
+    request<void>('DELETE', `/v1/reports/${reportId}/social-mentions/${itemId}`),
 
   // ----- Client context (docs/15-additions.md §15.1) -----
   getClientContext: (clientId: string) =>
@@ -553,6 +582,59 @@ export type ClientContextInput = Partial<{
   notes_markdown: string;
 }>;
 
+export type SocialPlatformId =
+  | 'x'
+  | 'linkedin'
+  | 'bluesky'
+  | 'threads'
+  | 'instagram'
+  | 'facebook'
+  | 'tiktok'
+  | 'reddit'
+  | 'substack'
+  | 'youtube'
+  | 'mastodon';
+
+export type SocialMentionView = {
+  id: string;
+  source_url: string;
+  platform: SocialPlatformId;
+  extraction_status: 'queued' | 'running' | 'done' | 'failed';
+  extraction_error: string | null;
+  author_handle: string | null;
+  author_display_name: string | null;
+  author_avatar_url: string | null;
+  author_profile_url: string | null;
+  author_follower_count: number | null;
+  author_verified: boolean;
+  posted_at: string | null;
+  content_text: string | null;
+  summary: string | null;
+  key_excerpt: string | null;
+  sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' | null;
+  sentiment_rationale: string | null;
+  subject_prominence: 'feature' | 'mention' | 'passing' | null;
+  topics: string[];
+  media_summary: string | null;
+  media_urls: string[];
+  likes_count: number | null;
+  reposts_count: number | null;
+  replies_count: number | null;
+  views_count: number | null;
+  estimated_reach: number | null;
+  is_user_edited: boolean;
+  edited_fields: string[];
+};
+
+export type ReportStatusCounts = {
+  total: number;
+  done: number;
+  extracting: number;
+  failed: number;
+  articles: number;
+  social: number;
+};
+
 export type Report = {
   id: string;
   client_id: string;
@@ -569,6 +651,8 @@ export type Report = {
   generated_at: string | null;
   created_at: string;
   coverage_items: CoverageItemView[];
+  social_mentions: SocialMentionView[];
+  status_counts: ReportStatusCounts;
 };
 
 export type CoverageItemView = {
