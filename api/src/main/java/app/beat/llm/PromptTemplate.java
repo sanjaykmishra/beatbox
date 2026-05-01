@@ -8,6 +8,18 @@ import java.util.regex.Pattern;
 public record PromptTemplate(
     String version, String model, double temperature, int maxTokens, String body) {
 
+  /**
+   * Sentinel for prompts whose frontmatter declares {@code max_tokens: dynamic} (e.g.
+   * pitch-draft-v1 routes by candidate confidence to 900/1200/1500). Callers that load such a
+   * prompt must supply the cap at call time via {@link #maxTokensOrDefault(int)}.
+   */
+  public static final int DYNAMIC_MAX_TOKENS = -1;
+
+  /** Returns the declared cap, or {@code fallback} when the prompt declared {@code dynamic}. */
+  public int maxTokensOrDefault(int fallback) {
+    return maxTokens == DYNAMIC_MAX_TOKENS ? fallback : maxTokens;
+  }
+
   private static final Pattern VAR = Pattern.compile("\\{\\{\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*}}");
 
   /** Inverted-section also accepted ({{^name}}...{{/name}}) for completeness. */

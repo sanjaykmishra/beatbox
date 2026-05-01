@@ -74,7 +74,7 @@ public class PromptLoader {
     String version = required(meta, "version");
     String model = required(meta, "model");
     double temperature = ((Number) meta.getOrDefault("temperature", 0.0)).doubleValue();
-    int maxTokens = ((Number) meta.getOrDefault("max_tokens", 1024)).intValue();
+    int maxTokens = parseMaxTokens(meta.getOrDefault("max_tokens", 1024));
 
     Matcher fm = FENCE.matcher(afterFrontmatter);
     if (!fm.find()) {
@@ -82,6 +82,17 @@ public class PromptLoader {
     }
     String body = fm.group(1).trim();
     return new PromptTemplate(version, model, temperature, maxTokens, body);
+  }
+
+  /**
+   * Parses {@code max_tokens} from frontmatter. Numeric values pass through. Any non-numeric value
+   * (e.g. {@code "dynamic"} on pitch-draft, where the cap depends on candidate confidence) maps to
+   * {@link PromptTemplate#DYNAMIC_MAX_TOKENS} — the caller is required to supply a value at
+   * runtime.
+   */
+  static int parseMaxTokens(Object raw) {
+    if (raw instanceof Number n) return n.intValue();
+    return PromptTemplate.DYNAMIC_MAX_TOKENS;
   }
 
   private static String required(Map<String, Object> m, String k) {
