@@ -17,7 +17,7 @@ class SummaryServiceTest {
   }
 
   @Test
-  void splitV11_splitsAtPerReportMarkerAndStripsBracketMarkers() {
+  void promptCacheSplit_splitsAtPerReportMarkerAndStripsBracketMarkers() {
     String rendered =
         """
         [CACHED — summary_instructions_block]
@@ -37,7 +37,7 @@ class SummaryServiceTest {
         Write the executive summary.
         """;
 
-    SummaryService.SystemAndUser split = SummaryService.splitV11(rendered);
+    PromptCacheSplit.SystemAndUser split = PromptCacheSplit.split(rendered);
 
     assertThat(split.system())
         .contains("You are writing the summary.")
@@ -56,10 +56,20 @@ class SummaryServiceTest {
   }
 
   @Test
-  void splitV11_handlesMissingMarkerByPuttingAllInSystem() {
+  void promptCacheSplit_handlesMissingMarkerByPuttingAllInSystem() {
     String unstructured = "Some prompt text with no markers at all.";
-    SummaryService.SystemAndUser split = SummaryService.splitV11(unstructured);
+    PromptCacheSplit.SystemAndUser split = PromptCacheSplit.split(unstructured);
     assertThat(split.system()).isEqualTo(unstructured);
     assertThat(split.user()).isEmpty();
+    assertThat(split.cacheable()).isFalse();
+  }
+
+  @Test
+  void promptCacheSplit_acceptsAnyNotCachedSuffix() {
+    // extraction-v1-2 uses "per-article", executive-summary-v1-1 uses "per-report" — both work.
+    PromptCacheSplit.SystemAndUser article =
+        PromptCacheSplit.split("instructions\n[NOT CACHED — per-article]\ninputs");
+    assertThat(article.user()).isEqualTo("inputs");
+    assertThat(article.cacheable()).isTrue();
   }
 }

@@ -34,6 +34,11 @@ beat:
     # Set this to a writable directory (mount as a volume in compose). When empty, screenshots
     # are simply skipped, which is fine for production where R2 above is configured.
     local-dir: ${LOCAL_SCREENSHOTS_DIR:}
+  pdfs:
+    # Local-disk fallback for generated PDFs when R2 isn't configured. Same shape as the
+    # screenshots fallback above. When empty AND R2 is empty, report generation fails with
+    # object_storage_not_configured.
+    local-dir: ${LOCAL_PDFS_DIR:}
   admin:
     # Comma-separated list of user emails allowed to view /v1/admin/*. Empty = nobody.
     emails: ${ADMIN_EMAILS:}

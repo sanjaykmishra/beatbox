@@ -86,7 +86,8 @@ public class PostVariantService {
     String rendered = t.render(vars);
     String model = modelOverride.isBlank() ? t.model() : modelOverride;
 
-    AnthropicClient.Result r = anthropic.call(model, t.temperature(), t.maxTokens(), rendered);
+    AnthropicClient.Result r =
+        anthropic.callMaybeCached(model, t.temperature(), t.maxTokens(), rendered);
 
     JsonNode parsed;
     try {

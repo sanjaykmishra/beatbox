@@ -49,6 +49,7 @@ services:
       R2_BUCKET: ${R2_BUCKET:-}
       R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
       LOCAL_SCREENSHOTS_DIR: /var/beat/screenshots
+      LOCAL_PDFS_DIR: /var/beat/pdfs
       SCRAPINGBEE_API_KEY: ${SCRAPINGBEE_API_KEY:-}
       DATAFORSEO_LOGIN: ${DATAFORSEO_LOGIN:-}
       DATAFORSEO_PASSWORD: ${DATAFORSEO_PASSWORD:-}
@@ -63,6 +64,7 @@ services:
       - "8081:8080"
     volumes:
       - screenshots-data:/var/beat/screenshots
+      - pdfs-data:/var/beat/pdfs
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,3 +106,4 @@ services:
 volumes:
   postgres-data:
   screenshots-data:
+  pdfs-data:

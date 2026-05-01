@@ -648,6 +648,7 @@ export type Report = {
   executive_summary_edited?: boolean;
   pdf_url: string | null;
   share_token: string | null;
+  failure_reason: string | null;
   generated_at: string | null;
   created_at: string;
   coverage_items: CoverageItemView[];
