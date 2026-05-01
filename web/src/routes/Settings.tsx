@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Eyebrow, Pill, type PillTone } from '../components/ui';
+import { useToast } from '../components/Toast';
+import { Alert, Eyebrow, Pill, type PillTone } from '../components/ui';
 import { api, ApiError, uploadLogo, type Billing, type Member } from '../lib/api';
 import { useAuth } from '../lib/useAuth';
 
@@ -115,7 +116,11 @@ export function Settings() {
           </div>
         </Section>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
         <MembersSection />
         <BillingSection />
@@ -187,11 +192,25 @@ function MemberRow({ member }: { member: Member }) {
 }
 
 function BillingSection() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const billing = useQuery({ queryKey: ['billing'], queryFn: () => api.getBilling() });
-  const [error, setError] = useState<string | null>(
-    params.get('billing') === 'cancelled' ? 'Checkout cancelled — try again any time.' : null,
+  const [error, setError] = useState<string | null>(null);
+  const [cancelledNotice, setCancelledNotice] = useState(
+    () => params.get('billing') === 'cancelled',
   );
+  const toast = useToast();
+
+  // Stripe redirects back with ?billing=ok on a successful checkout. Surface that as a toast and
+  // strip the param so a refresh doesn't re-fire the toast.
+  useEffect(() => {
+    if (params.get('billing') === 'ok') {
+      toast.success('Subscription updated.');
+      const next = new URLSearchParams(params);
+      next.delete('billing');
+      setParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const checkout = useMutation({
     mutationFn: ({
@@ -299,7 +318,20 @@ function BillingSection() {
             {portal.isPending ? 'Opening…' : 'Manage subscription'}
           </button>
         )}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {cancelledNotice && (
+          <Alert
+            tone="warning"
+            title="Checkout cancelled"
+            onDismiss={() => setCancelledNotice(false)}
+          >
+            You can pick up where you left off any time — your account is unchanged.
+          </Alert>
+        )}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
       </div>
     </section>
   );

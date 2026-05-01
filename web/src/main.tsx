@@ -6,6 +6,7 @@ import { AuthProvider } from './lib/auth';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ToastProvider } from './components/Toast';
 import { Signup } from './routes/Signup';
 import { Login } from './routes/Login';
 import { Clients } from './routes/Clients';
@@ -31,6 +32,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
+            <ToastProvider>
             <Routes>
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />
@@ -55,6 +57,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               </Route>
               <Route path="*" element={<Navigate to="/clients" replace />} />
             </Routes>
+            </ToastProvider>
           </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>

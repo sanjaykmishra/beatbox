@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Eyebrow, Pill, type PillTone } from '../components/ui';
+import { useToast } from '../components/Toast';
+import { Alert, Eyebrow, Pill, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import {
   api,
@@ -157,7 +158,20 @@ export function ReportReview() {
           </span>
         </div>
 
-        {generateError && <p className="text-sm text-red-600">{generateError}</p>}
+        {generateError && (
+          <Alert
+            tone="danger"
+            title="Can't generate this report yet"
+            action={
+              (counts?.failed ?? 0) > 0
+                ? { label: 'Show failed', onClick: () => setFilter('articles') }
+                : undefined
+            }
+            onDismiss={() => setGenerateError(null)}
+          >
+            {generateError}
+          </Alert>
+        )}
 
         {/* Unified items list. */}
         {unified.length === 0 ? (
@@ -639,6 +653,7 @@ function ArticleEditDrawer({
   const [lede, setLede] = useState(item.lede ?? '');
   const [publishDate, setPublishDate] = useState(item.publish_date ?? '');
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -657,9 +672,10 @@ function ArticleEditDrawer({
       if (Object.keys(edits).length === 0) return null;
       return api.patchCoverage(reportId, item.id, edits);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       onSaved();
       onClose();
+      if (result) toast.success('Coverage edits saved.');
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
   });
@@ -690,7 +706,11 @@ function ArticleEditDrawer({
         />
       </Field>
       <EditedFieldsNote fields={item.edited_fields} />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <Alert tone="danger" onDismiss={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
       <DrawerFooter onClose={onClose} onSave={() => save.mutate()} saving={save.isPending} />
     </DrawerShell>
   );
@@ -717,6 +737,7 @@ function SocialEditDrawer({
   >(item.subject_prominence ?? '');
   const [topics, setTopics] = useState((item.topics ?? []).join(', '));
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -744,9 +765,10 @@ function SocialEditDrawer({
       if (Object.keys(edits).length === 0) return null;
       return api.patchSocialMention(reportId, item.id, edits);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       onSaved();
       onClose();
+      if (result) toast.success('Social mention edits saved.');
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
   });
@@ -801,7 +823,11 @@ function SocialEditDrawer({
         />
       </Field>
       <EditedFieldsNote fields={item.edited_fields} />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <Alert tone="danger" onDismiss={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
       <DrawerFooter onClose={onClose} onSave={() => save.mutate()} saving={save.isPending} />
     </DrawerShell>
   );
