@@ -117,8 +117,10 @@ public class SummaryService {
     // a deterministic message and skip the call entirely.
     if (inputs.hasNoSubstantiveCoverage()) {
       log.info(
-          "summary: short-circuit — no substantive coverage (items={}, feature=0, mention=0)",
-          inputs.count());
+          "summary: short-circuit — no substantive coverage (items={}, feature=0, mention=0,"
+              + " passing=0, missing={})",
+          inputs.count(),
+          inputs.missingCount());
       return new Outcome(noSubstantiveCoverageText(inputs), VERSION_NO_COVERAGE_GUARD, List.of());
     }
 
@@ -173,10 +175,9 @@ public class SummaryService {
             + in.count()
             + " "
             + (in.count() == 1 ? "item was" : "items were")
-            + " logged, but none featured or mentioned "
+            + " logged, but "
             + name
-            + " as a subject — every item was tagged as a passing reference or not "
-            + "tagged at all.",
+            + " was not named in any of them — every article was tagged as missing the subject.",
         "Before treating this as a 'quiet month' narrative, audit the URLs that were added to "
             + "the report. The most common cause of an empty subject-prominence pattern is that "
             + "the URLs were on-topic for "

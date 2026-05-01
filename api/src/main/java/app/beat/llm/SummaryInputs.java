@@ -28,6 +28,7 @@ public record SummaryInputs(
     int featureCount,
     int mentionCount,
     int passingCount,
+    int missingCount,
     int prominenceUnknownCount,
     String outletList,
     String topicList,
@@ -47,7 +48,7 @@ public record SummaryInputs(
       Map<UUID, Outlet> outlets) {
     int t1 = 0, t2 = 0, t3 = 0;
     int pos = 0, neu = 0, mix = 0, neg = 0;
-    int featureN = 0, mentionN = 0, passingN = 0, unknownN = 0;
+    int featureN = 0, mentionN = 0, passingN = 0, missingN = 0, unknownN = 0;
     Map<UUID, Long> outletReach = new HashMap<>();
     Map<String, Integer> topicCounts = new LinkedHashMap<>();
     List<CoverageItem> ranked = items.stream().filter(c -> c.headline() != null).toList();
@@ -73,6 +74,7 @@ public record SummaryInputs(
           case "feature" -> featureN++;
           case "mention" -> mentionN++;
           case "passing" -> passingN++;
+          case "missing" -> missingN++;
           default -> unknownN++;
         }
       } else {
@@ -130,6 +132,7 @@ public record SummaryInputs(
         featureN,
         mentionN,
         passingN,
+        missingN,
         unknownN,
         outletList,
         topicList,
@@ -284,6 +287,8 @@ public record SummaryInputs(
         .append(mentionCount)
         .append(", passing: ")
         .append(passingCount)
+        .append(", missing: ")
+        .append(missingCount)
         .append(", unknown: ")
         .append(prominenceUnknownCount)
         .append('\n');
@@ -296,12 +301,19 @@ public record SummaryInputs(
   }
 
   /**
-   * True iff we have items but none of them feature or mention the client (only passing or
-   * unknown). Drives the runtime short-circuit in SummaryService — we don't ask the LLM to write an
-   * executive summary about a period with no substantive coverage; we write a deterministic one and
-   * skip the call.
+   * True iff we have items but none of them are non-missing — i.e., zero items have prominence in
+   * {feature, mention, passing}. Drives the runtime short-circuit in SummaryService: we don't ask
+   * the LLM to write an executive summary about a period where the client wasn't named in any
+   * article.
+   *
+   * <p>Under the v1.3 extraction prompt this fires when every item is tagged {@code missing}. For
+   * older v1.0–v1.2-era data the LLM was forced to pick {@code passing} for off-topic articles
+   * because the enum lacked {@code missing}; under the new logic those reports won't trip the guard
+   * and will go through the LLM path. That's the intended trade-off — per {@code
+   * docs/05-llm-prompts.md} we don't re-extract retroactively, and the guard is allowed to be
+   * imprecise on legacy data so it can be precise on new data.
    */
   public boolean hasNoSubstantiveCoverage() {
-    return count > 0 && featureCount == 0 && mentionCount == 0;
+    return count > 0 && featureCount == 0 && mentionCount == 0 && passingCount == 0;
   }
 }

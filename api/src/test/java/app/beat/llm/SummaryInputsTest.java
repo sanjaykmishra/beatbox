@@ -37,8 +37,9 @@ class SummaryInputsTest {
         neg,
         /* feature */ 0, /* mention */
         0, /* passing */
-        0, /* unknown */
-        count,
+        0, /* missing */
+        0,
+        /* unknown */ count,
         outlets,
         topics,
         headlines,
@@ -158,8 +159,8 @@ class SummaryInputsTest {
   }
 
   @Test
-  void hasNoSubstantiveCoverage_trueWhenAllPassing() {
-    // 3 items, all passing — Franklin BBQ scenario
+  void hasNoSubstantiveCoverage_trueWhenAllMissing() {
+    // 3 items, all missing — Franklin BBQ scenario under v1.3 extraction.
     SummaryInputs in =
         new SummaryInputs(
             "Franklin BBQ",
@@ -175,13 +176,43 @@ class SummaryInputsTest {
             0,
             /* feature */ 0, /* mention */
             0, /* passing */
-            3, /* unknown */
-            0,
+            0, /* missing */
+            3,
+            /* unknown */ 0,
             "TechCrunch, Let's Data Science",
             "funding, product launch",
             "Sources: Anthropic potential $900B valuation",
             "");
     assertThat(in.hasNoSubstantiveCoverage()).isTrue();
+  }
+
+  @Test
+  void hasNoSubstantiveCoverage_falseWhenAnyPassing() {
+    // Under v1.3 logic, even one passing item disables the guard. The LLM gets called and the
+    // v1.2 prompt's grounding rules are responsible for honest framing.
+    SummaryInputs in =
+        new SummaryInputs(
+            "Acme",
+            LocalDate.of(2026, 1, 1),
+            LocalDate.of(2026, 1, 31),
+            3,
+            0,
+            2,
+            1,
+            0,
+            3,
+            0,
+            0,
+            /* feature */ 0, /* mention */
+            0, /* passing */
+            1, /* missing */
+            2,
+            /* unknown */ 0,
+            "TechCrunch",
+            "funding",
+            "Industry roundup",
+            "");
+    assertThat(in.hasNoSubstantiveCoverage()).isFalse();
   }
 
   @Test
@@ -201,8 +232,9 @@ class SummaryInputsTest {
             0,
             /* feature */ 0, /* mention */
             1, /* passing */
-            2, /* unknown */
-            0,
+            0, /* missing */
+            2,
+            /* unknown */ 0,
             "TechCrunch",
             "funding",
             "Acme funded",
@@ -229,9 +261,40 @@ class SummaryInputsTest {
             0,
             0,
             0,
+            0,
             "",
             "",
             "",
+            "");
+    assertThat(in.hasNoSubstantiveCoverage()).isFalse();
+  }
+
+  @Test
+  void hasNoSubstantiveCoverage_isImpreciseOnLegacyAllPassingData() {
+    // v1.0–v1.2 era data: LLM tagged off-topic articles as 'passing' because the enum lacked
+    // 'missing'. The new logic treats this as substantive and routes to the LLM. Documented
+    // trade-off — the alternative would be re-extracting old reports, which docs/05 forbids.
+    SummaryInputs in =
+        new SummaryInputs(
+            "Franklin BBQ",
+            LocalDate.of(2026, 4, 1),
+            LocalDate.of(2026, 4, 30),
+            3,
+            0,
+            2,
+            1,
+            0,
+            3,
+            0,
+            0,
+            /* feature */ 0, /* mention */
+            0, /* passing */
+            3, /* missing */
+            0,
+            /* unknown */ 0,
+            "TechCrunch",
+            "funding",
+            "...",
             "");
     assertThat(in.hasNoSubstantiveCoverage()).isFalse();
   }
@@ -253,14 +316,15 @@ class SummaryInputsTest {
             0,
             /* feature */ 0, /* mention */
             1, /* passing */
-            2, /* unknown */
-            0,
+            1, /* missing */
+            1,
+            /* unknown */ 0,
             "TechCrunch",
             "funding",
             "Acme funded",
             "Item 1: Acme funded\n  Outlet: TechCrunch (Tier 2)\n  Subject prominence: mention  |  Sentiment: positive");
     String s = in.coverageItemsSummaryV12();
-    assertThat(s).contains("Subject prominence — feature: 0, mention: 1, passing: 2");
+    assertThat(s).contains("Subject prominence — feature: 0, mention: 1, passing: 1, missing: 1");
     assertThat(s).contains("Per-item detail");
     assertThat(s).contains("Item 1: Acme funded");
   }
