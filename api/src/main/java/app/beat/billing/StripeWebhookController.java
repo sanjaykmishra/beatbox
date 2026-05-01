@@ -214,6 +214,9 @@ public class StripeWebhookController {
     if (priceId.equals(billing.priceIdFor(PlanLimits.AGENCY, "monthly"))
         || priceId.equals(billing.priceIdFor(PlanLimits.AGENCY, "yearly")))
       return PlanLimits.AGENCY;
+    if (priceId.equals(billing.priceIdFor(PlanLimits.STUDIO, "monthly"))
+        || priceId.equals(billing.priceIdFor(PlanLimits.STUDIO, "yearly")))
+      return PlanLimits.STUDIO;
     return null;
   }
 

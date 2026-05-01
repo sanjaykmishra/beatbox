@@ -28,6 +28,8 @@ public class BillingService {
   private final String soloYearly;
   private final String agencyMonthly;
   private final String agencyYearly;
+  private final String studioMonthly;
+  private final String studioYearly;
   private final String appBaseUrl;
 
   public BillingService(
@@ -36,12 +38,16 @@ public class BillingService {
       @Value("${STRIPE_PRICE_SOLO_YEARLY:}") String soloYearly,
       @Value("${STRIPE_PRICE_AGENCY_MONTHLY:}") String agencyMonthly,
       @Value("${STRIPE_PRICE_AGENCY_YEARLY:}") String agencyYearly,
+      @Value("${STRIPE_PRICE_STUDIO_MONTHLY:}") String studioMonthly,
+      @Value("${STRIPE_PRICE_STUDIO_YEARLY:}") String studioYearly,
       @Value("${APP_BASE_URL:}") String appBaseUrl) {
     this.secretKey = secretKey;
     this.soloMonthly = soloMonthly;
     this.soloYearly = soloYearly;
     this.agencyMonthly = agencyMonthly;
     this.agencyYearly = agencyYearly;
+    this.studioMonthly = studioMonthly;
+    this.studioYearly = studioYearly;
     this.appBaseUrl = appBaseUrl;
   }
 
@@ -67,6 +73,8 @@ public class BillingService {
       case "solo:yearly" -> soloYearly;
       case "agency:monthly" -> agencyMonthly;
       case "agency:yearly" -> agencyYearly;
+      case "studio:monthly" -> studioMonthly;
+      case "studio:yearly" -> studioYearly;
       default -> null;
     };
   }

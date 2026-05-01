@@ -46,12 +46,13 @@ public class BillingController {
       int plan_limit_clients,
       int plan_limit_reports_monthly,
       Instant trial_ends_at,
+      Instant grandfathered_until,
       String stripe_customer_id,
       String stripe_subscription_id,
       boolean stripe_configured) {}
 
   public record CheckoutRequest(
-      @NotBlank @Pattern(regexp = "solo|agency") String plan,
+      @NotBlank @Pattern(regexp = "solo|agency|studio") String plan,
       @NotBlank @Pattern(regexp = "monthly|yearly") String interval) {}
 
   public record CheckoutResponse(String checkout_url) {}
@@ -70,6 +71,7 @@ public class BillingController {
         ws.planLimitClients(),
         ws.planLimitReportsMonthly(),
         ws.trialEndsAt(),
+        ws.grandfatheredUntil(),
         ws.stripeCustomerId(),
         ws.stripeSubscriptionId(),
         billing.isConfigured());

@@ -194,8 +194,13 @@ function BillingSection() {
   );
 
   const checkout = useMutation({
-    mutationFn: ({ plan, interval }: { plan: 'solo' | 'agency'; interval: 'monthly' | 'yearly' }) =>
-      api.startCheckout(plan, interval),
+    mutationFn: ({
+      plan,
+      interval,
+    }: {
+      plan: 'solo' | 'agency' | 'studio';
+      interval: 'monthly' | 'yearly';
+    }) => api.startCheckout(plan, interval),
     onSuccess: (r) => {
       window.location.href = r.checkout_url;
     },
@@ -215,8 +220,11 @@ function BillingSection() {
     return <p className="text-sm text-red-600">Failed to load billing.</p>;
   }
   const b = billing.data;
-  const onPaidPlan = b.plan === 'solo' || b.plan === 'agency' || b.plan === 'enterprise';
+  const onPaidPlan =
+    b.plan === 'solo' || b.plan === 'agency' || b.plan === 'studio' || b.plan === 'enterprise';
   const trialDaysLeft = trialDays(b);
+  const grandfatheredUntil = b.grandfathered_until ? new Date(b.grandfathered_until) : null;
+  const isGrandfathered = !!grandfatheredUntil && grandfatheredUntil.getTime() > Date.now();
 
   return (
     <section>
@@ -243,23 +251,42 @@ function BillingSection() {
             Billing isn't configured on the server. Set Stripe env vars to enable upgrades.
           </p>
         )}
+        {isGrandfathered && (
+          <p className="text-xs text-gray-600">
+            You're on legacy pricing through{' '}
+            {grandfatheredUntil!.toLocaleDateString(undefined, {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+            . Your current rate stays the same until then.
+          </p>
+        )}
         {b.stripe_configured && !onPaidPlan && (
-          <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="grid grid-cols-3 gap-3 pt-2">
             <PlanCard
               name="Solo"
-              price="$39/mo"
-              yearly="$33/mo billed annually"
+              price="$59/mo"
+              yearly="$50/mo billed annually"
               disabled={checkout.isPending}
               onMonthly={() => checkout.mutate({ plan: 'solo', interval: 'monthly' })}
               onYearly={() => checkout.mutate({ plan: 'solo', interval: 'yearly' })}
             />
             <PlanCard
               name="Agency"
-              price="$99/mo"
-              yearly="$84/mo billed annually"
+              price="$179/mo"
+              yearly="$152/mo billed annually"
               disabled={checkout.isPending}
               onMonthly={() => checkout.mutate({ plan: 'agency', interval: 'monthly' })}
               onYearly={() => checkout.mutate({ plan: 'agency', interval: 'yearly' })}
+            />
+            <PlanCard
+              name="Studio"
+              price="$349/mo"
+              yearly="$297/mo billed annually"
+              disabled={checkout.isPending}
+              onMonthly={() => checkout.mutate({ plan: 'studio', interval: 'monthly' })}
+              onYearly={() => checkout.mutate({ plan: 'studio', interval: 'yearly' })}
             />
           </div>
         )}

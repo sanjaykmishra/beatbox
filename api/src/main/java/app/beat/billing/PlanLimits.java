@@ -1,16 +1,18 @@
 package app.beat.billing;
 
 /**
- * Plan limits per docs/01-product-and-users.md §Pricing and docs/17-phase-1-5-social.md §17.3.
+ * Plan limits per docs/10-roadmap-overview.md §Pricing and docs/17-phase-1-5-social.md §17.3.
  *
- * <p>Solo: 5 client workspaces, 50 reports/mo, 1 GB asset storage. Agency: 15 clients, unlimited
- * reports, 10 GB asset storage. Trial mirrors Solo.
+ * <p>Solo $59: 5 client workspaces, 50 reports/mo, 1 GB asset storage. Agency $179: 15 clients,
+ * unlimited reports, 10 GB asset storage. Studio $349: 40 clients, unlimited reports, 40 GB asset
+ * storage. Enterprise: unlimited everything (custom contract). Trial mirrors Solo.
  */
 public final class PlanLimits {
 
   public static final String TRIAL = "trial";
   public static final String SOLO = "solo";
   public static final String AGENCY = "agency";
+  public static final String STUDIO = "studio";
   public static final String ENTERPRISE = "enterprise";
 
   public static final int UNLIMITED = Integer.MAX_VALUE;
@@ -26,6 +28,7 @@ public final class PlanLimits {
     return switch (plan == null ? TRIAL : plan) {
       case SOLO -> new Limits(5, 50, 1L * GB);
       case AGENCY -> new Limits(15, UNLIMITED, 10L * GB);
+      case STUDIO -> new Limits(40, UNLIMITED, 40L * GB);
       case ENTERPRISE -> new Limits(UNLIMITED, UNLIMITED, UNLIMITED_BYTES);
       default -> new Limits(5, 50, 1L * GB); // trial mirrors solo
     };

@@ -270,7 +270,7 @@ export const api = {
 
   // ----- Billing (week 8) -----
   getBilling: () => request<Billing>('GET', '/v1/billing'),
-  startCheckout: (plan: 'solo' | 'agency', interval: 'monthly' | 'yearly') =>
+  startCheckout: (plan: 'solo' | 'agency' | 'studio', interval: 'monthly' | 'yearly') =>
     request<{ checkout_url: string }>('POST', '/v1/billing/checkout', { plan, interval }),
   openPortal: () => request<{ portal_url: string }>('POST', '/v1/billing/portal', {}),
 
@@ -512,10 +512,11 @@ export type AdminDashboard = {
 };
 
 export type Billing = {
-  plan: 'trial' | 'solo' | 'agency' | 'enterprise';
+  plan: 'trial' | 'solo' | 'agency' | 'studio' | 'enterprise';
   plan_limit_clients: number;
   plan_limit_reports_monthly: number;
   trial_ends_at: string | null;
+  grandfathered_until: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   stripe_configured: boolean;
