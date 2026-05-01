@@ -102,6 +102,18 @@ export function Calendar() {
   const [composer, setComposer] = useState<ComposerState>({ open: false });
   const [eventDrawer, setEventDrawer] = useState<EventDrawerState>({ open: false });
   const [activeTypes, setActiveTypes] = useState<Set<FeedItemType> | null>(null);
+  const [dayMenu, setDayMenu] = useState<{
+    day: Date;
+    anchor: { top: number; right: number };
+  } | null>(null);
+
+  function openDayMenu(day: Date, button: HTMLElement) {
+    const rect = button.getBoundingClientRect();
+    setDayMenu({
+      day,
+      anchor: { top: rect.bottom + 4, right: window.innerWidth - rect.right },
+    });
+  }
 
   const clientsQ = useQuery({ queryKey: ['clients'], queryFn: api.listClients });
 
@@ -265,16 +277,7 @@ export function Calendar() {
             clientsById={clientsById}
             loading={feedQ.isLoading}
             onSelect={(item) => openItem(item, setComposer, setEventDrawer)}
-            onEmptyDay={(day) =>
-              setComposer({
-                open: true,
-                mode: 'new',
-                clientId: clientFilter,
-                // Don't pre-fill a past date — let the user pick. The composer's min={today}
-                // would otherwise reject the pre-filled value silently.
-                scheduledFor: isPastDay(day) ? undefined : day,
-              })
-            }
+            onAddOnDay={openDayMenu}
           />
         ) : (
           <MonthGrid
@@ -283,16 +286,7 @@ export function Calendar() {
             clientsById={clientsById}
             loading={feedQ.isLoading}
             onSelect={(item) => openItem(item, setComposer, setEventDrawer)}
-            onEmptyDay={(day) =>
-              setComposer({
-                open: true,
-                mode: 'new',
-                clientId: clientFilter,
-                // Don't pre-fill a past date — let the user pick. The composer's min={today}
-                // would otherwise reject the pre-filled value silently.
-                scheduledFor: isPastDay(day) ? undefined : day,
-              })
-            }
+            onAddOnDay={openDayMenu}
           />
         )}
       </div>
@@ -309,6 +303,31 @@ export function Calendar() {
           state={eventDrawer}
           clients={clientsQ.data?.items ?? []}
           onClose={() => setEventDrawer({ open: false })}
+        />
+      )}
+      {dayMenu && (
+        <DayAddMenu
+          day={dayMenu.day}
+          anchor={dayMenu.anchor}
+          onClose={() => setDayMenu(null)}
+          onPickPost={() => {
+            setDayMenu(null);
+            setComposer({
+              open: true,
+              mode: 'new',
+              clientId: clientFilter,
+              scheduledFor: dayMenu.day,
+            });
+          }}
+          onPickEvent={() => {
+            setDayMenu(null);
+            setEventDrawer({
+              open: true,
+              mode: 'new',
+              clientId: clientFilter,
+              occursAt: dayMenu.day,
+            });
+          }}
         />
       )}
     </BrowserFrame>
@@ -379,14 +398,14 @@ function WeekGrid({
   clientsById,
   loading,
   onSelect,
-  onEmptyDay,
+  onAddOnDay,
 }: {
   weekStart: Date;
   items: FeedItem[];
   clientsById: Map<string, ClientListItem>;
   loading: boolean;
   onSelect: (item: FeedItem) => void;
-  onEmptyDay: (day: Date) => void;
+  onAddOnDay: (day: Date, button: HTMLElement) => void;
 }) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const byDay = new Map<string, FeedItem[]>();
@@ -423,14 +442,16 @@ function WeekGrid({
                   {d.getDate()}
                 </div>
               </div>
-              <button
-                onClick={() => onEmptyDay(d)}
-                className="text-gray-400 hover:text-ink text-lg leading-none"
-                title="Draft a post on this day"
-                aria-label="Draft a post on this day"
-              >
-                +
-              </button>
+              {!isPastDay(d) && (
+                <button
+                  onClick={(e) => onAddOnDay(d, e.currentTarget)}
+                  className="text-gray-400 hover:text-ink text-lg leading-none"
+                  title="Add a post or event on this day"
+                  aria-label="Add a post or event on this day"
+                >
+                  +
+                </button>
+              )}
             </div>
             {loading && list.length === 0 ? (
               <div className="h-3 w-2/3 bg-gray-100 rounded animate-pulse" />
@@ -623,14 +644,14 @@ function MonthGrid({
   clientsById,
   loading,
   onSelect,
-  onEmptyDay,
+  onAddOnDay,
 }: {
   anchor: Date;
   items: FeedItem[];
   clientsById: Map<string, ClientListItem>;
   loading: boolean;
   onSelect: (item: FeedItem) => void;
-  onEmptyDay: (day: Date) => void;
+  onAddOnDay: (day: Date, button: HTMLElement) => void;
 }) {
   const gridStart = mondayOf(firstOfMonth(anchor));
   // Render until we've passed the end of the month, padded to a full week.
@@ -691,14 +712,16 @@ function MonthGrid({
                 >
                   {d.getDate()}
                 </span>
-                <button
-                  onClick={() => onEmptyDay(d)}
-                  className="text-gray-300 hover:text-ink text-sm leading-none px-1"
-                  title="Draft a post on this day"
-                  aria-label="Draft a post on this day"
-                >
-                  +
-                </button>
+                {!isPastDay(d) && (
+                  <button
+                    onClick={(e) => onAddOnDay(d, e.currentTarget)}
+                    className="text-gray-300 hover:text-ink text-sm leading-none px-1"
+                    title="Add a post or event on this day"
+                    aria-label="Add a post or event on this day"
+                  >
+                    +
+                  </button>
+                )}
               </div>
               {loading && list.length === 0 ? null : (
                 <ul className="space-y-0.5 flex-1">
@@ -920,6 +943,63 @@ function NewMenu({
 }
 
 // --------------------- Click routing ---------------------
+
+function DayAddMenu({
+  day,
+  anchor,
+  onClose,
+  onPickPost,
+  onPickEvent,
+}: {
+  day: Date;
+  anchor: { top: number; right: number };
+  onClose: () => void;
+  onPickPost: () => void;
+  onPickEvent: () => void;
+}) {
+  const label = day.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+  return createPortal(
+    <>
+      <button
+        type="button"
+        aria-label="close menu"
+        className="fixed inset-0 z-40 cursor-default"
+        onClick={onClose}
+      />
+      <div
+        className="fixed z-50 min-w-[220px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
+        style={{ top: anchor.top, right: anchor.right }}
+      >
+        <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-gray-500 bg-gray-50 border-b border-gray-100">
+          Add on {label}
+        </div>
+        <button
+          type="button"
+          onClick={onPickPost}
+          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        >
+          <div className="font-medium text-ink">Owned post</div>
+          <div className="text-[11px] text-gray-500">Multi-platform composer</div>
+        </button>
+        <button
+          type="button"
+          onClick={onPickEvent}
+          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100"
+        >
+          <div className="font-medium text-ink">Calendar event</div>
+          <div className="text-[11px] text-gray-500">
+            Embargo, launch, meeting, blackout, …
+          </div>
+        </button>
+      </div>
+    </>,
+    document.body,
+  );
+}
 
 function openItem(
   item: FeedItem,
