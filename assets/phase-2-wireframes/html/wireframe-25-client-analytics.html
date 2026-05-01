@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css"></head>
+<body>
+<div class="page">
+  <div class="shell">
+    <div class="chrome">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="crumb">beat.app / clients / acme corp / <span class="here">analytics</span></div>
+    </div>
+    <div class="body" style="padding: 24px 36px;">
+
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px;">
+        <div style="display: flex; gap: 14px; align-items: center;">
+          <div class="avatar lg" style="background: #dbeafe; width: 48px; height: 48px; font-size: 16px;">AC</div>
+          <div>
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 2px;">Acme Corp &middot; B2B SaaS</div>
+            <h1 style="font-size: 22px;">Analytics</h1>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <select class="input" style="font-size: 12px;">
+            <option>Last 6 months &middot; Nov 2025 &mdash; Apr 2026</option>
+          </select>
+          <button class="btn btn-secondary" style="font-size: 12px;">Add to next report &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Stat row -->
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 22px;">
+        <div class="stat">
+          <div class="label">Total &middot; 6mo</div>
+          <div class="value">82</div>
+          <div class="delta up">&uarr; 38% vs prior 6mo</div>
+        </div>
+        <div class="stat">
+          <div class="label">Tier 1 &middot; 6mo</div>
+          <div class="value">21</div>
+          <div class="delta up">&uarr; 50% vs prior</div>
+        </div>
+        <div class="stat">
+          <div class="label">Sentiment</div>
+          <div class="value">+71</div>
+          <div class="delta">stable</div>
+        </div>
+        <div class="stat">
+          <div class="label">Reach &middot; cumulative</div>
+          <div class="value">142M</div>
+          <div class="delta up">&uarr; 22%</div>
+        </div>
+        <div class="stat">
+          <div class="label">Top topic</div>
+          <div class="value" style="font-size: 16px; padding-top: 6px;">AI infra</div>
+          <div class="delta">28% of all coverage</div>
+        </div>
+      </div>
+
+      <!-- Charts row 1 -->
+      <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; margin-bottom: 14px;">
+        <!-- Coverage volume -->
+        <div class="panel" style="padding: 18px 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3>Coverage volume by month</h3>
+            <span class="muted" style="font-size: 12px;">6-month rolling avg shown in dashed line</span>
+          </div>
+          <div style="height: 200px; position: relative; padding: 0 8px;">
+            <div style="display: flex; align-items: flex-end; height: 100%; gap: 22px;">
+              <div style="flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;">
+                <div style="background: #2563eb; height: 56%; border-radius: 3px 3px 0 0;"></div>
+                <div class="muted" style="font-size: 11px; text-align: center; margin-top: 6px;">Nov</div>
+              </div>
+              <div style="flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;">
+                <div style="background: #2563eb; height: 64%; border-radius: 3px 3px 0 0;"></div>
+                <div class="muted" style="font-size: 11px; text-align: center; margin-top: 6px;">Dec</div>
+              </div>
+              <div style="flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;">
+                <div style="background: #2563eb; height: 38%; border-radius: 3px 3px 0 0;"></div>
+                <div class="muted" style="font-size: 11px; text-align: center; margin-top: 6px;">Jan</div>
+              </div>
+              <div style="flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;">
+                <div style="background: #2563eb; height: 75%; border-radius: 3px 3px 0 0;"></div>
+                <div class="muted" style="font-size: 11px; text-align: center; margin-top: 6px;">Feb</div>
+              </div>
+              <div style="flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;">
+                <div style="background: #2563eb; height: 88%; border-radius: 3px 3px 0 0;"></div>
+                <div class="muted" style="font-size: 11px; text-align: center; margin-top: 6px;">Mar</div>
+              </div>
+              <div style="flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;">
+                <div style="background: #2563eb; height: 94%; border-radius: 3px 3px 0 0;"></div>
+                <div class="muted" style="font-size: 11px; text-align: center; margin-top: 6px;">Apr</div>
+              </div>
+            </div>
+          </div>
+          <div class="muted" style="font-size: 11px; margin-top: 10px; padding: 8px 10px; background: #fafaf9; border-radius: 4px;">
+            Volume up sharply since Series B announcement in Feb. April hit 14 placements &mdash; highest month on record.
+          </div>
+        </div>
+
+        <!-- Sentiment trend -->
+        <div class="panel" style="padding: 18px 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3>Sentiment trend</h3>
+          </div>
+          <div style="height: 180px; display: flex; align-items: flex-end; gap: 14px; padding: 0 6px;">
+            <div style="flex: 1; height: 100%; display: flex; flex-direction: column; gap: 0;">
+              <div style="background: #16a34a; flex: 7; border-radius: 3px 3px 0 0;"></div>
+              <div style="background: #cbd5e1; flex: 2;"></div>
+              <div style="background: #ef4444; flex: 1; border-radius: 0 0 3px 3px;"></div>
+              <div class="muted" style="font-size: 11px; text-align: center; margin-top: 4px;">Nov</div>
+            </div>
+            <div style="flex: 1; height: 100%; display: flex; flex-direction: column;">
+              <div style="background: #16a34a; flex: 8; border-radius: 3px 3px 0 0;"></div>
+              <div style="background: #cbd5e1; flex: 2;"></div>
+              <div style="background: #ef4444; flex: 0.5; border-radius: 0 0 3px 3px;"></div>
+              <div class="muted" style="font-size: 11px; text-align: center; margin-top: 4px;">Dec</div>
+            </div>
+            <div style="flex: 1; height: 100%; display: flex; flex-direction: column;">
+              <div style="background: #16a34a; flex: 6; border-radius: 3px 3px 0 0;"></div>
+              <div style="background: #cbd5e1; flex: 3;"></div>
+              <div style="background: #ef4444; flex: 1; border-radius: 0 0 3px 3px;"></div>
+              <div class="muted" style="font-size: 11px; text-align: center; margin-top: 4px;">Jan</div>
+            </div>
+            <div style="flex: 1; height: 100%; display: flex; flex-direction: column;">
+              <div style="background: #16a34a; flex: 9; border-radius: 3px 3px 0 0;"></div>
+              <div style="background: #cbd5e1; flex: 1;"></div>
+              <div style="background: #ef4444; flex: 0.5; border-radius: 0 0 3px 3px;"></div>
+              <div class="muted" style="font-size: 11px; text-align: center; margin-top: 4px;">Feb</div>
+            </div>
+            <div style="flex: 1; height: 100%; display: flex; flex-direction: column;">
+              <div style="background: #16a34a; flex: 7; border-radius: 3px 3px 0 0;"></div>
+              <div style="background: #cbd5e1; flex: 2;"></div>
+              <div style="background: #ef4444; flex: 1.5; border-radius: 0 0 3px 3px;"></div>
+              <div class="muted" style="font-size: 11px; text-align: center; margin-top: 4px;">Mar</div>
+            </div>
+            <div style="flex: 1; height: 100%; display: flex; flex-direction: column;">
+              <div style="background: #16a34a; flex: 8; border-radius: 3px 3px 0 0;"></div>
+              <div style="background: #cbd5e1; flex: 2;"></div>
+              <div style="background: #ef4444; flex: 1; border-radius: 0 0 3px 3px;"></div>
+              <div class="muted" style="font-size: 11px; text-align: center; margin-top: 4px;">Apr</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 14px; margin-top: 12px; font-size: 11px;">
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: #16a34a; border-radius: 2px;"></span> Positive</div>
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: #cbd5e1; border-radius: 2px;"></span> Neutral</div>
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: #ef4444; border-radius: 2px;"></span> Negative</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts row 2 -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+        <!-- Tier mix donut -->
+        <div class="panel" style="padding: 18px 20px;">
+          <h3 style="margin-bottom: 14px;">Tier mix</h3>
+          <div style="display: flex; align-items: center; gap: 18px;">
+            <!-- Donut -->
+            <div style="width: 110px; height: 110px; border-radius: 50%; background: conic-gradient(#1d4ed8 0% 26%, #60a5fa 26% 60%, #cbd5e1 60% 100%); position: relative; display: flex; align-items: center; justify-content: center;">
+              <div style="width: 64px; height: 64px; background: white; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div style="font-size: 16px; font-weight: 600;">82</div>
+                <div style="font-size: 9px; color: #94a3b8;">total</div>
+              </div>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #1d4ed8; border-radius: 2px;"></span> Tier 1</div>
+                <div style="font-weight: 600;">21</div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #60a5fa; border-radius: 2px;"></span> Tier 2</div>
+                <div style="font-weight: 600;">28</div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; background: #cbd5e1; border-radius: 2px;"></span> Tier 3</div>
+                <div style="font-weight: 600;">33</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top outlets -->
+        <div class="panel" style="padding: 18px 20px;">
+          <h3 style="margin-bottom: 14px;">Top outlets</h3>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                <div>TechCrunch</div><div style="color: #94a3b8;">11</div>
+              </div>
+              <div style="background: #f1f5f9; height: 5px; border-radius: 3px;"><div style="background: #2563eb; height: 100%; width: 100%; border-radius: 3px;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                <div>Wall Street Journal</div><div style="color: #94a3b8;">8</div>
+              </div>
+              <div style="background: #f1f5f9; height: 5px; border-radius: 3px;"><div style="background: #2563eb; height: 100%; width: 73%; border-radius: 3px;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                <div>The Verge</div><div style="color: #94a3b8;">7</div>
+              </div>
+              <div style="background: #f1f5f9; height: 5px; border-radius: 3px;"><div style="background: #2563eb; height: 100%; width: 64%; border-radius: 3px;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                <div>Bloomberg</div><div style="color: #94a3b8;">6</div>
+              </div>
+              <div style="background: #f1f5f9; height: 5px; border-radius: 3px;"><div style="background: #2563eb; height: 100%; width: 55%; border-radius: 3px;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                <div>Forbes</div><div style="color: #94a3b8;">5</div>
+              </div>
+              <div style="background: #f1f5f9; height: 5px; border-radius: 3px;"><div style="background: #2563eb; height: 100%; width: 45%; border-radius: 3px;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                <div>Axios</div><div style="color: #94a3b8;">4</div>
+              </div>
+              <div style="background: #f1f5f9; height: 5px; border-radius: 3px;"><div style="background: #2563eb; height: 100%; width: 36%; border-radius: 3px;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top journalists -->
+        <div class="panel" style="padding: 18px 20px;">
+          <h3 style="margin-bottom: 14px;">Top journalists</h3>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="avatar" style="width: 28px; height: 28px; font-size: 11px;">SP</div>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500;">Sarah Perez</div>
+                <div class="muted" style="font-size: 11px;">TechCrunch &middot; 4 pieces</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="avatar amber" style="width: 28px; height: 28px; font-size: 11px;">DJ</div>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500;">David Jeans</div>
+                <div class="muted" style="font-size: 11px;">Forbes &middot; 3 pieces</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="avatar green" style="width: 28px; height: 28px; font-size: 11px;">EM</div>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500;">Erin Mendell</div>
+                <div class="muted" style="font-size: 11px;">WSJ &middot; 3 pieces</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="avatar purple" style="width: 28px; height: 28px; font-size: 11px;">KW</div>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500;">Kim Walters</div>
+                <div class="muted" style="font-size: 11px;">Bloomberg &middot; 2 pieces</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="avatar gray" style="width: 28px; height: 28px; font-size: 11px;">AT</div>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 500;">Alex Thompson</div>
+                <div class="muted" style="font-size: 11px;">Axios &middot; 2 pieces</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom callout -->
+      <div class="panel-sub" style="padding: 12px 16px; border-radius: 6px; font-size: 12px; color: #475569;">
+        <strong style="color: #0f172a;">Honest framing:</strong> Months with fewer than 5 coverage items are flagged as "low sample" &mdash; sentiment percentages can swing widely on small numbers. Show 6-month rolling averages when discussing trends with the client.
+      </div>
+
+    </div>
+  </div>
+</div>
+</body></html>

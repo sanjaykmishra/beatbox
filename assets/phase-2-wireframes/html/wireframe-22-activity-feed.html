@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css"></head>
+<body>
+<div class="page">
+  <div class="shell">
+    <div class="chrome">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="crumb">beat.app / settings / <span class="here">activity</span></div>
+    </div>
+    <div style="display: flex; flex: 1; overflow: hidden;">
+
+      <div class="sidenav">
+        <div class="section-label">Settings</div>
+        <div class="nav-item">Workspace</div>
+        <div class="nav-item">Branding</div>
+        <div class="nav-item">Team &amp; roles</div>
+        <div class="nav-item active">Activity</div>
+        <div class="nav-item">Inbox &amp; integrations</div>
+        <div class="nav-item">Billing</div>
+        <div class="nav-item">Referrals</div>
+        <div class="section-label">Workspace</div>
+        <div class="nav-item">Templates</div>
+        <div class="nav-item">Stock prompts</div>
+      </div>
+
+      <div style="flex: 1; padding: 32px 48px; overflow-y: auto;">
+        <div style="max-width: 1080px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <div>
+              <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Settings &middot; Hayworth PR</div>
+              <h1>Activity</h1>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input class="input" placeholder="Search by member, client, action&hellip;" style="width: 280px;">
+              <button class="btn btn-secondary">Export CSV</button>
+            </div>
+          </div>
+          <p class="muted" style="margin: 8px 0 24px; font-size: 13px; max-width: 580px;">
+            Every meaningful action across the workspace. Useful for compliance audits and for tracing changes back to the team member who made them.
+          </p>
+
+          <!-- Filters -->
+          <div style="display: flex; gap: 8px; margin-bottom: 18px;">
+            <span class="badge badge-blue" style="padding: 6px 12px; font-size: 12px;">All actions</span>
+            <span class="badge badge-gray" style="padding: 6px 12px; font-size: 12px; background: white; border: 1px solid #e5e5e3; color: #475569;">Reports</span>
+            <span class="badge badge-gray" style="padding: 6px 12px; font-size: 12px; background: white; border: 1px solid #e5e5e3; color: #475569;">Pitches</span>
+            <span class="badge badge-gray" style="padding: 6px 12px; font-size: 12px; background: white; border: 1px solid #e5e5e3; color: #475569;">Clients</span>
+            <span class="badge badge-gray" style="padding: 6px 12px; font-size: 12px; background: white; border: 1px solid #e5e5e3; color: #475569;">Templates</span>
+            <span class="badge badge-gray" style="padding: 6px 12px; font-size: 12px; background: white; border: 1px solid #e5e5e3; color: #475569;">Team</span>
+            <span class="badge badge-gray" style="padding: 6px 12px; font-size: 12px; background: white; border: 1px solid #e5e5e3; color: #475569;">Billing</span>
+          </div>
+
+          <!-- Today -->
+          <div class="eyebrow" style="margin-bottom: 10px;">Today &middot; Wednesday, May 1</div>
+          <div class="panel" style="padding: 0; margin-bottom: 22px;">
+            <div class="row" style="padding: 14px 18px;">
+              <div class="avatar" style="margin-right: 12px;">AH</div>
+              <div style="flex: 1;">
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 500;">Alex Hayworth</span>
+                  <span class="muted"> generated report for </span>
+                  <span style="font-weight: 500;">Acme Corp</span>
+                  <span class="muted"> &middot; April 2026 coverage</span>
+                </div>
+                <div class="muted" style="font-size: 12px;">14 coverage items &middot; Hayworth Standard template &middot; 47s render time</div>
+              </div>
+              <div class="muted" style="font-size: 12px;">2:14 PM</div>
+            </div>
+            <div class="row" style="padding: 14px 18px;">
+              <div class="avatar green" style="margin-right: 12px;">JC</div>
+              <div style="flex: 1;">
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 500;">Jamie Chen</span>
+                  <span class="muted"> shared report </span>
+                  <span style="font-weight: 500;">Mercury Q1 review</span>
+                  <span class="muted"> via public link</span>
+                </div>
+                <div class="muted" style="font-size: 12px;">Link expires in 30 days &middot; downloadable PDF</div>
+              </div>
+              <div class="muted" style="font-size: 12px;">11:48 AM</div>
+            </div>
+            <div class="row" style="padding: 14px 18px;">
+              <div class="avatar amber" style="margin-right: 12px;">PS</div>
+              <div style="flex: 1;">
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 500;">Priya Sharma</span>
+                  <span class="muted"> assigned 6 inbox items to </span>
+                  <span style="font-weight: 500;">Stellar Health</span>
+                </div>
+                <div class="muted" style="font-size: 12px;">From forwarded email &middot; 6 URLs added to draft report</div>
+              </div>
+              <div class="muted" style="font-size: 12px;">10:32 AM</div>
+            </div>
+            <div class="row" style="padding: 14px 18px;">
+              <div class="avatar" style="margin-right: 12px;">AH</div>
+              <div style="flex: 1;">
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 500;">Alex Hayworth</span>
+                  <span class="muted"> invited </span>
+                  <span style="font-weight: 500;">sasha@hayworth.pr</span>
+                  <span class="muted"> as Member</span>
+                </div>
+                <div class="muted" style="font-size: 12px;">Invite pending &middot; expires in 7 days</div>
+              </div>
+              <div class="muted" style="font-size: 12px;">9:15 AM</div>
+            </div>
+          </div>
+
+          <!-- Yesterday -->
+          <div class="eyebrow" style="margin-bottom: 10px;">Yesterday &middot; Tuesday, April 30</div>
+          <div class="panel" style="padding: 0; margin-bottom: 22px;">
+            <div class="row" style="padding: 14px 18px;">
+              <div class="avatar purple" style="margin-right: 12px;">DK</div>
+              <div style="flex: 1;">
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 500;">Daniel Kim</span>
+                  <span class="muted"> edited template </span>
+                  <span style="font-weight: 500;">Hayworth Standard</span>
+                </div>
+                <div class="muted" style="font-size: 12px;">Changed: stats grid metrics (added Reach, removed Tier 2 count)</div>
+              </div>
+              <div class="muted" style="font-size: 12px;">4:52 PM</div>
+            </div>
+            <div class="row" style="padding: 14px 18px;">
+              <div class="avatar green" style="margin-right: 12px;">JC</div>
+              <div style="flex: 1;">
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 500;">Jamie Chen</span>
+                  <span class="muted"> created new client </span>
+                  <span style="font-weight: 500;">Northwind Logistics</span>
+                </div>
+                <div class="muted" style="font-size: 12px;">Industry: B2B logistics &middot; 4 portal users invited</div>
+              </div>
+              <div class="muted" style="font-size: 12px;">2:08 PM</div>
+            </div>
+            <div class="row" style="padding: 14px 18px;">
+              <div class="avatar gray" style="margin-right: 12px;">RM</div>
+              <div style="flex: 1;">
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 500;">Riya Martinez (Viewer)</span>
+                  <span class="muted"> viewed report </span>
+                  <span style="font-weight: 500;">Acme Corp &middot; March 2026</span>
+                </div>
+                <div class="muted" style="font-size: 12px;">Via portal &middot; portal.beat.app</div>
+              </div>
+              <div class="muted" style="font-size: 12px;">11:04 AM</div>
+            </div>
+            <div class="row" style="padding: 14px 18px;">
+              <div class="avatar" style="margin-right: 12px;">AH</div>
+              <div style="flex: 1;">
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 500;">Alex Hayworth</span>
+                  <span class="muted"> upgraded plan from </span>
+                  <span style="font-weight: 500;">Solo</span>
+                  <span class="muted"> to </span>
+                  <span style="font-weight: 500;">Agency</span>
+                </div>
+                <div class="muted" style="font-size: 12px;">Annual billing &middot; effective next renewal &middot; $179/mo &middot; 15% off annual</div>
+              </div>
+              <div class="muted" style="font-size: 12px;">8:42 AM</div>
+            </div>
+          </div>
+
+          <!-- Earlier -->
+          <div class="eyebrow" style="margin-bottom: 10px;">Earlier this week</div>
+          <div class="panel" style="padding: 0;">
+            <div class="row" style="padding: 14px 18px; color: #64748b;">
+              <div class="avatar gray" style="margin-right: 12px;">PS</div>
+              <div style="flex: 1;">
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 500; color: #1a1a1a;">Priya Sharma</span>
+                  <span> changed role of </span>
+                  <span style="font-weight: 500; color: #1a1a1a;">riya@acme-client.com</span>
+                  <span> from Member to </span>
+                  <span style="font-weight: 500; color: #1a1a1a;">Viewer</span>
+                </div>
+                <div style="font-size: 12px;">Reason logged: "External &mdash; should not edit"</div>
+              </div>
+              <div style="font-size: 12px;">Mon 3:24 PM</div>
+            </div>
+            <div class="row" style="padding: 14px 18px;">
+              <div class="avatar" style="margin-right: 12px;">AH</div>
+              <div style="flex: 1;">
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 500;">Alex Hayworth</span>
+                  <span class="muted"> published report </span>
+                  <span style="font-weight: 500;">Stellar Health March 2026</span>
+                  <span class="muted"> to client portal</span>
+                </div>
+                <div class="muted" style="font-size: 12px;">Visible to 3 portal users at stellarhealth.com</div>
+              </div>
+              <div class="muted" style="font-size: 12px;">Mon 10:11 AM</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css"></head>
+<body>
+<div class="page">
+  <div class="shell">
+    <div class="chrome">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="crumb">beat.app / settings / <span class="here">team</span></div>
+    </div>
+    <div style="display: flex; flex: 1; overflow: hidden;">
+
+      <!-- Settings sidebar -->
+      <div class="sidenav">
+        <div class="section-label">Settings</div>
+        <div class="nav-item">Workspace</div>
+        <div class="nav-item">Branding</div>
+        <div class="nav-item active">Team &amp; roles</div>
+        <div class="nav-item">Activity</div>
+        <div class="nav-item">Inbox &amp; integrations</div>
+        <div class="nav-item">Billing</div>
+        <div class="nav-item">Referrals</div>
+        <div class="section-label">Workspace</div>
+        <div class="nav-item">Templates</div>
+        <div class="nav-item">Stock prompts</div>
+      </div>
+
+      <!-- Main content -->
+      <div style="flex: 1; padding: 32px 48px; overflow-y: auto;">
+        <div style="max-width: 980px;">
+          <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Settings &middot; Hayworth PR</div>
+          <h1>Team &amp; roles</h1>
+          <p class="muted" style="margin: 8px 0 28px; font-size: 13px; max-width: 580px;">
+            Owners can invite members, change roles, and manage billing. Members can use everything except billing and team management. Viewers see reports only.
+          </p>
+
+          <!-- Members table -->
+          <div class="panel" style="padding: 0; margin-bottom: 28px;">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #efefed; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h2>Members</h2>
+                <div class="muted" style="font-size: 12px; margin-top: 2px;">5 of 5 seats used &middot; agency tier</div>
+              </div>
+              <button class="btn btn-primary">+ Invite member</button>
+            </div>
+
+            <div class="row head">
+              <div style="flex: 2;">Member</div>
+              <div style="flex: 1;">Role</div>
+              <div style="flex: 1;">Last active</div>
+              <div style="width: 80px; text-align: right;"></div>
+            </div>
+
+            <div class="row">
+              <div style="flex: 2; display: flex; align-items: center; gap: 12px;">
+                <div class="avatar lg">AH</div>
+                <div>
+                  <div style="font-weight: 500;">Alex Hayworth</div>
+                  <div class="muted" style="font-size: 12px;">alex@hayworth.pr &middot; you</div>
+                </div>
+              </div>
+              <div style="flex: 1;"><span class="badge badge-purple">Owner</span></div>
+              <div style="flex: 1; color: #64748b;">Active now</div>
+              <div style="width: 80px; text-align: right; color: #cbd5e1; font-size: 12px;">&mdash;</div>
+            </div>
+
+            <div class="row">
+              <div style="flex: 2; display: flex; align-items: center; gap: 12px;">
+                <div class="avatar lg green">JC</div>
+                <div>
+                  <div style="font-weight: 500;">Jamie Chen</div>
+                  <div class="muted" style="font-size: 12px;">jamie@hayworth.pr</div>
+                </div>
+              </div>
+              <div style="flex: 1;"><span class="badge badge-blue">Member</span></div>
+              <div style="flex: 1; color: #64748b;">2 hours ago</div>
+              <div style="width: 80px; text-align: right;"><span class="btn-link">Edit</span></div>
+            </div>
+
+            <div class="row">
+              <div style="flex: 2; display: flex; align-items: center; gap: 12px;">
+                <div class="avatar lg amber">PS</div>
+                <div>
+                  <div style="font-weight: 500;">Priya Sharma</div>
+                  <div class="muted" style="font-size: 12px;">priya@hayworth.pr</div>
+                </div>
+              </div>
+              <div style="flex: 1;"><span class="badge badge-blue">Member</span></div>
+              <div style="flex: 1; color: #64748b;">Yesterday</div>
+              <div style="width: 80px; text-align: right;"><span class="btn-link">Edit</span></div>
+            </div>
+
+            <div class="row">
+              <div style="flex: 2; display: flex; align-items: center; gap: 12px;">
+                <div class="avatar lg purple">DK</div>
+                <div>
+                  <div style="font-weight: 500;">Daniel Kim</div>
+                  <div class="muted" style="font-size: 12px;">daniel@hayworth.pr</div>
+                </div>
+              </div>
+              <div style="flex: 1;"><span class="badge badge-blue">Member</span></div>
+              <div style="flex: 1; color: #64748b;">3 days ago</div>
+              <div style="width: 80px; text-align: right;"><span class="btn-link">Edit</span></div>
+            </div>
+
+            <div class="row">
+              <div style="flex: 2; display: flex; align-items: center; gap: 12px;">
+                <div class="avatar lg gray">RM</div>
+                <div>
+                  <div style="font-weight: 500;">Riya Martinez</div>
+                  <div class="muted" style="font-size: 12px;">riya@acme-client.com &middot; external</div>
+                </div>
+              </div>
+              <div style="flex: 1;"><span class="badge badge-gray">Viewer</span></div>
+              <div style="flex: 1; color: #64748b;">1 week ago</div>
+              <div style="width: 80px; text-align: right;"><span class="btn-link">Edit</span></div>
+            </div>
+          </div>
+
+          <!-- Pending invites -->
+          <div class="panel" style="padding: 0; margin-bottom: 28px;">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #efefed;">
+              <h2>Pending invites <span class="muted" style="font-weight: 400; font-size: 13px;">&middot; 1</span></h2>
+            </div>
+            <div class="row">
+              <div style="flex: 2; display: flex; align-items: center; gap: 12px;">
+                <div class="avatar lg gray" style="background: #f1f5f9;">SK</div>
+                <div>
+                  <div style="font-weight: 500; color: #475569;">sasha@hayworth.pr</div>
+                  <div class="muted" style="font-size: 12px;">Invited by Alex H. &middot; 2 days ago &middot; expires in 5 days</div>
+                </div>
+              </div>
+              <div style="flex: 1;"><span class="badge badge-blue">Member</span></div>
+              <div style="flex: 1;"></div>
+              <div style="width: 160px; text-align: right; display: flex; gap: 14px; justify-content: flex-end;">
+                <span class="btn-link">Resend</span>
+                <span class="btn-link" style="color: #dc2626;">Rescind</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Permission summary -->
+          <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <h2>What each role can do</h2>
+              <span class="btn-link">View full permission matrix &rarr;</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+              <div class="panel-sub" style="padding: 14px 16px; border-radius: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                  <span class="badge badge-purple">Owner</span>
+                  <span style="font-size: 12px; color: #94a3b8;">1 currently</span>
+                </div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.6;">
+                  Everything members can do, plus invite team, change roles, manage billing, delete workspace.
+                </div>
+              </div>
+              <div class="panel-sub" style="padding: 14px 16px; border-radius: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                  <span class="badge badge-blue">Member</span>
+                  <span style="font-size: 12px; color: #94a3b8;">3 currently</span>
+                </div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.6;">
+                  Create / edit / delete clients, generate &amp; share reports, edit templates, capture pitches. No billing or team management.
+                </div>
+              </div>
+              <div class="panel-sub" style="padding: 14px 16px; border-radius: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                  <span class="badge badge-gray">Viewer</span>
+                  <span style="font-size: 12px; color: #94a3b8;">1 currently</span>
+                </div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.6;">
+                  Read-only access to reports. Cannot edit anything. Often used for clients or external reviewers.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body></html>
