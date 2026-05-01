@@ -8,6 +8,9 @@ import app.beat.infra.RequestContext;
 import app.beat.outlet.Domains;
 import app.beat.report.Report;
 import app.beat.report.ReportRepository;
+import app.beat.social.SocialExtractionJobRepository;
+import app.beat.social.SocialMentionRepository;
+import app.beat.social.UrlClassifier;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -35,22 +38,42 @@ public class CoverageController {
   private final ReportRepository reports;
   private final CoverageItemRepository coverage;
   private final ExtractionJobRepository jobs;
+  private final SocialMentionRepository socialMentions;
+  private final SocialExtractionJobRepository socialJobs;
   private final ActivityRecorder activity;
 
   public CoverageController(
       ReportRepository reports,
       CoverageItemRepository coverage,
       ExtractionJobRepository jobs,
+      SocialMentionRepository socialMentions,
+      SocialExtractionJobRepository socialJobs,
       ActivityRecorder activity) {
     this.reports = reports;
     this.coverage = coverage;
     this.jobs = jobs;
+    this.socialMentions = socialMentions;
+    this.socialJobs = socialJobs;
     this.activity = activity;
   }
 
   public record AddCoverageRequest(@NotEmpty List<String> urls) {}
 
-  public record QueuedItemDto(UUID id, String source_url, String extraction_status) {}
+  /**
+   * Per-URL outcome the dispatcher returns. {@code kind} is "article" or "social"; for social we
+   * also surface the {@code platform} so the frontend can render the right card immediately.
+   */
+  public record QueuedItemDto(
+      UUID id, String source_url, String extraction_status, String kind, String platform) {
+
+    static QueuedItemDto article(UUID id, String url, String status) {
+      return new QueuedItemDto(id, url, status, "article", null);
+    }
+
+    static QueuedItemDto social(UUID id, String url, String status, String platform) {
+      return new QueuedItemDto(id, url, status, "social", platform);
+    }
+  }
 
   public record AddCoverageResponse(List<QueuedItemDto> items) {}
 
@@ -77,11 +100,37 @@ public class CoverageController {
     }
     List<QueuedItemDto> created = new ArrayList<>();
     int sortOrder = 0;
+    int socialCount = 0;
     for (String url : normalized) {
-      var inserted = coverage.insertQueued(report.id(), url, sortOrder++);
-      if (inserted.isPresent()) {
-        jobs.enqueue(inserted.get().id());
-        created.add(new QueuedItemDto(inserted.get().id(), url, inserted.get().extractionStatus()));
+      // Per docs/17 §17.1: dispatch by URL classifier so a single paste field handles both
+      // articles and social posts. Social URLs route to social_mentions + social_extraction_jobs;
+      // anything else falls through to the existing article pipeline.
+      String platform = UrlClassifier.platformOf(url).orElse(null);
+      if (platform != null) {
+        var inserted =
+            socialMentions.insertQueued(
+                ctx.workspaceId(), report.id(), report.clientId(), platform, url, sortOrder++);
+        if (inserted.isPresent()) {
+          socialJobs.enqueue(inserted.get().id());
+          created.add(
+              QueuedItemDto.social(
+                  inserted.get().id(), url, inserted.get().extractionStatus(), platform));
+          socialCount++;
+          activity.recordUser(
+              ctx.workspaceId(),
+              ctx.userId(),
+              EventKinds.SOCIAL_MENTION_ADDED,
+              "social_mention",
+              inserted.get().id(),
+              Map.of("platform", platform));
+        }
+      } else {
+        var inserted = coverage.insertQueued(report.id(), url, sortOrder++);
+        if (inserted.isPresent()) {
+          jobs.enqueue(inserted.get().id());
+          created.add(
+              QueuedItemDto.article(inserted.get().id(), url, inserted.get().extractionStatus()));
+        }
       }
     }
     activity.recordUser(
@@ -90,7 +139,7 @@ public class CoverageController {
         EventKinds.REPORT_URLS_ADDED,
         "report",
         report.id(),
-        Map.of("count", created.size()));
+        Map.of("count", created.size(), "social_count", socialCount));
     return ResponseEntity.status(HttpStatus.ACCEPTED).body(new AddCoverageResponse(created));
   }
 

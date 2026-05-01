@@ -60,4 +60,12 @@ public final class EventKinds {
   public static final String CALENDAR_EVENT_CREATED = "calendar_event.created";
   public static final String CALENDAR_EVENT_UPDATED = "calendar_event.updated";
   public static final String CALENDAR_EVENT_DELETED = "calendar_event.deleted";
+
+  // Phase 1.5 — social mentions (earned coverage on social platforms)
+  public static final String SOCIAL_MENTION_ADDED = "social_mention.added";
+  public static final String SOCIAL_MENTION_EXTRACTED = "social_mention.extracted";
+  public static final String SOCIAL_MENTION_EDITED = "social_mention.edited";
+  public static final String SOCIAL_MENTION_RETRIED = "social_mention.retried";
+  public static final String SOCIAL_MENTION_DELETED = "social_mention.deleted";
+  public static final String SOCIAL_EXTRACTION_FAILED = "social_extraction.failed";
 }

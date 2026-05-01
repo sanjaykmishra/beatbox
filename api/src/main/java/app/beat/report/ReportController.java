@@ -13,6 +13,10 @@ import app.beat.outlet.OutletRepository;
 import app.beat.render.RenderClient;
 import app.beat.render.RenderJobRepository;
 import app.beat.render.RenderPayloadBuilder;
+import app.beat.social.SocialAuthor;
+import app.beat.social.SocialAuthorRepository;
+import app.beat.social.SocialMention;
+import app.beat.social.SocialMentionRepository;
 import app.beat.workspace.WorkspaceRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -48,6 +52,8 @@ public class ReportController {
   private final ClientRepository clients;
   private final CoverageItemRepository coverage;
   private final OutletRepository outlets;
+  private final SocialMentionRepository socialMentions;
+  private final SocialAuthorRepository socialAuthors;
   private final ActivityRecorder activity;
   private final WorkspaceRepository workspaces;
   private final RenderJobRepository renderJobs;
@@ -61,6 +67,8 @@ public class ReportController {
       ClientRepository clients,
       CoverageItemRepository coverage,
       OutletRepository outlets,
+      SocialMentionRepository socialMentions,
+      SocialAuthorRepository socialAuthors,
       ActivityRecorder activity,
       WorkspaceRepository workspaces,
       RenderJobRepository renderJobs,
@@ -72,6 +80,8 @@ public class ReportController {
     this.clients = clients;
     this.coverage = coverage;
     this.outlets = outlets;
+    this.socialMentions = socialMentions;
+    this.socialAuthors = socialAuthors;
     this.activity = activity;
     this.workspaces = workspaces;
     this.renderJobs = renderJobs;
@@ -105,6 +115,47 @@ public class ReportController {
       boolean is_user_edited,
       List<String> edited_fields) {}
 
+  /**
+   * Summary the wireframe-31 header renders ("22 done · 3 extracting"). Counts unify across
+   * articles and social mentions; clients filter client-side via the All / Articles / Social pills.
+   */
+  public record ReportStatusCountsDto(
+      int total, int done, int extracting, int failed, int articles, int social) {}
+
+  /**
+   * Per-mention shape consumed by wireframe-31's social card. Author display fields are flattened
+   * onto the row so the frontend doesn't need a second round-trip.
+   */
+  public record SocialMentionDto(
+      UUID id,
+      String source_url,
+      String platform,
+      String extraction_status,
+      String extraction_error,
+      String author_handle,
+      String author_display_name,
+      String author_avatar_url,
+      String author_profile_url,
+      Long author_follower_count,
+      boolean author_verified,
+      Instant posted_at,
+      String content_text,
+      String summary,
+      String key_excerpt,
+      String sentiment,
+      String sentiment_rationale,
+      String subject_prominence,
+      List<String> topics,
+      String media_summary,
+      List<String> media_urls,
+      Long likes_count,
+      Long reposts_count,
+      Long replies_count,
+      Long views_count,
+      Long estimated_reach,
+      boolean is_user_edited,
+      List<String> edited_fields) {}
+
   public record ReportDto(
       UUID id,
       UUID client_id,
@@ -119,7 +170,9 @@ public class ReportController {
       String share_token,
       Instant generated_at,
       Instant created_at,
-      List<CoverageItemDto> coverage_items) {}
+      List<CoverageItemDto> coverage_items,
+      List<SocialMentionDto> social_mentions,
+      ReportStatusCountsDto status_counts) {}
 
   // ---------- POST /v1/clients/:client_id/reports ----------
 
@@ -166,8 +219,74 @@ public class ReportController {
         reports
             .findInWorkspace(ctx.workspaceId(), id)
             .orElseThrow(() -> AppException.notFound("Report"));
-    var items = coverage.listByReport(r.id()).stream().map(this::toCoverageDto).toList();
-    return toDto(r, items);
+    var coverageItems = coverage.listByReport(r.id());
+    var coverageDtos = coverageItems.stream().map(this::toCoverageDto).toList();
+    var socialItems = socialMentions.listByReport(ctx.workspaceId(), r.id());
+    var socialDtos = socialItems.stream().map(this::toSocialDto).toList();
+    var counts = computeStatusCounts(coverageItems, socialItems);
+    return toDto(r, coverageDtos, socialDtos, counts);
+  }
+
+  private SocialMentionDto toSocialDto(SocialMention m) {
+    SocialAuthor author =
+        m.authorId() == null ? null : socialAuthors.findById(m.authorId()).orElse(null);
+    return new SocialMentionDto(
+        m.id(),
+        m.sourceUrl(),
+        m.platform(),
+        m.extractionStatus(),
+        m.extractionError(),
+        author == null ? null : author.handle(),
+        author == null ? null : author.displayName(),
+        author == null ? null : author.avatarUrl(),
+        author == null ? null : author.profileUrl(),
+        m.followerCountAtPost() != null
+            ? m.followerCountAtPost()
+            : (author == null ? null : author.followerCount()),
+        author != null && author.isVerified(),
+        m.postedAt(),
+        m.contentText(),
+        m.summary(),
+        /* key_excerpt is in raw_extracted but not on the row; surface via summary for now */ null,
+        m.sentiment(),
+        m.sentimentRationale(),
+        m.subjectProminence(),
+        m.topics(),
+        m.mediaSummary(),
+        m.mediaUrls(),
+        m.likesCount(),
+        m.repostsCount(),
+        m.repliesCount(),
+        m.viewsCount(),
+        m.estimatedReach(),
+        m.isUserEdited(),
+        m.editedFields());
+  }
+
+  private static ReportStatusCountsDto computeStatusCounts(
+      List<CoverageItem> articles, List<SocialMention> mentions) {
+    int total = articles.size() + mentions.size();
+    int extracting = 0;
+    int done = 0;
+    int failed = 0;
+    for (CoverageItem c : articles) {
+      switch (c.extractionStatus()) {
+        case "queued", "running" -> extracting++;
+        case "done" -> done++;
+        case "failed" -> failed++;
+        default -> {}
+      }
+    }
+    for (SocialMention m : mentions) {
+      switch (m.extractionStatus()) {
+        case "queued", "running" -> extracting++;
+        case "done" -> done++;
+        case "failed" -> failed++;
+        default -> {}
+      }
+    }
+    return new ReportStatusCountsDto(
+        total, done, extracting, failed, articles.size(), mentions.size());
   }
 
   private CoverageItemDto toCoverageDto(CoverageItem c) {
@@ -198,6 +317,15 @@ public class ReportController {
   }
 
   private ReportDto toDto(Report r, List<CoverageItemDto> items) {
+    return toDto(
+        r, items, List.of(), new ReportStatusCountsDto(items.size(), 0, 0, 0, items.size(), 0));
+  }
+
+  private ReportDto toDto(
+      Report r,
+      List<CoverageItemDto> items,
+      List<SocialMentionDto> socialMentions,
+      ReportStatusCountsDto counts) {
     return new ReportDto(
         r.id(),
         r.clientId(),
@@ -212,7 +340,9 @@ public class ReportController {
         r.shareToken(),
         r.generatedAt(),
         r.createdAt(),
-        items);
+        items,
+        socialMentions,
+        counts);
   }
 
   private static String defaultTitle(CreateReportRequest body) {
