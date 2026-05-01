@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ConfirmDialog';
 import { Alert, Eyebrow, PrimaryLink, SecondaryLink } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import { api, ApiError, uploadLogo } from '../lib/api';
@@ -18,6 +19,7 @@ export function ClientEdit() {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const toast = useToast();
+  const confirm = useConfirm();
 
   const update = useMutation({
     mutationFn: (b: Parameters<typeof api.updateClient>[1]) => api.updateClient(id, b),
@@ -161,9 +163,14 @@ export function ClientEdit() {
               </p>
             </div>
             <button
-              onClick={() => {
-                if (confirm(`Delete ${c.name}? Existing reports remain accessible.`))
-                  remove.mutate();
+              onClick={async () => {
+                const ok = await confirm({
+                  title: `Delete ${c.name}?`,
+                  body: 'Existing reports remain accessible via direct link.',
+                  tone: 'danger',
+                  confirmLabel: 'Delete client',
+                });
+                if (ok) remove.mutate();
               }}
               className="rounded-lg border border-red-200 bg-white text-red-700 hover:bg-red-50 px-3 py-2 text-sm font-medium flex-none"
             >
