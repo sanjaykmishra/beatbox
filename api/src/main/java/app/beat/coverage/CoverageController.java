@@ -3,6 +3,7 @@ package app.beat.coverage;
 import app.beat.activity.ActivityRecorder;
 import app.beat.activity.EventKinds;
 import app.beat.extraction.ExtractionJobRepository;
+import app.beat.extraction.UrlPrefilter;
 import app.beat.infra.AppException;
 import app.beat.infra.RequestContext;
 import app.beat.outlet.Domains;
@@ -40,6 +41,7 @@ public class CoverageController {
   private final ExtractionJobRepository jobs;
   private final SocialMentionRepository socialMentions;
   private final SocialExtractionJobRepository socialJobs;
+  private final UrlPrefilter urlPrefilter;
   private final ActivityRecorder activity;
 
   public CoverageController(
@@ -48,12 +50,14 @@ public class CoverageController {
       ExtractionJobRepository jobs,
       SocialMentionRepository socialMentions,
       SocialExtractionJobRepository socialJobs,
+      UrlPrefilter urlPrefilter,
       ActivityRecorder activity) {
     this.reports = reports;
     this.coverage = coverage;
     this.jobs = jobs;
     this.socialMentions = socialMentions;
     this.socialJobs = socialJobs;
+    this.urlPrefilter = urlPrefilter;
     this.activity = activity;
   }
 
@@ -127,9 +131,19 @@ public class CoverageController {
       } else {
         var inserted = coverage.insertQueued(report.id(), url, sortOrder++);
         if (inserted.isPresent()) {
-          jobs.enqueue(inserted.get().id());
-          created.add(
-              QueuedItemDto.article(inserted.get().id(), url, inserted.get().extractionStatus()));
+          // Pre-filter obvious non-article URLs (Reddit listings, live-update tickers,
+          // homepages, tag/category indexes, …). The article fetcher would either return
+          // empty or feed the LLM noise; failing fast with a useful message is the right
+          // user experience.
+          var rejected = urlPrefilter.reject(url);
+          if (rejected.isPresent()) {
+            coverage.markFailed(inserted.get().id(), "Not a single article: " + rejected.get());
+            created.add(QueuedItemDto.article(inserted.get().id(), url, "failed"));
+          } else {
+            jobs.enqueue(inserted.get().id());
+            created.add(
+                QueuedItemDto.article(inserted.get().id(), url, inserted.get().extractionStatus()));
+          }
         }
       }
     }

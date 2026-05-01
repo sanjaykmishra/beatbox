@@ -50,6 +50,13 @@ public class ExtractionService {
     this.modelOverride = modelOverride;
     this.mode = normalizeMode(mode);
     log.info("ExtractionService tier mode = {}", this.mode);
+    if (modelOverride != null && !modelOverride.isBlank()) {
+      log.info(
+          "ExtractionService model override active: ANTHROPIC_MODEL_EXTRACTION={} (overrides the"
+              + " prompt's declared model). Set to a real model id like 'claude-sonnet-4-6' or"
+              + " unset to use the prompt's value.",
+          modelOverride);
+    }
   }
 
   static String normalizeMode(String raw) {
