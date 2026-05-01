@@ -26,8 +26,7 @@ public class RequestLogFilter extends OncePerRequestFilter {
 
   // Healthcheck endpoints are pinged constantly by Docker / Fly / load balancers — logging every
   // hit drowns out actual request lines. Skip both shapes (Spring Actuator + our /v1/healthz).
-  private static final Set<String> SKIP_PREFIXES =
-      Set.of("/actuator/", "/health", "/v1/healthz");
+  private static final Set<String> SKIP_PREFIXES = Set.of("/actuator/", "/health", "/v1/healthz");
 
   @Override
   protected void doFilterInternal(

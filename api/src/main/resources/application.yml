@@ -29,6 +29,11 @@ beat:
     secret-access-key: ${R2_SECRET_ACCESS_KEY:}
     bucket: ${R2_BUCKET:}
     public-base-url: ${R2_PUBLIC_BASE_URL:}
+  screenshots:
+    # Local-disk fallback for screenshots when R2 isn't configured (typical local Docker dev).
+    # Set this to a writable directory (mount as a volume in compose). When empty, screenshots
+    # are simply skipped, which is fine for production where R2 above is configured.
+    local-dir: ${LOCAL_SCREENSHOTS_DIR:}
   admin:
     # Comma-separated list of user emails allowed to view /v1/admin/*. Empty = nobody.
     emails: ${ADMIN_EMAILS:}
