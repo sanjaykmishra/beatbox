@@ -132,6 +132,36 @@ export function ReportReview() {
           </div>
         </div>
 
+        {r.status === 'failed' && (
+          <Alert
+            tone="warning"
+            title="Last generation attempt failed"
+            action={{ label: 'Try again', onClick: () => generate.mutate() }}
+          >
+            Click <strong>Generate report</strong> above to try again, or fix any failed
+            extractions first.
+          </Alert>
+        )}
+        {r.status === 'processing' && (
+          <Alert tone="info" title="Generating…">
+            We're rendering the PDF in the background. You'll be sent to the preview once it's
+            ready.
+          </Alert>
+        )}
+        {r.status === 'ready' && (
+          <Alert
+            tone="success"
+            title="Report generated"
+            action={{
+              label: 'Open preview →',
+              onClick: () => navigate(`/reports/${r.id}/preview`),
+            }}
+          >
+            The PDF is ready. Edit the executive summary inline on the preview, or download to
+            send to your client.
+          </Alert>
+        )}
+
         {/* Filter pills + sort dropdown. Sort is currently fixed (date desc); wireframe shows a
             select but Phase 1 doesn't need configurable sort. */}
         <div className="flex items-center gap-2 flex-wrap">
