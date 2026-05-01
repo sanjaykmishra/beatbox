@@ -142,12 +142,19 @@ public class ExtractionWorker {
               .map(c -> c.name())
               .orElse("the subject");
 
-      var fetched = fetcher.fetch(item.sourceUrl());
-      if (fetched.isEmpty()) {
-        retryOrFail(job, "fetch_returned_empty");
+      var fetchOutcome = fetcher.fetchWithReason(item.sourceUrl());
+      if (fetchOutcome.article().isEmpty()) {
+        // Bare reason from the fetcher is short
+        // ("readability_empty_then_scrapingbee_unconfigured");
+        // wrap it with a fixed prefix so the failed_reason column still self-identifies.
+        String reason =
+            fetchOutcome.reason() == null
+                ? "fetch_returned_empty"
+                : "fetch_returned_empty (" + fetchOutcome.reason() + ")";
+        retryOrFail(job, reason);
         return;
       }
-      var article = fetched.get();
+      var article = fetchOutcome.article().get();
 
       // Outlet: upsert by domain, then classify tier if it's still default.
       String domain = Domains.apexFromUrl(item.sourceUrl()).orElse("");
