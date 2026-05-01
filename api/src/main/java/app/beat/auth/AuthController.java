@@ -1,5 +1,7 @@
 package app.beat.auth;
 
+import app.beat.infra.AppException;
+import app.beat.infra.RequestContext;
 import app.beat.workspace.Workspace;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -10,6 +12,7 @@ import java.time.Instant;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -21,9 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private final AuthService auth;
+  private final UserRepository users;
 
-  public AuthController(AuthService auth) {
+  public AuthController(AuthService auth, UserRepository users) {
     this.auth = auth;
+    this.users = users;
   }
 
   public record SignupRequest(
@@ -75,5 +80,15 @@ public class AuthController {
     }
     auth.logout(token);
     return ResponseEntity.noContent().build();
+  }
+
+  /** Returns the currently-authenticated user. SPA reads this on session load. */
+  @GetMapping("/me")
+  public UserDto me(HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    return users
+        .findById(ctx.userId())
+        .map(UserDto::from)
+        .orElseThrow(() -> AppException.notFound("User"));
   }
 }

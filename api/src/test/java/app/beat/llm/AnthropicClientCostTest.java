@@ -28,4 +28,26 @@ class AnthropicClientCostTest {
     String out = AnthropicClient.truncateForTokenBudget(text, 1000);
     assertThat(out).hasSize(4000);
   }
+
+  @Test
+  void haikuMatchesPublishedRates() {
+    BigDecimal cost = AnthropicClient.costFor("claude-haiku-4-5", 1_000_000, 0);
+    assertThat(cost).isEqualByComparingTo(new BigDecimal("1.00"));
+    BigDecimal cost2 = AnthropicClient.costFor("claude-haiku-4-5", 0, 1_000_000);
+    assertThat(cost2).isEqualByComparingTo(new BigDecimal("5.00"));
+  }
+
+  @Test
+  void cacheWriteCostsMoreThanRegularInput() {
+    BigDecimal regular = AnthropicClient.costFor("claude-sonnet-4-6", 1000, 0, 0, 0);
+    BigDecimal cached = AnthropicClient.costFor("claude-sonnet-4-6", 0, 0, 1000, 0);
+    assertThat(cached).isGreaterThan(regular);
+  }
+
+  @Test
+  void cacheReadCostsLessThanRegularInput() {
+    BigDecimal regular = AnthropicClient.costFor("claude-sonnet-4-6", 1000, 0, 0, 0);
+    BigDecimal cached = AnthropicClient.costFor("claude-sonnet-4-6", 0, 0, 0, 1000);
+    assertThat(cached).isLessThan(regular);
+  }
 }

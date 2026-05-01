@@ -1,6 +1,6 @@
 ---
 version: extraction_v1.2
-model: claude-haiku-4  # first-pass; escalates to claude-sonnet-4 on confidence-low or schema-fail
+model: claude-haiku-4-5  # first-pass; escalates to claude-sonnet-4-6 on confidence-low or schema-fail
 temperature: 0.1
 max_tokens: 1500
 expected_output_format: json
@@ -8,7 +8,7 @@ schema_class: app.beat.llm.ExtractionSchema
 prompt_cache:
   - extraction_instructions_block
 escalation:
-  to_model: claude-sonnet-4
+  to_model: claude-sonnet-4-6
   trigger: confidence == "low" OR schema_validation_failed
 ---
 

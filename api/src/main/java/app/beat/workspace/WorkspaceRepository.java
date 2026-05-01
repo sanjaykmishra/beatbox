@@ -35,6 +35,7 @@ public class WorkspaceRepository {
               rs.getString("stripe_customer_id"),
               rs.getString("stripe_subscription_id"),
               ts(rs, "trial_ends_at"),
+              ts(rs, "grandfathered_until"),
               rs.getObject("default_template_id", UUID.class),
               ts(rs, "created_at"),
               ts(rs, "updated_at"));

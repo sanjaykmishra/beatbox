@@ -286,6 +286,21 @@ public class OwnedPostController {
       throw AppException.badRequest(
           "/errors/missing-reason", "Reason required", "Rejecting a post requires a reason.");
     }
+    // Authorship guards: an author can't approve / reject / send-to-client their own post during
+    // an internal review pass. They CAN reopen back to draft (their own work, their call).
+    boolean isAuthor =
+        existing.draftedByUserId() != null && existing.draftedByUserId().equals(ctx.userId());
+    boolean reviewerAction =
+        ("approved".equals(target) || "rejected".equals(target) || "client_review".equals(target))
+            && ("internal_review".equals(existing.status())
+                || "client_review".equals(existing.status()));
+    if (isAuthor && reviewerAction) {
+      throw AppException.forbidden(
+          "You can't review your own post — route it to a teammate instead.");
+    }
+    // Submit-for-internal-review with no other members is permitted at the API level (a teammate
+    // can join the workspace later) but the SPA hides the button via the membersQ check in
+    // EditComposer to keep solo-workspace UX uncluttered.
     OwnedPost moved = posts.transition(id, target, Instant.now());
     var meta = new HashMap<String, Object>();
     meta.put("from", existing.status());

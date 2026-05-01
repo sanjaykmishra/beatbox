@@ -38,11 +38,17 @@ public class AnthropicClient {
   private final String apiKey;
   private final ActivityRecorder activity;
 
-  // Approx Sonnet-class pricing per million tokens. Update when contract changes.
+  // Per-million-token pricing per docs/18-cost-engineering.md (Anthropic public rates,
+  // Apr 2026): Haiku $1/$5, Sonnet $3/$15, Opus $15/$75. Cache writes bill at 1.25× the
+  // input rate; cache reads at 0.1×.
+  private static final BigDecimal HAIKU_INPUT_PER_MTOK = new BigDecimal("1.00");
+  private static final BigDecimal HAIKU_OUTPUT_PER_MTOK = new BigDecimal("5.00");
   private static final BigDecimal SONNET_INPUT_PER_MTOK = new BigDecimal("3.00");
   private static final BigDecimal SONNET_OUTPUT_PER_MTOK = new BigDecimal("15.00");
   private static final BigDecimal OPUS_INPUT_PER_MTOK = new BigDecimal("15.00");
   private static final BigDecimal OPUS_OUTPUT_PER_MTOK = new BigDecimal("75.00");
+  private static final BigDecimal CACHE_WRITE_MULT = new BigDecimal("1.25");
+  private static final BigDecimal CACHE_READ_MULT = new BigDecimal("0.10");
 
   @org.springframework.beans.factory.annotation.Autowired
   public AnthropicClient(
@@ -62,21 +68,62 @@ public class AnthropicClient {
     return apiKey != null && !apiKey.isBlank();
   }
 
-  public record Result(String text, int inputTokens, int outputTokens, BigDecimal costUsd) {}
+  public record Result(
+      String text,
+      int inputTokens,
+      int outputTokens,
+      int cacheCreationInputTokens,
+      int cacheReadInputTokens,
+      BigDecimal costUsd) {
+
+    public Result(String text, int inputTokens, int outputTokens, BigDecimal costUsd) {
+      this(text, inputTokens, outputTokens, 0, 0, costUsd);
+    }
+  }
 
   /**
-   * Single message call with up to 3 retries on 429/5xx (2s, 8s, 30s).
+   * Single message call with up to 3 retries on 429/5xx (2s, 8s, 30s). Convenience overload with no
+   * system block and no caching.
    *
    * @throws IllegalStateException if API key isn't configured
    * @throws RuntimeException on non-retryable HTTP errors or transport failure
    */
   public Result call(String model, double temperature, int maxTokens, String userMessage) {
+    return call(model, temperature, maxTokens, null, false, userMessage);
+  }
+
+  /**
+   * Single message call with optional cached system block. Per docs/18-cost-engineering.md, large
+   * stable instructions (style guidance, schema rules, brand-voice context) belong in the system
+   * block with caching enabled — the first call writes the cache (1.25× input rate), subsequent
+   * calls within the 5-minute TTL pay 0.1× for the cached portion.
+   *
+   * @param systemBlock stable instructions; pass {@code null} to omit
+   * @param cacheSystem when true and {@code systemBlock} is non-empty, attaches {@code
+   *     cache_control: ephemeral} so Anthropic caches the block server-side
+   */
+  public Result call(
+      String model,
+      double temperature,
+      int maxTokens,
+      String systemBlock,
+      boolean cacheSystem,
+      String userMessage) {
     if (!isConfigured()) throw new IllegalStateException("ANTHROPIC_API_KEY not configured");
 
     ObjectNode body = json.createObjectNode();
     body.put("model", model);
     body.put("max_tokens", maxTokens);
     body.put("temperature", temperature);
+    if (systemBlock != null && !systemBlock.isEmpty()) {
+      var sysArr = body.putArray("system");
+      var sys = sysArr.addObject();
+      sys.put("type", "text");
+      sys.put("text", systemBlock);
+      if (cacheSystem) {
+        sys.putObject("cache_control").put("type", "ephemeral");
+      }
+    }
     var messages = body.putArray("messages");
     var msg = messages.addObject();
     msg.put("role", "user");
@@ -155,22 +202,37 @@ public class AnthropicClient {
           text.append(block.path("text").asText());
         }
       }
-      int inTok = root.path("usage").path("input_tokens").asInt();
-      int outTok = root.path("usage").path("output_tokens").asInt();
-      BigDecimal cost = costFor(model, inTok, outTok);
-      return new Result(text.toString(), inTok, outTok, cost);
+      JsonNode usage = root.path("usage");
+      int inTok = usage.path("input_tokens").asInt();
+      int outTok = usage.path("output_tokens").asInt();
+      int cacheWriteTok = usage.path("cache_creation_input_tokens").asInt();
+      int cacheReadTok = usage.path("cache_read_input_tokens").asInt();
+      BigDecimal cost = costFor(model, inTok, outTok, cacheWriteTok, cacheReadTok);
+      return new Result(text.toString(), inTok, outTok, cacheWriteTok, cacheReadTok, cost);
     } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
       throw new RuntimeException("anthropic: bad response JSON", e);
     }
   }
 
   static BigDecimal costFor(String model, int inputTokens, int outputTokens) {
+    return costFor(model, inputTokens, outputTokens, 0, 0);
+  }
+
+  static BigDecimal costFor(
+      String model,
+      int inputTokens,
+      int outputTokens,
+      int cacheCreationTokens,
+      int cacheReadTokens) {
     String m = model == null ? "" : model.toLowerCase();
     BigDecimal inRate;
     BigDecimal outRate;
     if (m.contains("opus")) {
       inRate = OPUS_INPUT_PER_MTOK;
       outRate = OPUS_OUTPUT_PER_MTOK;
+    } else if (m.contains("haiku")) {
+      inRate = HAIKU_INPUT_PER_MTOK;
+      outRate = HAIKU_OUTPUT_PER_MTOK;
     } else {
       inRate = SONNET_INPUT_PER_MTOK;
       outRate = SONNET_OUTPUT_PER_MTOK;
@@ -180,15 +242,27 @@ public class AnthropicClient {
         inRate.multiply(BigDecimal.valueOf(inputTokens)).divide(mtok, 6, RoundingMode.HALF_UP);
     BigDecimal out =
         outRate.multiply(BigDecimal.valueOf(outputTokens)).divide(mtok, 6, RoundingMode.HALF_UP);
-    return in.add(out);
+    BigDecimal cacheWrite =
+        inRate
+            .multiply(CACHE_WRITE_MULT)
+            .multiply(BigDecimal.valueOf(cacheCreationTokens))
+            .divide(mtok, 6, RoundingMode.HALF_UP);
+    BigDecimal cacheRead =
+        inRate
+            .multiply(CACHE_READ_MULT)
+            .multiply(BigDecimal.valueOf(cacheReadTokens))
+            .divide(mtok, 6, RoundingMode.HALF_UP);
+    return in.add(out).add(cacheWrite).add(cacheRead);
   }
 
   private static void logCall(String model, Result r, long durMs, String outcome) {
     log.info(
-        "anthropic_call model={} input_tokens={} output_tokens={} cost_usd={} duration_ms={} outcome={}",
+        "anthropic_call model={} input_tokens={} output_tokens={} cache_write={} cache_read={} cost_usd={} duration_ms={} outcome={}",
         model,
         r.inputTokens(),
         r.outputTokens(),
+        r.cacheCreationInputTokens(),
+        r.cacheReadInputTokens(),
         r.costUsd().toPlainString(),
         durMs,
         outcome);

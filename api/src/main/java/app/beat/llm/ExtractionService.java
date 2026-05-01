@@ -22,21 +22,43 @@ public class ExtractionService {
   private static final Logger log = LoggerFactory.getLogger(ExtractionService.class);
   private static final int MAX_INPUT_TOKENS = 8000;
 
+  /** Tier dispatch modes for {@link #extract}. Set via {@code beat.prompts.extraction.tier}. */
+  static final String MODE_SINGLE = "single";
+
+  static final String MODE_TWO_TIER = "two_tier";
+  static final String MODE_SHADOW = "shadow";
+
   private final PromptLoader prompts;
   private final AnthropicClient anthropic;
   private final ExtractionCacheRepository cache;
+  private final TwoTierExtractionService twoTier;
   private final ObjectMapper json = new ObjectMapper();
   private final String modelOverride;
+  private final String mode;
 
   public ExtractionService(
       PromptLoader prompts,
       AnthropicClient anthropic,
       ExtractionCacheRepository cache,
-      @Value("${ANTHROPIC_MODEL_EXTRACTION:}") String modelOverride) {
+      TwoTierExtractionService twoTier,
+      @Value("${ANTHROPIC_MODEL_EXTRACTION:}") String modelOverride,
+      @Value("${beat.prompts.extraction.tier:single}") String mode) {
     this.prompts = prompts;
     this.anthropic = anthropic;
     this.cache = cache;
+    this.twoTier = twoTier;
     this.modelOverride = modelOverride;
+    this.mode = normalizeMode(mode);
+    log.info("ExtractionService tier mode = {}", this.mode);
+  }
+
+  static String normalizeMode(String raw) {
+    if (raw == null) return MODE_SINGLE;
+    String m = raw.trim().toLowerCase();
+    return switch (m) {
+      case MODE_TWO_TIER, MODE_SHADOW, MODE_SINGLE -> m;
+      default -> MODE_SINGLE;
+    };
   }
 
   public boolean isEnabled() {
@@ -52,6 +74,56 @@ public class ExtractionService {
       String articleText,
       ClientContext context) {
     if (!isEnabled()) return Optional.empty();
+
+    return switch (mode) {
+      case MODE_TWO_TIER -> extractV12AsOutcome(url, outletName, subjectName, articleText, context);
+      case MODE_SHADOW -> {
+        // User-facing path is v1/v1.1 (unchanged). v1.2 fires for telemetry-only and any
+        // failure is swallowed — shadow must never break the user path.
+        Optional<Outcome> primary =
+            extractSingle(url, outletName, subjectName, articleText, context);
+        try {
+          var shadow = twoTier.extract(url, outletName, subjectName, articleText, context);
+          shadow.ifPresent(
+              s ->
+                  log.info(
+                      "extraction_shadow: v12 ran tier={} prefilter={} prompt={}",
+                      s.tier(),
+                      s.prefilterReason(),
+                      s.promptVersion()));
+        } catch (RuntimeException e) {
+          log.warn("extraction_shadow: v12 path failed (ignored): {}", e.toString());
+        }
+        yield primary;
+      }
+      default -> extractSingle(url, outletName, subjectName, articleText, context);
+    };
+  }
+
+  /**
+   * Adapts the v1.2 outcome shape to the worker-visible {@link Outcome}. Drops prefilter rejects.
+   */
+  private Optional<Outcome> extractV12AsOutcome(
+      String url,
+      String outletName,
+      String subjectName,
+      String articleText,
+      ClientContext context) {
+    var v12 = twoTier.extract(url, outletName, subjectName, articleText, context).orElse(null);
+    if (v12 == null) return Optional.empty();
+    if (v12.prefilterReason() != null) {
+      // No LLM call happened. Caller treats absence the same as v1.x failure.
+      return Optional.empty();
+    }
+    return Optional.of(new Outcome(v12.result(), v12.promptVersion()));
+  }
+
+  private Optional<Outcome> extractSingle(
+      String url,
+      String outletName,
+      String subjectName,
+      String articleText,
+      ClientContext context) {
     // Use v1.1 when context is available, v1 otherwise. The cache is keyed on prompt version,
     // so a context add doesn't pollute the no-context cache.
     boolean useContext = context != null && !context.isEmpty();

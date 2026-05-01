@@ -1,8 +1,9 @@
 import { createContext } from 'react';
-import type { Workspace } from './api';
+import type { User, Workspace } from './api';
 
 export type AuthState = {
   workspace: Workspace | null;
+  user: User | null;
   loading: boolean;
   signIn: (token: string) => Promise<void>;
   signOut: () => Promise<void>;

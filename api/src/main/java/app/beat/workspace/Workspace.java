@@ -15,6 +15,7 @@ public record Workspace(
     String stripeCustomerId,
     String stripeSubscriptionId,
     Instant trialEndsAt,
+    Instant grandfatheredUntil,
     UUID defaultTemplateId,
     Instant createdAt,
     Instant updatedAt) {}

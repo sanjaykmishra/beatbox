@@ -1,0 +1,158 @@
+# Beat — executive summary reviewer rubric (per docs/06-evals.md §"Summary eval"
+# and prompts/executive-summary-v1-1.md §"Eval set").
+#
+# This rubric anchors the v1.0 → v1.1 migration described in docs/18. Each
+# scenario carries:
+#   - a brief description of the report-period state
+#   - a hand-written reference summary in the agency voice (250-400 words,
+#     three paragraphs, prose only)
+#   - must-include / must-not-include phrases the eval asserts on
+#
+# Hard gates exercised offline (no API key required) by SummaryEvalTest:
+#   - HyperboleDetector finds zero violations in every reference summary
+#   - every reference summary is 250-400 words
+#   - every reference summary is exactly three paragraphs
+#
+# Live (LLM) gates are layered on top when ANTHROPIC_API_KEY is set + the
+# beat.eval.live system property; the live runner re-uses these rubrics for
+# LLM-as-judge comparison against the live Sonnet output of v1.1.
+
+- id: routine_b2b_month
+  scenario: |
+    A typical month for a B2B SaaS client (Acme Corp). 6 coverage items;
+    one tier-1 (TechCrunch on the Series B), three tier-2 trade pubs, two
+    tier-3 syndicated. Sentiment skews positive (4) with two neutral
+    pieces. No surprises.
+  reference_summary: |
+    January delivered six pieces of coverage for Acme Corp, headlined by a
+    tier-1 TechCrunch placement on the Series B. The month leaned positive,
+    with four positive and two neutral pieces. The funding announcement
+    carried the bulk of estimated reach across the trade pickups that
+    followed, and the placement itself stayed consistent with the messaging
+    framework agreed in the December planning conversation. There were no
+    negative or mixed pieces, which is consistent with a clean execution
+    against a controllable announcement window. Total reach for the month
+    landed slightly above the trailing six-month average, driven entirely
+    by the TechCrunch placement.
+
+    Trade publications drove the supporting coverage. Two industry titles
+    paired Acme with the broader B2B SaaS funding environment, and a third
+    placed the team in a customer-success roundup that ran late in the
+    month. Reach was concentrated on the funding announcement on day one,
+    with the trade pieces sustaining mention velocity through mid-month
+    rather than adding net new audience. Topic coverage stayed disciplined:
+    every piece framed Acme as a platform play rather than a feature
+    update, which matched the strategy and the analyst briefings that ran
+    the week before.
+
+    The story to watch is the secondary narrative around hiring momentum
+    that surfaced in two of the trade write-ups. If that thread continues
+    in February, the team has an opportunity to seed an executive feature
+    on org build-out without leaning on more funding news. The customer
+    spotlight from the late-month roundup is the second thread worth
+    pulling on, since it produced the only tier-3 piece this month that
+    drove inbound to the website. February's planning conversation should
+    weigh both threads against the launch sequencing the engineering team
+    is targeting for the second quarter.
+  must_include_phrases:
+    - "Acme"
+    - "TechCrunch"
+    - "Series B"
+  must_not_include:
+    - "groundbreaking"
+    - "revolutionary"
+    - "tremendous"
+    - "unprecedented"
+    - "incredible"
+
+- id: launch_month
+  scenario: |
+    Product-launch month. 11 coverage items concentrated around the launch
+    day. Five tier-1 placements (TechCrunch, The Verge, Wired, Bloomberg,
+    Forbes), the rest tier-2 trade and tier-3 syndicated. Sentiment 9
+    positive, 2 neutral. Strong reach.
+  reference_summary: |
+    The launch landed. Eleven pieces of coverage cleared in the eight days
+    around launch day, including five tier-1 placements at TechCrunch, The
+    Verge, Wired, Bloomberg, and Forbes. That is the strongest tier-1
+    spread Acme has shipped to date and a meaningful step up from the
+    October announcement, which carried two tier-1s. Total estimated reach
+    for the month came in at roughly three times the trailing six-month
+    average, with the tier-1 cluster accounting for the majority. The
+    embargoed briefings ran cleanly and the prepared technical detail
+    survived the editing process at the four titles that quoted from it.
+
+    Sentiment was overwhelmingly positive. Nine pieces ran positive, two
+    neutral, and there were no negative pieces. Reach concentrated on the
+    tier-1 cluster — the Verge and Wired placements in particular drove
+    the bulk of estimated audience — while the trade publications carried
+    the use-case detail the launch deck could not. Topic coverage stayed
+    focused: every article framed the announcement as a platform move
+    rather than a feature update, which matched the strategy and the
+    analyst briefings that ran two weeks earlier. The Forbes piece is the
+    one to bookmark, because it positioned Acme against two named
+    competitors in language we could not have written ourselves.
+
+    Two threads carry into February. First, the Bloomberg piece quoted the
+    CFO on revenue mix in a way that reads as a quiet earnings preview;
+    that is worth a follow-up to ensure financial press is briefed before
+    the quarter closes. Second, a thoughtful Forbes column raised platform
+    pricing questions that could surface again in earnings coverage if not
+    addressed proactively. Neither is urgent, but both will compound if
+    left to drift through the quarter.
+  must_include_phrases:
+    - "Acme"
+    - "tier-1"
+  must_not_include:
+    - "groundbreaking"
+    - "revolutionary"
+    - "tremendous"
+    - "unprecedented"
+    - "incredible"
+    - "game-changing"
+
+- id: crisis_month
+  scenario: |
+    A crisis-period month. The client (Acme Corp) announced layoffs.
+    9 coverage items, 1 tier-1 (NYT investigation), 5 tier-2 trade pieces
+    contextualizing the layoffs in the broader market, 3 syndicated.
+    Sentiment 1 positive, 2 neutral, 4 mixed, 2 negative. Tone calibration
+    is the test here.
+  reference_summary: |
+    November was a difficult month. Nine pieces of coverage carried the
+    layoff story, led by a tier-1 New York Times piece that placed the
+    decision in the broader market reset that has shaped technology hiring
+    since the summer. Two pieces ran negative; four were mixed; two
+    stayed neutral; one — a customer spotlight from a trade title that ran
+    late in the cycle — landed positive against the broader tone. Total
+    estimated reach was elevated compared to a typical month, driven
+    largely by the Times investigation and the syndication that followed.
+
+    The Times investigation set the framing the trade publications then
+    inherited: layoffs as a structural response to a market reset rather
+    than as performance failure on the part of the leadership team. That
+    framing is the most important outcome from a tough cycle, because the
+    trade pickups largely held to it. Two pieces did push back on the
+    timing of the announcement relative to the Q3 close, citing the gap
+    between the press release and the all-hands. Those two pieces are the
+    ones likely to be cited if the story resurfaces, especially in any
+    follow-up coverage that pairs Acme with named peers who handled
+    similar reductions earlier in the year.
+
+    Going forward, the priority is to make sure the next earnings cycle is
+    not framed against the layoff narrative. The customer spotlight that
+    landed mid-month is the kind of follow-on story the team should seed
+    more aggressively in December — operating proof points, not further
+    commentary on the cuts themselves. Two trade reporters who covered the
+    layoffs constructively are also natural next-call candidates for a
+    forward-looking feature on the strategic shifts the announcement
+    enables. Both are mid-month opportunities rather than December-launch
+    work, so they fit the planning cadence cleanly.
+  must_include_phrases:
+    - "Acme"
+  must_not_include:
+    - "groundbreaking"
+    - "revolutionary"
+    - "tremendous"
+    - "unprecedented"
+    - "incredible"
