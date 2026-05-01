@@ -16,9 +16,26 @@ public class ExtractionJobRepository {
 
   public record QueuedJob(UUID id, UUID coverageItemId, int attemptCount) {}
 
-  /** Enqueue a job. */
+  /**
+   * Enqueue (or re-enqueue) a job. The {@code coverage_item_id} column is unique, so we UPSERT: a
+   * fresh paste creates a new row in {@code queued}; a Retry on a previously-{@code failed} row
+   * resets it to {@code queued} with last_error cleared and started/completed_at NULL. Without the
+   * UPSERT, Retry threw a duplicate-key constraint violation because the failed row from the
+   * original attempt was still in the table.
+   */
   public void enqueue(UUID coverageItemId) {
-    jdbc.sql("INSERT INTO extraction_jobs (coverage_item_id) VALUES (:c)")
+    jdbc.sql(
+            """
+            INSERT INTO extraction_jobs (coverage_item_id)
+            VALUES (:c)
+            ON CONFLICT (coverage_item_id) DO UPDATE SET
+              status = 'queued',
+              last_error = NULL,
+              started_at = NULL,
+              completed_at = NULL,
+              queued_at = now(),
+              updated_at = now()
+            """)
         .param("c", coverageItemId)
         .update();
   }

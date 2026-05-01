@@ -364,11 +364,27 @@ public class ReportController {
         reports
             .findInWorkspace(ctx.workspaceId(), id)
             .orElseThrow(() -> AppException.notFound("Report"));
-    if (!"draft".equals(r.status())) {
+    // Allow Generate from 'draft' (first run) and 'failed' (retry after a render-pipeline
+    // failure — Anthropic outage, render container down, temperature deprecation, etc.). Reject
+    // 'processing' (already in flight) and 'ready' (already done; users edit summaries inline).
+    if ("processing".equals(r.status())) {
       throw AppException.badRequest(
-          "/errors/report-not-draft",
-          "Report not in draft",
-          "Only draft reports can be generated.");
+          "/errors/report-in-flight",
+          "Report is already generating",
+          "Wait for the current generation to finish.");
+    }
+    if ("ready".equals(r.status())) {
+      throw AppException.badRequest(
+          "/errors/report-already-generated",
+          "Report already generated",
+          "Edit the executive summary inline on the preview, or duplicate this report to start"
+              + " a fresh draft.");
+    }
+    if (!"draft".equals(r.status()) && !"failed".equals(r.status())) {
+      throw AppException.badRequest(
+          "/errors/report-not-generatable",
+          "Report can't be generated",
+          "Only draft or failed reports can be generated; this one is " + r.status() + ".");
     }
     // Per CLAUDE.md guardrail #8 ("social mentions are first-class"), the generate gate considers
     // both articles and social mentions when deciding whether anything is in-flight or has been

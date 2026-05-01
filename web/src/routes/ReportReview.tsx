@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ConfirmDialog';
 import { Alert, Eyebrow, Pill, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import {
@@ -31,6 +32,7 @@ export function ReportReview() {
   const [editingSocial, setEditingSocial] = useState<SocialMentionView | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>('all');
+  const confirm = useConfirm();
 
   const report = useQuery({
     queryKey: ['report', id],
@@ -132,6 +134,36 @@ export function ReportReview() {
           </div>
         </div>
 
+        {r.status === 'failed' && (
+          <Alert
+            tone="warning"
+            title="Last generation attempt failed"
+            action={{ label: 'Try again', onClick: () => generate.mutate() }}
+          >
+            Click <strong>Generate report</strong> above to try again, or fix any failed
+            extractions first.
+          </Alert>
+        )}
+        {r.status === 'processing' && (
+          <Alert tone="info" title="Generating…">
+            We're rendering the PDF in the background. You'll be sent to the preview once it's
+            ready.
+          </Alert>
+        )}
+        {r.status === 'ready' && (
+          <Alert
+            tone="success"
+            title="Report generated"
+            action={{
+              label: 'Open preview →',
+              onClick: () => navigate(`/reports/${r.id}/preview`),
+            }}
+          >
+            The PDF is ready. Edit the executive summary inline on the preview, or download to
+            send to your client.
+          </Alert>
+        )}
+
         {/* Filter pills + sort dropdown. Sort is currently fixed (date desc); wireframe shows a
             select but Phase 1 doesn't need configurable sort. */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -217,7 +249,12 @@ export function ReportReview() {
                       }
                     }}
                     onRemove={async () => {
-                      if (!confirm('Remove this coverage item?')) return;
+                      const ok = await confirm({
+                        title: 'Remove this coverage item?',
+                        tone: 'danger',
+                        confirmLabel: 'Remove',
+                      });
+                      if (!ok) return;
                       try {
                         await api.deleteCoverage(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });
@@ -241,7 +278,12 @@ export function ReportReview() {
                       }
                     }}
                     onRemove={async () => {
-                      if (!confirm('Remove this social mention?')) return;
+                      const ok = await confirm({
+                        title: 'Remove this social mention?',
+                        tone: 'danger',
+                        confirmLabel: 'Remove',
+                      });
+                      if (!ok) return;
                       try {
                         await api.deleteSocialMention(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });

@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ConfirmDialog';
 import { Alert, Eyebrow, Pill, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import {
@@ -1533,6 +1534,7 @@ function EditCalendarEvent({
   const [url, setUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (eventQ.data && !hydrated) {
@@ -1708,8 +1710,13 @@ function EditCalendarEvent({
 
         <div className="flex justify-between gap-2 pt-3 border-t border-gray-100">
           <button
-            onClick={() => {
-              if (confirm('Delete this event?')) remove.mutate();
+            onClick={async () => {
+              const ok = await confirm({
+                title: 'Delete this event?',
+                tone: 'danger',
+                confirmLabel: 'Delete event',
+              });
+              if (ok) remove.mutate();
             }}
             disabled={remove.isPending}
             className="text-sm text-red-600 hover:underline"
@@ -1899,6 +1906,7 @@ function EditComposer({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const toast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (postQ.data && !hydrated) {
@@ -2139,8 +2147,14 @@ function EditComposer({
           ))}
         </div>
         <button
-          onClick={() => {
-            if (confirm('Delete this post? This cannot be undone.')) remove.mutate();
+          onClick={async () => {
+            const ok = await confirm({
+              title: 'Delete this post?',
+              body: 'This cannot be undone.',
+              tone: 'danger',
+              confirmLabel: 'Delete post',
+            });
+            if (ok) remove.mutate();
           }}
           disabled={remove.isPending}
           className="text-sm text-red-600 hover:underline disabled:opacity-50"

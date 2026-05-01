@@ -92,6 +92,8 @@ beat/
 
 Never use a bare `<p className="text-red-600">` or similar for user-facing feedback — those are easy to miss, don't dismiss, and don't stack. Pick `Alert` for "this needs attention" and `useToast()` for "this just happened."
 
+**Destructive confirmations.** Use **`useConfirm()` from `web/src/components/ConfirmDialog.tsx`** — never the native `window.confirm()`. The browser default renders unstyled chrome ("localhost:5173 says…") that breaks the product's visual identity. Pattern: `const ok = await confirm({title: 'Delete this post?', body: 'This cannot be undone.', tone: 'danger', confirmLabel: 'Delete post'}); if (!ok) return;`. Provider is mounted once at the app root via `<ConfirmDialogProvider>` in `main.tsx`. Use `tone: 'danger'` for delete/destroy actions; default for benign confirmations.
+
 **Migrations.** Flyway. Numbered files (`V001__init.sql`). Migrations are forward-only; never edit a merged migration.
 
 **Tests.** Unit tests next to code. Integration tests in `src/test/integration/`. The LLM eval harness lives in `src/test/eval/` and runs nightly + on every PR that touches `prompts/` or LLM client code. See `docs/06-evals.md`.

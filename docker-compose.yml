@@ -48,6 +48,7 @@ services:
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
       R2_BUCKET: ${R2_BUCKET:-}
       R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
+      LOCAL_SCREENSHOTS_DIR: /var/beat/screenshots
       SCRAPINGBEE_API_KEY: ${SCRAPINGBEE_API_KEY:-}
       DATAFORSEO_LOGIN: ${DATAFORSEO_LOGIN:-}
       DATAFORSEO_PASSWORD: ${DATAFORSEO_PASSWORD:-}
@@ -60,6 +61,8 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:-dev-session-secret-change-me}
     ports:
       - "8081:8080"
+    volumes:
+      - screenshots-data:/var/beat/screenshots
     depends_on:
       postgres:
         condition: service_healthy
@@ -100,3 +103,4 @@ services:
 
 volumes:
   postgres-data:
+  screenshots-data:

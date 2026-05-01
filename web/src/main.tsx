@@ -7,6 +7,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
+import { ConfirmDialogProvider } from './components/ConfirmDialog';
 import { Signup } from './routes/Signup';
 import { Login } from './routes/Login';
 import { Clients } from './routes/Clients';
@@ -33,6 +34,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
           <AuthProvider>
             <ToastProvider>
+            <ConfirmDialogProvider>
             <Routes>
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />
@@ -57,6 +59,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               </Route>
               <Route path="*" element={<Navigate to="/clients" replace />} />
             </Routes>
+            </ConfirmDialogProvider>
             </ToastProvider>
           </AuthProvider>
         </BrowserRouter>

@@ -34,24 +34,28 @@ public class ScreenshotClient {
   private final S3Client s3;
   private final String bucket;
   private final String publicBaseUrl;
+  private final LocalScreenshotStore localStore;
 
   public ScreenshotClient(
       @Value("${RENDER_SERVICE_URL:}") String renderUrl,
       @Value("${RENDER_SERVICE_TOKEN:}") String renderToken,
       @Autowired(required = false) S3Client s3,
       @Value("${beat.r2.bucket:}") String bucket,
-      @Value("${beat.r2.public-base-url:}") String publicBaseUrl) {
+      @Value("${beat.r2.public-base-url:}") String publicBaseUrl,
+      @Autowired(required = false) LocalScreenshotStore localStore) {
     this.renderUrl = renderUrl;
     this.renderToken = renderToken;
     this.s3 = s3;
     this.bucket = bucket;
     this.publicBaseUrl = publicBaseUrl;
+    this.localStore = localStore;
   }
 
   public Optional<String> capture(UUID workspaceId, String pageUrl) {
     if (renderUrl == null || renderUrl.isBlank()) return Optional.empty();
-    if (s3 == null || bucket == null || bucket.isBlank()) {
-      // No object storage — skip capture rather than persist bytes locally.
+    boolean r2Configured = s3 != null && bucket != null && !bucket.isBlank();
+    if (!r2Configured && localStore == null) {
+      // Neither R2 nor local-disk fallback — skip rather than drop bytes on the floor.
       return Optional.empty();
     }
     try {
@@ -69,13 +73,18 @@ public class ScreenshotClient {
         return Optional.empty();
       }
       byte[] png = res.body();
-      String key = "screenshots/" + workspaceId + "/" + UUID.randomUUID() + ".png";
-      s3.putObject(
-          PutObjectRequest.builder().bucket(bucket).key(key).contentType("image/png").build(),
-          RequestBody.fromBytes(png));
-      String publicUrl =
-          publicBaseUrl.endsWith("/") ? publicBaseUrl + key : publicBaseUrl + "/" + key;
-      return Optional.of(publicUrl);
+      if (r2Configured) {
+        String key = "screenshots/" + workspaceId + "/" + UUID.randomUUID() + ".png";
+        s3.putObject(
+            PutObjectRequest.builder().bucket(bucket).key(key).contentType("image/png").build(),
+            RequestBody.fromBytes(png));
+        String publicUrl =
+            publicBaseUrl.endsWith("/") ? publicBaseUrl + key : publicBaseUrl + "/" + key;
+        return Optional.of(publicUrl);
+      }
+      // Local-disk fallback for dev. Returns a /v1/screenshots/... URL served by
+      // ScreenshotController; the SPA loads it via the same /v1 proxy as every other API call.
+      return Optional.of(localStore.put(workspaceId, png));
     } catch (Exception e) {
       if (e instanceof InterruptedException) Thread.currentThread().interrupt();
       log.warn("screenshot: capture failed for {}: {}", pageUrl, e.toString());
