@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { useToast } from '../components/Toast';
 import { Alert, Pill, type PillTone } from '../components/ui';
@@ -179,6 +179,12 @@ export function ReportPreview() {
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold tracking-tightish text-ink">{r.title}</h1>
             <StatusPill status={r.status} />
+            <Link
+              to={`/clients/${r.client_id}#past-reports`}
+              className="ml-auto text-xs text-gray-500 hover:text-gray-800 underline decoration-dotted"
+            >
+              ← All reports
+            </Link>
           </div>
           <p className="mt-1 text-xs text-gray-500">
             Server-rendered preview of the PDF. Edit the executive summary inline; use Share or
