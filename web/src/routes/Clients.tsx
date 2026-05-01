@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Pill, PrimaryButton, type PillTone } from '../components/ui';
+import { Alert, Pill, PrimaryButton, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import { api, ApiError, type ClientListItem, type Severity } from '../lib/api';
 
@@ -78,7 +78,13 @@ export function Clients() {
           </button>
         </form>
       )}
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {error && (
+        <div className="mt-3">
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        </div>
+      )}
 
       <div className="mt-6 -mx-8 border-t border-gray-200">
         {list.isLoading && (

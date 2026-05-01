@@ -308,12 +308,13 @@ function matchesFilter(it: UnifiedItem, f: FilterKey): boolean {
       return it.kind === 'social';
     case 'tier1':
       return it.kind === 'article' && (it.data.tier_at_extraction ?? 99) === 1;
-    case 'high_engagement':
+    case 'high_engagement': {
       // Social mentions only; "high engagement" is a heuristic on likes + reposts.
       if (it.kind !== 'social') return false;
       const likes = it.data.likes_count ?? 0;
       const reposts = it.data.reposts_count ?? 0;
       return likes + reposts >= 100;
+    }
   }
 }
 

@@ -13,6 +13,7 @@ export function Settings() {
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const toast = useToast();
   // Branding-only updates (logo) reload the page so the avatar in the header refreshes.
   // Inline edits like the workspace name use update.mutate directly + refreshWorkspace.
   const update = useMutation({
@@ -20,6 +21,7 @@ export function Settings() {
     onSuccess: async () => {
       await refreshWorkspace();
       void qc.invalidateQueries({ queryKey: ['workspace'] });
+      toast.success('Workspace updated.');
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : 'Update failed'),
   });
@@ -258,13 +260,25 @@ function BillingSection() {
               : b.plan_limit_reports_monthly
           } reports / month`}
         />
-        {b.plan === 'trial' && (
-          <p className={trialDaysLeft <= 3 ? 'text-sm text-amber-700' : 'text-sm text-gray-600'}>
-            {trialDaysLeft > 0
-              ? `Trial: ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining.`
-              : 'Trial ended. Add a card to continue creating reports.'}
-          </p>
-        )}
+        {b.plan === 'trial' &&
+          (trialDaysLeft <= 3 ? (
+            <Alert
+              tone={trialDaysLeft <= 0 ? 'danger' : 'warning'}
+              title={
+                trialDaysLeft > 0
+                  ? `Trial ends in ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'}`
+                  : 'Trial ended'
+              }
+            >
+              {trialDaysLeft > 0
+                ? 'Add a card to keep generating reports after your trial ends.'
+                : 'Add a card to continue creating reports.'}
+            </Alert>
+          ) : (
+            <p className="text-sm text-gray-600">
+              Trial: {trialDaysLeft} days remaining.
+            </p>
+          ))}
         {!b.stripe_configured && (
           <p className="text-xs text-gray-500">
             Billing isn't configured on the server. Set Stripe env vars to enable upgrades.

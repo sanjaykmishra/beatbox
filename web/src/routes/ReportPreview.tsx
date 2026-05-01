@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Pill, type PillTone } from '../components/ui';
+import { useToast } from '../components/Toast';
+import { Alert, Pill, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import { api, ApiError, type Report } from '../lib/api';
 
@@ -14,6 +15,7 @@ export function ReportPreview() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const report = useQuery({
     queryKey: ['report', id],
@@ -44,6 +46,7 @@ export function ReportPreview() {
     onSuccess: () => {
       setShareUrl(null);
       qc.invalidateQueries({ queryKey: ['report', id] });
+      toast.success('Share link revoked.');
     },
   });
 
@@ -146,7 +149,11 @@ export function ReportPreview() {
           </p>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
         {shareUrl && (
           <div className="bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-3">
@@ -244,12 +251,14 @@ function SummaryEditor({
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(initial);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const save = useMutation({
     mutationFn: () => api.editSummary(reportId, text),
     onSuccess: () => {
       setOpen(false);
       onSaved();
+      toast.success('Executive summary saved.');
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
   });

@@ -4,7 +4,8 @@ import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { BrowserFrame } from '../components/BrowserFrame';
-import { Eyebrow, Pill, type PillTone } from '../components/ui';
+import { useToast } from '../components/Toast';
+import { Alert, Eyebrow, Pill, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import {
   ApiError,
@@ -1364,6 +1365,7 @@ function NewCalendarEvent({
   const [allDay, setAllDay] = useState(false);
   const [url, setUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const create = useMutation({
     mutationFn: () =>
@@ -1380,6 +1382,7 @@ function NewCalendarEvent({
     onSuccess: async () => {
       await qc.refetchQueries({ queryKey: ['calendar-feed'], type: 'active' });
       onClose();
+      toast.success('Event created.');
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Create failed'),
   });
@@ -1396,7 +1399,11 @@ function NewCalendarEvent({
         </button>
       </div>
       <div className="px-6 py-5 space-y-4 flex-1">
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
         <Field label="Type">
           <select
@@ -1525,6 +1532,7 @@ function EditCalendarEvent({
   const [allDay, setAllDay] = useState(false);
   const [url, setUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (eventQ.data && !hydrated) {
@@ -1556,6 +1564,7 @@ function EditCalendarEvent({
     onSuccess: async () => {
       await qc.refetchQueries({ queryKey: ['calendar-feed'], type: 'active' });
       await qc.invalidateQueries({ queryKey: ['calendar-event', eventId] });
+      toast.success('Event saved.');
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Save failed'),
   });
@@ -1569,6 +1578,7 @@ function EditCalendarEvent({
       qc.removeQueries({ queryKey: ['calendar-event', eventId] });
       await qc.refetchQueries({ queryKey: ['calendar-feed'], type: 'active' });
       onClose();
+      toast.success('Event deleted.');
     },
   });
 
@@ -1597,7 +1607,11 @@ function EditCalendarEvent({
         </button>
       </div>
       <div className="px-6 py-5 space-y-4 flex-1">
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
         <Field label="Type">
           <select
@@ -1836,7 +1850,11 @@ function NewComposer({
 
   return (
     <DrawerFrame onClose={onClose} title="New post">
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <Alert tone="danger" onDismiss={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
       <label className="block">
         <span className="block text-xs font-medium text-gray-500 mb-1">Client</span>
         <select
@@ -1880,6 +1898,7 @@ function EditComposer({
   const [warnings, setWarnings] = useState<Record<string, string[]>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (postQ.data && !hydrated) {
@@ -1907,6 +1926,7 @@ function EditComposer({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['posts'] });
       void qc.invalidateQueries({ queryKey: ['post', postId] });
+      toast.success('Post saved.');
     },
     onError: (e) => setSaveError(e instanceof ApiError ? e.message : 'Save failed'),
   });
@@ -1914,10 +1934,11 @@ function EditComposer({
   const transition = useMutation({
     mutationFn: (vars: { t: PostTransition; reason?: string }) =>
       api.transitionPost(postId, vars.t, vars.reason ? { reason: vars.reason } : undefined),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       void qc.invalidateQueries({ queryKey: ['posts'] });
       void qc.invalidateQueries({ queryKey: ['post', postId] });
       void qc.invalidateQueries({ queryKey: ['posts-review-count'] });
+      toast.success(transitionToastLabel(vars.t));
     },
     onError: (e) => setSaveError(e instanceof ApiError ? e.message : 'Transition failed'),
   });
@@ -1927,6 +1948,7 @@ function EditComposer({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['posts'] });
       onClose();
+      toast.success('Post deleted.');
     },
   });
 
@@ -1935,6 +1957,7 @@ function EditComposer({
     onSuccess: (r) => {
       setVariants((prev) => ({ ...prev, ...r.variants }));
       setWarnings(r.warnings);
+      toast.success('Variants regenerated.');
     },
     onError: (e) => setSaveError(e instanceof ApiError ? e.message : 'Regenerate failed'),
   });
@@ -1971,7 +1994,11 @@ function EditComposer({
         <Pill tone={STATUS_TONE[post.status]}>{post.status.replace('_', ' ')}</Pill>
       }
     >
-      {saveError && <p className="text-sm text-red-600">{saveError}</p>}
+      {saveError && (
+        <Alert tone="danger" onDismiss={() => setSaveError(null)}>
+          {saveError}
+        </Alert>
+      )}
 
       <Field label="Title (internal, never published)">
         <input
@@ -2177,6 +2204,28 @@ function VariantEditor({
       )}
     </div>
   );
+}
+
+/** Toast copy for each post-state transition. */
+function transitionToastLabel(t: PostTransition): string {
+  switch (t) {
+    case 'submit_for_internal_review':
+      return 'Submitted for review.';
+    case 'request_client_approval':
+      return 'Sent for client approval.';
+    case 'approve':
+      return 'Post approved.';
+    case 'reject':
+      return 'Post rejected.';
+    case 'mark_posted':
+      return 'Marked as posted.';
+    case 'archive':
+      return 'Post archived.';
+    case 'reopen':
+      return 'Post reopened.';
+    default:
+      return 'Status updated.';
+  }
 }
 
 function transitionOptionsFor(
