@@ -53,4 +53,49 @@ class UrlPrefilterTest {
     assertThat(prefilter.reject("")).isPresent();
     assertThat(prefilter.reject("not-a-url")).isPresent();
   }
+
+  @Test
+  void rejectsRedditSubredditListings() {
+    assertThat(prefilter.reject("https://www.reddit.com/r/MachineLearning/hot")).isPresent();
+    assertThat(prefilter.reject("https://www.reddit.com/r/python/new/")).isPresent();
+    assertThat(prefilter.reject("https://reddit.com/r/funny")).isPresent();
+    assertThat(prefilter.reject("https://old.reddit.com/r/news/top")).isPresent();
+  }
+
+  @Test
+  void rejectsRedditNonPostPaths() {
+    assertThat(prefilter.reject("https://www.reddit.com/user/spez")).isPresent();
+    assertThat(prefilter.reject("https://www.reddit.com/u/spez")).isPresent();
+  }
+
+  @Test
+  void allowsRedditPostUrls() {
+    assertThat(
+            prefilter.reject(
+                "https://www.reddit.com/r/MachineLearning/comments/1abc2de/some_paper_discussion/"))
+        .isEmpty();
+    assertThat(prefilter.reject("https://reddit.com/r/foo/comments/abc123")).isEmpty();
+  }
+
+  @Test
+  void rejectsLiveUpdatesAndTickers() {
+    assertThat(
+            prefilter.reject(
+                "https://www.cnbc.com/2026/04/29/stock-market-today-live-updates.html"))
+        .isPresent();
+    assertThat(prefilter.reject("https://example.com/news/live/qatar-summit-2026")).isPresent();
+    assertThat(prefilter.reject("https://example.com/markets/ticker/AAPL")).isPresent();
+  }
+
+  @Test
+  void allowsRegularNewsArticles() {
+    assertThat(
+            prefilter.reject(
+                "https://www.bloomberg.com/news/articles/2026-04-26/big-tech-earnings-week"))
+        .isEmpty();
+    assertThat(
+            prefilter.reject(
+                "https://techcrunch.com/2026/04/30/anthropic-potential-900b-valuation-round/"))
+        .isEmpty();
+  }
 }
