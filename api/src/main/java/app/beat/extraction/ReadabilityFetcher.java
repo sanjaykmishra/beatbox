@@ -43,7 +43,7 @@ public class ReadabilityFetcher implements ArticleFetcher {
   private final HttpClient http =
       HttpClient.newBuilder()
           .followRedirects(HttpClient.Redirect.NORMAL)
-          .connectTimeout(Duration.ofSeconds(8))
+          .connectTimeout(Duration.ofSeconds(4))
           .build();
 
   @Override
@@ -56,7 +56,7 @@ public class ReadabilityFetcher implements ArticleFetcher {
     try {
       HttpRequest req =
           HttpRequest.newBuilder(URI.create(url))
-              .timeout(Duration.ofSeconds(15))
+              .timeout(Duration.ofSeconds(8))
               .header("User-Agent", "Mozilla/5.0 (compatible; BeatBot/1.0; +https://beat.app/bot)")
               .header("Accept", "text/html,application/xhtml+xml")
               .GET()

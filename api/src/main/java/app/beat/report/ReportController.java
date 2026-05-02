@@ -164,6 +164,7 @@ public class ReportController {
   public record ReportDto(
       UUID id,
       UUID client_id,
+      String client_name,
       UUID workspace_id,
       UUID template_id,
       String title,
@@ -362,9 +363,14 @@ public class ReportController {
       List<CoverageItemDto> items,
       List<SocialMentionDto> socialMentions,
       ReportStatusCountsDto counts) {
+    // Pull the client name so the SPA can render it in breadcrumbs and headings without a second
+    // round-trip. Workspace-scoped lookup keeps us inside tenant boundaries (docs/14).
+    String clientName =
+        clients.findInWorkspace(r.workspaceId(), r.clientId()).map(c -> c.name()).orElse(null);
     return new ReportDto(
         r.id(),
         r.clientId(),
+        clientName,
         r.workspaceId(),
         r.templateId(),
         r.title(),

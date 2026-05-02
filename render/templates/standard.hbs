@@ -97,6 +97,49 @@
     .badge.sentiment-neutral { background: var(--bg-soft); color: var(--ink-soft); }
     .badge.sentiment-mixed { background: #fef3c7; color: #92400e; }
     .badge.sentiment-negative { background: #fee2e2; color: #991b1b; }
+
+    /* ----- Screen-only styling -----
+       The template above is PDF-first (Letter page size, half-inch @page margins).
+       /render emulates print media via puppeteer so this @media screen block doesn't
+       apply there. /preview and the public share view render in a browser and need
+       a max-width container, padding, and a smaller cover band so the page doesn't
+       open with a giant blank top section. */
+    @media screen {
+      body {
+        background: var(--bg-soft);
+        padding: 32px 16px 64px;
+      }
+      body > section, body > div.page-break + section, body > section + section {
+        max-width: 880px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      body > section {
+        background: var(--bg);
+        padding: 24px 32px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .cover {
+        min-height: 0;
+        padding: 8px 0 4px;
+      }
+      .cover-title { font-size: 32px; }
+      .cover-period { font-size: 14px; margin-top: 8px; }
+      .cover-eyebrow { font-size: 11px; }
+      h2 { font-size: 16px; padding-bottom: 8px; margin-top: 8px; }
+      h2:first-child { margin-top: 0; }
+      h1 { font-size: 28px; }
+      .glance .value { font-size: 24px; }
+      .glance .label { font-size: 10px; }
+      .highlight .thumb, .coverage-item .thumb {
+        width: 96px; height: 64px;
+      }
+      .page-break { display: none; }
+    }
   </style>
 </head>
 <body>

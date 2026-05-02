@@ -29,7 +29,7 @@ public class ScrapingBeeFetcher implements ArticleFetcher {
   private final HttpClient http =
       HttpClient.newBuilder()
           .followRedirects(HttpClient.Redirect.NORMAL)
-          .connectTimeout(Duration.ofSeconds(10))
+          .connectTimeout(Duration.ofSeconds(5))
           .build();
 
   public ScrapingBeeFetcher(
@@ -72,7 +72,7 @@ public class ScrapingBeeFetcher implements ArticleFetcher {
     try {
       HttpRequest req =
           HttpRequest.newBuilder(URI.create(endpoint))
-              .timeout(Duration.ofSeconds(45))
+              .timeout(Duration.ofSeconds(20))
               .GET()
               .build();
       HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
@@ -106,7 +106,7 @@ public class ScrapingBeeFetcher implements ArticleFetcher {
     try {
       HttpRequest req =
           HttpRequest.newBuilder(URI.create(endpoint))
-              .timeout(Duration.ofSeconds(45))
+              .timeout(Duration.ofSeconds(20))
               .GET()
               .build();
       HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());

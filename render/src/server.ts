@@ -173,6 +173,10 @@ app.post('/render', requireServiceToken, async (req, res) => {
     // networkidle — failed image requests don't stall the wait. networkidle0 was hanging on
     // local-disk screenshot URLs with no resolvable host.
     await page.setContent(html, { waitUntil: 'load', timeout: 30_000 });
+    // Force print media so the template's @media screen block (used by /preview and the public
+    // share view in a browser) does NOT apply to PDF rendering. The template's PDF-first base
+    // styles continue to drive layout via @page Letter / 0.5in margins.
+    await page.emulateMediaType('print');
     const pdf = await page.pdf({
       format: 'Letter',
       printBackground: true,
