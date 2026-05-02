@@ -318,12 +318,10 @@ public class CoverageController {
     if (!item.reportId().equals(report.id())) {
       throw AppException.notFound("Coverage item");
     }
-    if (!"failed".equals(item.extractionStatus())) {
-      throw AppException.badRequest(
-          "/errors/not-failed",
-          "Item not in failed state",
-          "Only failed coverage items can be retried.");
-    }
+    // Allow retry on any status — the worker preserves cell-level edits via edited_fields per
+    // CLAUDE.md guardrail #4, so re-extracting a 'done' item is safe (the use case is forcing
+    // a refresh under a new prompt version, e.g. extraction-v1.3 added 'missing' prominence).
+    // 'queued' and 'running' are no-ops via the idempotent enqueue below.
     coverage.resetForRetry(item.id());
     jobs.enqueue(item.id());
     activity.recordUser(

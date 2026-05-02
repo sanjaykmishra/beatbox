@@ -477,9 +477,17 @@ function CoverageCard({
     ? new Date(item.publish_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     : null;
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onEdit}
-      className="text-left w-full bg-white border border-gray-200 rounded-lg px-5 py-4 hover:border-gray-300 transition-colors flex items-start gap-4"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onEdit();
+        }
+      }}
+      className="cursor-pointer text-left w-full bg-white border border-gray-200 rounded-lg px-5 py-4 hover:border-gray-300 transition-colors flex items-start gap-4"
     >
       <Thumbnail src={item.screenshot_url} />
       <div className="min-w-0 flex-1">
@@ -500,8 +508,21 @@ function CoverageCard({
         </h3>
         {item.lede && <p className="mt-1 text-xs text-gray-500 line-clamp-2">{item.lede}</p>}
       </div>
-      <span className="text-xs text-gray-400 flex-none pt-1">Edit ›</span>
-    </button>
+      <div className="flex flex-col items-end gap-1.5 flex-none pt-0.5 text-sm">
+        <span className="text-gray-400">Edit ›</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRetry();
+          }}
+          className="text-gray-500 hover:text-gray-800 hover:underline"
+          title="Re-extract this article (preserves your edits)"
+        >
+          Re-extract
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -561,9 +582,17 @@ function SocialCard({
   const followers = formatCount(item.author_follower_count);
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onEdit}
-      className="text-left w-full bg-white border border-gray-200 rounded-lg px-5 py-4 hover:border-gray-300 transition-colors flex items-start gap-4"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onEdit();
+        }
+      }}
+      className="cursor-pointer text-left w-full bg-white border border-gray-200 rounded-lg px-5 py-4 hover:border-gray-300 transition-colors flex items-start gap-4"
     >
       {/* Platform thumbnail tile */}
       <div className="h-16 w-[86px] bg-gray-50 border border-gray-100 rounded flex-none flex flex-col items-center justify-center gap-1 px-1.5">
@@ -609,8 +638,21 @@ function SocialCard({
         <SocialEngagementRow item={item} />
       </div>
 
-      <span className="text-xs text-gray-400 flex-none pt-1">Edit ›</span>
-    </button>
+      <div className="flex flex-col items-end gap-1.5 flex-none pt-0.5 text-sm">
+        <span className="text-gray-400">Edit ›</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRetry();
+          }}
+          className="text-gray-500 hover:text-gray-800 hover:underline"
+          title="Re-extract this mention (preserves your edits)"
+        >
+          Re-extract
+        </button>
+      </div>
+    </div>
   );
 }
 
