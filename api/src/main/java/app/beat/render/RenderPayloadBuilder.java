@@ -46,7 +46,14 @@ public class RenderPayloadBuilder {
         Highlights.pickTop(items, outletCache, 4).stream()
             .map(c -> toHighlight(c, outletCache))
             .toList();
-    var itemDtos = items.stream().map(c -> toItem(c, outletCache)).toList();
+    // Only render items the LLM actually finished extracting. Failed / queued / running items
+    // would otherwise render as empty rows in the rendered HTML and PDF (no headline, no lede),
+    // which looks like a bug to the share-link recipient.
+    var itemDtos =
+        items.stream()
+            .filter(c -> "done".equals(c.extractionStatus()))
+            .map(c -> toItem(c, outletCache))
+            .toList();
     String baseUrl = internalApiUrl.isBlank() ? null : internalApiUrl;
     return new RenderPayload(branding, clientDto, reportDto, glance, highlights, itemDtos, baseUrl);
   }

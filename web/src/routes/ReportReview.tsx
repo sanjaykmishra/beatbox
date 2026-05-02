@@ -510,19 +510,19 @@ function CoverageCard({
         </h3>
         {item.lede && <p className="mt-1 text-xs text-gray-500 line-clamp-2">{item.lede}</p>}
       </div>
-      <div className="flex flex-col items-end gap-1.5 flex-none pt-0.5 text-sm">
-        <span className="text-gray-400">Edit ›</span>
+      <div className="flex items-center gap-3 flex-none pt-0.5 text-sm text-gray-500">
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onRetry();
           }}
-          className="text-gray-500 hover:text-gray-800 hover:underline"
+          className="hover:text-gray-800 hover:underline"
           title="Re-extract this article (preserves your edits)"
         >
           Re-extract
         </button>
+        <span className="hover:text-gray-800">Edit ›</span>
       </div>
     </div>
   );
@@ -640,19 +640,19 @@ function SocialCard({
         <SocialEngagementRow item={item} />
       </div>
 
-      <div className="flex flex-col items-end gap-1.5 flex-none pt-0.5 text-sm">
-        <span className="text-gray-400">Edit ›</span>
+      <div className="flex items-center gap-3 flex-none pt-0.5 text-sm text-gray-500">
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onRetry();
           }}
-          className="text-gray-500 hover:text-gray-800 hover:underline"
+          className="hover:text-gray-800 hover:underline"
           title="Re-extract this mention (preserves your edits)"
         >
           Re-extract
         </button>
+        <span className="hover:text-gray-800">Edit ›</span>
       </div>
     </div>
   );
