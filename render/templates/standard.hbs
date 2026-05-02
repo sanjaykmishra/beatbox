@@ -124,11 +124,12 @@
         line-height: 1.5;
       }
       .cover {
-        /* Inherit horizontal padding from `body > section` (32px) so the title doesn't run to
-           the card edge. The PDF-mode .cover { padding: 0.4in 0 } only applies in print media. */
+        /* Base PDF rule sets `padding: 0.4in 0` (zero horizontal). In screen mode we want the
+           same horizontal inset as the rest of the section (32px) so the title doesn't hug the
+           card edge. Set all four explicitly via shorthand — partial overrides on top/bottom
+           only would leave the base zero in place. */
         min-height: 0;
-        padding-top: 8px;
-        padding-bottom: 4px;
+        padding: 8px 32px 4px;
       }
       .cover-title { font-size: 32px; }
       .cover-period { font-size: 14px; margin-top: 8px; }
