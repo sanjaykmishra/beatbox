@@ -225,7 +225,7 @@ export const api = {
       key_quote: string;
       sentiment: 'positive' | 'neutral' | 'negative' | 'mixed';
       sentiment_rationale: string;
-      subject_prominence: 'feature' | 'mention' | 'passing';
+      subject_prominence: 'feature' | 'mention' | 'passing' | 'missing';
       topics: string[];
     }>,
   ) =>
@@ -241,7 +241,7 @@ export const api = {
       summary: string;
       sentiment: 'positive' | 'neutral' | 'negative' | 'mixed';
       sentiment_rationale: string;
-      subject_prominence: 'feature' | 'mention' | 'passing';
+      subject_prominence: 'feature' | 'mention' | 'passing' | 'missing';
       topics: string[];
     }>,
   ) =>
@@ -615,7 +615,7 @@ export type SocialMentionView = {
   key_excerpt: string | null;
   sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' | null;
   sentiment_rationale: string | null;
-  subject_prominence: 'feature' | 'mention' | 'passing' | null;
+  subject_prominence: 'feature' | 'mention' | 'passing' | 'missing' | null;
   topics: string[];
   media_summary: string | null;
   media_urls: string[];
@@ -679,6 +679,7 @@ export type CoverageItemView = {
   publish_date: string | null;
   lede: string | null;
   sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' | null;
+  subject_prominence: 'feature' | 'mention' | 'passing' | 'missing' | null;
   screenshot_url: string | null;
   tier_at_extraction: number | null;
   estimated_reach: number | null;
@@ -696,7 +697,7 @@ export type EditedCoverage = {
   key_quote: string | null;
   sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' | null;
   sentiment_rationale: string | null;
-  subject_prominence: 'feature' | 'mention' | 'passing' | null;
+  subject_prominence: 'feature' | 'mention' | 'passing' | 'missing' | null;
   topics: string[];
   is_user_edited: boolean;
   edited_fields: string[];

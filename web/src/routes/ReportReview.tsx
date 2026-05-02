@@ -440,7 +440,9 @@ function sentimentTone(s: 'positive' | 'neutral' | 'negative' | 'mixed' | null |
   }
 }
 
-function prominenceLabel(p: 'feature' | 'mention' | 'passing' | null | undefined): string | null {
+function prominenceLabel(
+  p: 'feature' | 'mention' | 'passing' | 'missing' | null | undefined,
+): string | null {
   if (!p) return null;
   return p.charAt(0).toUpperCase() + p.slice(1);
 }
@@ -826,6 +828,12 @@ function ArticleEditDrawer({
   const [headline, setHeadline] = useState(item.headline ?? '');
   const [lede, setLede] = useState(item.lede ?? '');
   const [publishDate, setPublishDate] = useState(item.publish_date ?? '');
+  const [sentiment, setSentiment] = useState<'positive' | 'neutral' | 'negative' | 'mixed' | ''>(
+    (item.sentiment as 'positive' | 'neutral' | 'negative' | 'mixed' | null) ?? '',
+  );
+  const [prominence, setProminence] = useState<
+    'feature' | 'mention' | 'passing' | 'missing' | ''
+  >(item.subject_prominence ?? '');
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
 
@@ -843,6 +851,10 @@ function ArticleEditDrawer({
       if (headline !== (item.headline ?? '')) edits.headline = headline;
       if (lede !== (item.lede ?? '')) edits.lede = lede;
       if (publishDate !== (item.publish_date ?? '')) edits.publish_date = publishDate || undefined;
+      if (sentiment && sentiment !== (item.sentiment ?? '')) edits.sentiment = sentiment;
+      if (prominence && prominence !== (item.subject_prominence ?? '')) {
+        edits.subject_prominence = prominence;
+      }
       if (Object.keys(edits).length === 0) return null;
       return api.patchCoverage(reportId, item.id, edits);
     },
@@ -879,6 +891,40 @@ function ArticleEditDrawer({
           onChange={(e) => setLede(e.target.value)}
         />
       </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Sentiment">
+          <select
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white"
+            value={sentiment}
+            onChange={(e) =>
+              setSentiment(e.target.value as 'positive' | 'neutral' | 'negative' | 'mixed' | '')
+            }
+          >
+            <option value="">—</option>
+            <option value="positive">positive</option>
+            <option value="neutral">neutral</option>
+            <option value="mixed">mixed</option>
+            <option value="negative">negative</option>
+          </select>
+        </Field>
+        <Field label="Subject prominence">
+          <select
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white"
+            value={prominence}
+            onChange={(e) =>
+              setProminence(
+                e.target.value as 'feature' | 'mention' | 'passing' | 'missing' | '',
+              )
+            }
+          >
+            <option value="">—</option>
+            <option value="feature">feature</option>
+            <option value="mention">mention</option>
+            <option value="passing">passing</option>
+            <option value="missing">missing</option>
+          </select>
+        </Field>
+      </div>
       <EditedFieldsNote fields={item.edited_fields} />
       {error && (
         <Alert tone="danger" onDismiss={() => setError(null)}>
@@ -987,6 +1033,7 @@ function SocialEditDrawer({
           <option value="feature">Feature</option>
           <option value="mention">Mention</option>
           <option value="passing">Passing</option>
+          <option value="missing">Missing</option>
         </select>
       </Field>
       <Field label="Topics (comma-separated)">

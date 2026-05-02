@@ -28,14 +28,28 @@ public class SocialExtractionService {
   private final AnthropicClient anthropic;
   private final ObjectMapper json = new ObjectMapper();
   private final String modelOverride;
+  private final String promptStem;
 
   public SocialExtractionService(
       PromptLoader prompts,
       AnthropicClient anthropic,
-      @Value("${ANTHROPIC_MODEL_SOCIAL_EXTRACTION:}") String modelOverride) {
+      @Value("${ANTHROPIC_MODEL_SOCIAL_EXTRACTION:}") String modelOverride,
+      @Value("${beat.prompts.social-extraction.version:v1_1}") String version) {
     this.prompts = prompts;
     this.anthropic = anthropic;
     this.modelOverride = modelOverride;
+    this.promptStem = resolvePromptStem(version);
+    log.info("SocialExtractionService prompt = {}", this.promptStem);
+  }
+
+  /** {@code v1_0} → legacy 3-value enum; {@code v1_1} → adds {@code missing}. */
+  private static String resolvePromptStem(String configured) {
+    if (configured == null) return "social-extraction-v1-1";
+    return switch (configured.trim().toLowerCase()) {
+      case "v1_0", "social-extraction-v1", "social_extraction_v1.0" -> "social-extraction-v1";
+      case "v1_1", "social-extraction-v1-1", "social_extraction_v1.1" -> "social-extraction-v1-1";
+      default -> "social-extraction-v1-1";
+    };
   }
 
   public boolean isEnabled() {
@@ -48,7 +62,7 @@ public class SocialExtractionService {
   public Optional<Outcome> extract(
       FetchedSocialPost post, String subjectName, ClientContext context) {
     if (!isEnabled()) return Optional.empty();
-    PromptTemplate t = prompts.get("social-extraction-v1");
+    PromptTemplate t = prompts.get(promptStem);
 
     Map<String, String> vars = new LinkedHashMap<>();
     vars.put("platform", safe(post.platform()));
