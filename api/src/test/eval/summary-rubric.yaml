@@ -156,3 +156,101 @@
     - "tremendous"
     - "unprecedented"
     - "incredible"
+
+# ----------------------------------------------------------------------------
+# Partial-missing scenario — added with the SummaryInputs two-pass split (see
+# prompts/executive-summary-v1-2.md "Eval set additions") so the LLM only sees
+# tier/sentiment/outlet aggregates from substantive items, even though the
+# prominence breakdown still surfaces the missing count for transparency.
+#
+# The regression risk this fixture catches: if SummaryInputs accidentally
+# regresses to including missing items in tier/sentiment/outlet aggregates,
+# the LLM will write about outlets and topics that came from off-topic items.
+# The must_not_include list pins those exact fabrications.
+#
+# This fixture also exercises the v1.2 prompt's grounding rule D — partial-
+# missing cases reach the LLM (the runtime guard only fires on all-missing)
+# and must be framed honestly without softening into PR-speak.
+# ----------------------------------------------------------------------------
+
+- id: partial_missing_one_substantive
+  scenario: |
+    8 items added to a Franklin BBQ report. 1 substantive mention from a
+    tier-2 TechCrunch piece on the Texas restaurant industry that quoted
+    Franklin BBQ's owner on independent-vs-chain dynamics. The other 7
+    items are off-topic technology pieces (Anthropic valuation, Vega
+    Series B, Platformer column on Meta employees, Claude Code release,
+    etc.) that were added to the report but didn't mention Franklin BBQ
+    at all — they're tagged subject_prominence='missing' by the v1.3
+    extraction prompt.
+
+    SummaryInputs.build's two-pass logic should feed the LLM:
+      - Total coverage items: 1  (substantive only)
+      - Tier breakdown: Tier 2: 1  (TechCrunch piece's tier)
+      - Sentiment: neutral: 1
+      - Top outlets by reach: TechCrunch
+      - Most-mentioned topics: restaurants
+      - Notable headlines: [the one TechCrunch headline]
+      - Subject prominence — feature: 0, mention: 1, passing: 0,
+        missing: 7, unknown: 0  (full breakdown, including missing,
+        for transparency)
+
+    The reference summary models the agency-voice shape: acknowledges
+    the partial-coverage context (7 didn't mention the client), uses
+    only the 1 substantive piece's specifics, makes an honest forward
+    recommendation. Pure prose, no hype.
+  reference_summary: |
+    April was a quiet month for Franklin BBQ in earned media. One piece
+    landed — a tier-2 TechCrunch article on Texas restaurant industry
+    consolidation that quoted the owner on the pressures independents
+    face when chains expand. Seven additional items were added to the
+    report this period but did not name Franklin BBQ and are not
+    included in the counts here; they appear elsewhere on the coverage
+    builder for source-list cleanup. The single substantive placement
+    carried the entire measurable footprint for the month and read
+    constructively, positioning Franklin BBQ as an operator voice on a
+    story other outlets did not pick up.
+
+    Sentiment on the one substantive piece was neutral. The TechCrunch
+    placement reached an industry-trade audience rather than the
+    consumer audience that drives weekend foot traffic. There were no
+    negative or mixed pieces — the volume was low enough that sentiment
+    is more about absence than about pattern. Reach was concentrated
+    entirely on the one article; without the seven off-topic items, the
+    month's measurable footprint is smaller than the trailing six-month
+    average. That gap is the most useful number to take into the May
+    planning conversation.
+
+    The pattern worth flagging is the seven off-topic additions. URLs
+    that look industry-adjacent but turn out not to mention the client
+    usually mean the source list is set too broadly or pulling from
+    feeds that don't filter for brand name. A review of which feeds
+    produced those seven would prevent the same pattern in May. Looking
+    ahead, the priority is converting the TechCrunch trade-press
+    relationship into a longer feature on independent restaurant
+    operations and seeding at least one consumer-trade story to
+    rebalance the audience the coverage is reaching.
+  must_include_phrases:
+    - "Franklin BBQ"
+    - "TechCrunch"
+  must_not_include:
+    # Outlet-fabrication probe: these outlets ARE in the report's
+    # coverage_items but tagged 'missing'. If the LLM names any of them,
+    # SummaryInputs is leaking missing-item data into the input OR the
+    # prompt's grounding rule B is being violated.
+    - "Anthropic"
+    - "Vega"
+    - "Platformer"
+    - "Let's Data Science"
+    - "Claude Code"
+    # Count-fabrication probe: the LLM must report 1, not 8, as the
+    # substantive count.
+    - "eight pieces"
+    - "8 pieces"
+    # Hyperbole.
+    - "groundbreaking"
+    - "revolutionary"
+    - "tremendous"
+    - "unprecedented"
+    - "incredible"
+
