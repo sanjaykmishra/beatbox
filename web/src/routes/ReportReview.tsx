@@ -932,7 +932,7 @@ function ArticleEditDrawer({
       </Field>
       <Field label="Lede">
         <textarea
-          rows={3}
+          rows={6}
           className="w-full rounded-lg border border-gray-300 px-3 py-2"
           value={lede}
           onChange={(e) => setLede(e.target.value)}
@@ -1044,7 +1044,7 @@ function SocialEditDrawer({
     <DrawerShell onClose={onClose} title="Edit social mention" sourceUrl={item.source_url}>
       <Field label="Summary">
         <textarea
-          rows={3}
+          rows={6}
           className="w-full rounded-lg border border-gray-300 px-3 py-2"
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
