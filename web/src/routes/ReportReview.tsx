@@ -50,7 +50,16 @@ export function ReportReview() {
 
   const generate = useMutation({
     mutationFn: () => api.generateReport(id),
-    onSuccess: () => navigate(`/reports/${id}/preview`),
+    onSuccess: () => {
+      // Optimistically flip the cached report to 'processing' so ReportPreview's draft-bounce
+      // effect doesn't read stale 'draft' and ping-pong us back here. Invalidate too so the next
+      // fetch reflects authoritative server state (failure_reason, generated_at, etc.).
+      qc.setQueryData(['report', id], (prev: Report | undefined) =>
+        prev ? { ...prev, status: 'processing' as const } : prev,
+      );
+      void qc.invalidateQueries({ queryKey: ['report', id] });
+      navigate(`/reports/${id}/preview`);
+    },
     onError: (e) => setGenerateError(e instanceof ApiError ? e.message : 'Generate failed'),
   });
 
