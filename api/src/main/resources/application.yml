@@ -45,6 +45,23 @@ beat:
     # this is the api service's internal hostname. Production R2 URLs are absolute, so this can
     # be empty there.
     internal-api-url: ${RENDER_INTERNAL_API_URL:}
+  prompts:
+    extraction:
+      # Tier dispatch for the article extraction pipeline (see ExtractionService.java).
+      #   two_tier — use TwoTierExtractionService → extraction-v1-3 (Haiku → Sonnet escalation,
+      #              cost-engineered, supports the 'missing' subject_prominence value).
+      #              This is the production path.
+      #   single   — legacy single-call path using extraction-v1 / extraction-v1-1. Falls back
+      #              for emergency rollback only; does NOT support 'missing'.
+      #   shadow   — single user-facing + two_tier telemetry-only.
+      tier: ${BEAT_PROMPTS_EXTRACTION_TIER:two_tier}
+      version: ${BEAT_PROMPTS_EXTRACTION_VERSION:v1_3}
+    summary:
+      # v1 (Opus, original) | v1_1 (Sonnet, cached) | v1_2 (grounding rules) | shadow | shadow_v12
+      version: ${BEAT_PROMPTS_SUMMARY_VERSION:v1}
+    social-extraction:
+      # v1_0 (legacy 3-value enum) | v1_1 (adds 'missing'). Default v1_1.
+      version: ${BEAT_PROMPTS_SOCIAL_EXTRACTION_VERSION:v1_1}
   admin:
     # Comma-separated list of user emails allowed to view /v1/admin/*. Empty = nobody.
     emails: ${ADMIN_EMAILS:}

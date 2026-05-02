@@ -128,6 +128,8 @@ These exist because each one represents a real bug that already shipped. When in
 
 **Visual changes aren't verified until they're loaded in a browser.** Type-check + lint + render-template-compiles is not the same as "this looks right." For SPA changes that affect layout, screen-mode CSS (`@media screen` blocks in `render/templates/`), iframe-embedded HTML, or anything cross-origin (public share, srcDoc), explicitly state in the report-back: "I haven't loaded this in a browser; please verify." Don't paper over the gap by claiming it works when it hasn't been seen.
 
+**For prompt-version changes, trace dispatch from the worker, not from the prompt loader.** It's possible to update a prompt file, bump the schema, wire the loader, and ship — yet have no production code path actually call it. Article extraction has two services (`ExtractionService` legacy + `TwoTierExtractionService` two-tier), with a `beat.prompts.extraction.tier` flag dispatching between them; updating the v1.3 prompt while the flag still pointed to legacy meant every "re-extract" cycle re-ran v1.0 and burned API budget. Before claiming a prompt change works: open the worker (e.g. `ExtractionWorker.handleJob`), follow the call into the service, and verify the path you edited is the one that actually runs under the current config. Pattern reference: `ExtractionService.extract` dispatch by `mode`.
+
 ## Critical guardrails
 
 These exist because failure here is high-cost. Don't relax them without explicit human sign-off.
