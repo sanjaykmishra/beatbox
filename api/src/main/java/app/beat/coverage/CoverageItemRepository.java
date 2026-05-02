@@ -135,7 +135,12 @@ public class CoverageItemRepository {
               lede = CASE WHEN 'lede' = ANY(edited_fields) THEN lede ELSE COALESCE(:lede, lede) END,
               tier_at_extraction = COALESCE(tier_at_extraction, :tier),
               estimated_reach = COALESCE(estimated_reach, :reach),
-              screenshot_url = COALESCE(screenshot_url, :ss),
+              -- Prefer the new capture: re-extract should refresh the thumbnail. If the new
+              -- capture failed (Optional.empty → null param), keep the previous URL rather than
+              -- nulling the field, so we don't downgrade from "stale screenshot" to "no
+              -- screenshot." This is the opposite direction from headline/lede where the LLM is
+              -- the source of truth and we don't want a re-extract to overwrite user edits.
+              screenshot_url = COALESCE(:ss, screenshot_url),
               extraction_status = 'done',
               extraction_error = NULL
             WHERE id = :id

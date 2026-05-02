@@ -13,7 +13,10 @@ import java.util.Set;
 public final class SocialExtractionSchema {
 
   public static final Set<String> SENTIMENT = Set.of("positive", "neutral", "negative", "mixed");
-  public static final Set<String> PROMINENCE = Set.of("feature", "mention", "passing");
+  // social-extraction-v1.1 added 'missing' (subject's name does not appear in the post body)
+  // for parity with extraction-v1.3 so the runtime guard sees a unified signal across both
+  // streams. v1.0 outputs that don't use 'missing' still validate.
+  public static final Set<String> PROMINENCE = Set.of("feature", "mention", "passing", "missing");
 
   private SocialExtractionSchema() {}
 

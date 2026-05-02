@@ -192,7 +192,7 @@ public class CoverageController {
       String key_quote,
       @Pattern(regexp = "positive|neutral|negative|mixed") String sentiment,
       String sentiment_rationale,
-      @Pattern(regexp = "feature|mention|passing") String subject_prominence,
+      @Pattern(regexp = "feature|mention|passing|missing") String subject_prominence,
       List<String> topics) {}
 
   public record EditedCoverageDto(
