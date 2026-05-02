@@ -234,7 +234,11 @@
   </section>
   {{/if}}
 
-  <!-- COVERAGE LIST -->
+  <!-- COVERAGE LIST — hidden entirely when there are no substantive items, since an empty list
+       under the "Coverage" heading reads like a render bug to the share-link recipient. The
+       'N additional items did not mention …' footnote on at-a-glance already explains where
+       any off-topic URLs went. -->
+  {{#if coverage_items.length}}
   <section>
     <h2>Coverage</h2>
     <ul class="coverage-list">
@@ -263,6 +267,7 @@
       {{/each}}
     </ul>
   </section>
+  {{/if}}
 
 </body>
 </html>
