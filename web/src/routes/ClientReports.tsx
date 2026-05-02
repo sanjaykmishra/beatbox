@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
 import { Alert, Eyebrow, Pill, PrimaryLink, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
-import { api, type ReportSummary } from '../lib/api';
+import { api, ApiError, type ReportSummary } from '../lib/api';
 
 /**
  * Past-reports browser. Left rail (25%) lists all of the client's reports newest-first; right
@@ -194,18 +194,80 @@ function ReportPane({ report, loading }: { report: ReportSummary | null; loading
     );
   }
   if (report.status === 'ready') {
-    return (
-      <iframe
-        title={report.title}
-        // /v1/reports/:id/preview returns the same authenticated rendered HTML used elsewhere.
-        // Same-origin iframe so relative /v1/screenshots/... URLs in the body resolve correctly.
-        src={`/v1/reports/${report.id}/preview`}
-        className="w-full bg-white border border-gray-200 rounded-xl"
-        style={{ height: '70vh' }}
-      />
-    );
+    return <ReadyReportPreview report={report} />;
   }
   return <NonReadyPlaceholder report={report} />;
+}
+
+/**
+ * Fetches the rendered HTML via the authenticated /v1/reports/:id/preview endpoint (Bearer-token
+ * auth, same as the rest of the app) and renders it in a sandboxed iframe via srcDoc. Iframes
+ * loaded by src= do NOT carry our Authorization header, so a plain {@code src=...} would 401 —
+ * we fetch with the header, then inject the body.
+ *
+ * <p>To make the rendered HTML's relative URLs resolve correctly inside an {@code about:srcdoc}
+ * document (notably {@code /v1/screenshots/...}), we inject a {@code <base href>} pointing at
+ * the SPA origin. Browsers honor base inside srcDoc; resources then load from the same origin
+ * that proxies {@code /v1/*} to the API.
+ */
+function ReadyReportPreview({ report }: { report: ReportSummary }) {
+  const previewHtml = useQuery({
+    queryKey: ['report-preview', report.id],
+    queryFn: () => api.fetchReportPreviewHtml(report.id),
+    staleTime: 60_000,
+  });
+
+  const srcDoc = useMemo(() => {
+    if (!previewHtml.data) return null;
+    return injectBase(previewHtml.data, window.location.origin);
+  }, [previewHtml.data]);
+
+  if (previewHtml.isLoading) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl flex items-center justify-center text-sm text-gray-500" style={{ height: '70vh' }}>
+        Loading preview…
+      </div>
+    );
+  }
+  if (previewHtml.error || !srcDoc) {
+    const msg =
+      previewHtml.error instanceof ApiError
+        ? previewHtml.error.message
+        : 'Could not load preview.';
+    return (
+      <Alert
+        tone="danger"
+        title="Couldn't load preview"
+        action={{ label: 'Retry', onClick: () => previewHtml.refetch() }}
+      >
+        {msg}
+      </Alert>
+    );
+  }
+  return (
+    <iframe
+      title={report.title}
+      srcDoc={srcDoc}
+      sandbox="allow-same-origin"
+      className="w-full bg-white border border-gray-200 rounded-xl"
+      style={{ height: '70vh' }}
+    />
+  );
+}
+
+/**
+ * Inject a {@code <base href>} into rendered HTML so relative URLs ({@code /v1/screenshots/...})
+ * resolve to the SPA origin instead of {@code about:srcdoc}. Inserts immediately after the
+ * opening {@code <head>} tag if present; otherwise prepends.
+ */
+function injectBase(html: string, baseUrl: string): string {
+  const tag = `<base href="${baseUrl.replace(/"/g, '&quot;')}/">`;
+  const headOpen = /<head\b[^>]*>/i.exec(html);
+  if (headOpen) {
+    const at = headOpen.index + headOpen[0].length;
+    return html.slice(0, at) + tag + html.slice(at);
+  }
+  return tag + html;
 }
 
 function NonReadyPlaceholder({ report }: { report: ReportSummary }) {
