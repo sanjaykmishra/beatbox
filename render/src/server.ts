@@ -226,7 +226,21 @@ app.post('/screenshot', requireServiceToken, async (req, res) => {
       'Mozilla/5.0 (compatible; BeatBot/1.0; +https://beat.app/bot)',
     );
     log('debug', 'screenshot_navigating', { url });
-    const navResponse = await page.goto(url, { waitUntil: 'networkidle2', timeout: 30_000 });
+    // Heavy news sites (TechCrunch, Bloomberg, etc.) ship enough trackers that networkidle2
+    // never settles within a sane timeout. domcontentloaded fires when the article HTML is
+    // parsed — that's enough for the above-the-fold screenshot we're after. We then sleep
+    // briefly to let the hero image / fonts / CSS settle before snapping. Total upper bound:
+    // 45s timeout + 1.5s settle.
+    const navResponse = await page
+      .goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 })
+      .catch((err) => {
+        log('warn', 'screenshot_nav_timeout_continuing', {
+          url,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return null;
+      });
+    await new Promise((r) => setTimeout(r, 1500));
     log('debug', 'screenshot_navigated', {
       url,
       status: navResponse?.status() ?? null,
