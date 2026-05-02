@@ -52,7 +52,15 @@ public class RenderPayloadBuilder {
             .filter(c -> "done".equals(c.extractionStatus()))
             .filter(c -> !"missing".equals(c.subjectProminence()))
             .toList();
-    var glance = AtAGlance.compute(substantive, outletCache);
+    // Disclosure footnote driver: count how many done-but-missing items the user added so the
+    // template can surface "N additional items did not mention …" near the at-a-glance row.
+    int missingCount =
+        (int)
+            items.stream()
+                .filter(c -> "done".equals(c.extractionStatus()))
+                .filter(c -> "missing".equals(c.subjectProminence()))
+                .count();
+    var glance = AtAGlance.compute(substantive, outletCache, missingCount);
     var highlights =
         Highlights.pickTop(substantive, outletCache, 4).stream()
             .map(c -> toHighlight(c, outletCache))

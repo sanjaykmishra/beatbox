@@ -29,7 +29,20 @@ public record RenderPayload(
       String executive_summary,
       List<String> executive_summary_paragraphs) {}
 
-  public record Glance(int total, int tier_1, int outlets, long reach_total, String reach_human) {}
+  /**
+   * {@code total} is the substantive coverage count (excludes 'missing' items) — what the agency
+   * wants to lead with. {@code missing_count} is the number of items the user added that didn't
+   * mention the subject; the template uses it to render a small disclosure footnote when nonzero so
+   * the share-link recipient understands the discrepancy between the URL count and the headline
+   * number.
+   */
+  public record Glance(
+      int total,
+      int tier_1,
+      int outlets,
+      long reach_total,
+      String reach_human,
+      int missing_count) {}
 
   public record Highlight(
       String headline,
