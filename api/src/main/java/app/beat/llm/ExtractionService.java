@@ -43,7 +43,7 @@ public class ExtractionService {
       TwoTierExtractionService twoTier,
       ObjectMapper json,
       @Value("${ANTHROPIC_MODEL_EXTRACTION:}") String modelOverride,
-      @Value("${beat.prompts.extraction.tier:single}") String mode) {
+      @Value("${beat.prompts.extraction.tier:two_tier}") String mode) {
     this.prompts = prompts;
     this.anthropic = anthropic;
     this.cache = cache;
@@ -62,11 +62,11 @@ public class ExtractionService {
   }
 
   static String normalizeMode(String raw) {
-    if (raw == null) return MODE_SINGLE;
+    if (raw == null) return MODE_TWO_TIER;
     String m = raw.trim().toLowerCase();
     return switch (m) {
       case MODE_TWO_TIER, MODE_SHADOW, MODE_SINGLE -> m;
-      default -> MODE_SINGLE;
+      default -> MODE_TWO_TIER;
     };
   }
 
