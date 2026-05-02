@@ -28,6 +28,7 @@ class SummaryInputsTest {
         start,
         end,
         count,
+        /* substantiveCount */ count,
         t1,
         t2,
         t3,
@@ -158,31 +159,51 @@ class SummaryInputsTest {
     assertThat(vars.get("count")).isEqualTo("6");
   }
 
+  /**
+   * Builder for prominence-breakdown fixtures: one helper that takes the full set of integer
+   * counters explicitly so adding tests doesn't churn whole-record literals.
+   */
+  private static SummaryInputs withProminence(
+      String clientName,
+      int total,
+      int substantiveCount,
+      int feature,
+      int mention,
+      int passing,
+      int missing,
+      int unknown,
+      String outletList,
+      String topicList,
+      String headlines,
+      String perItemBlock) {
+    return new SummaryInputs(
+        clientName,
+        LocalDate.of(2026, 4, 1),
+        LocalDate.of(2026, 4, 30),
+        total,
+        substantiveCount,
+        /* tier1 */ 0,
+        /* tier2 */ 0,
+        /* tier3 */ 0,
+        /* positive */ 0,
+        /* neutral */ 0,
+        /* mixed */ 0,
+        /* negative */ 0,
+        feature,
+        mention,
+        passing,
+        missing,
+        unknown,
+        outletList,
+        topicList,
+        headlines,
+        perItemBlock);
+  }
+
   @Test
   void hasNoSubstantiveCoverage_trueWhenAllMissing() {
     // 3 items, all missing — Franklin BBQ scenario under v1.3 extraction.
-    SummaryInputs in =
-        new SummaryInputs(
-            "Franklin BBQ",
-            LocalDate.of(2026, 4, 1),
-            LocalDate.of(2026, 4, 30),
-            3,
-            0,
-            2,
-            1,
-            0,
-            3,
-            0,
-            0,
-            /* feature */ 0, /* mention */
-            0, /* passing */
-            0, /* missing */
-            3,
-            /* unknown */ 0,
-            "TechCrunch, Let's Data Science",
-            "funding, product launch",
-            "Sources: Anthropic potential $900B valuation",
-            "");
+    SummaryInputs in = withProminence("Franklin BBQ", 3, 0, 0, 0, 0, 3, 0, "", "", "", "");
     assertThat(in.hasNoSubstantiveCoverage()).isTrue();
   }
 
@@ -190,82 +211,20 @@ class SummaryInputsTest {
   void hasNoSubstantiveCoverage_falseWhenAnyPassing() {
     // Under v1.3 logic, even one passing item disables the guard. The LLM gets called and the
     // v1.2 prompt's grounding rules are responsible for honest framing.
-    SummaryInputs in =
-        new SummaryInputs(
-            "Acme",
-            LocalDate.of(2026, 1, 1),
-            LocalDate.of(2026, 1, 31),
-            3,
-            0,
-            2,
-            1,
-            0,
-            3,
-            0,
-            0,
-            /* feature */ 0, /* mention */
-            0, /* passing */
-            1, /* missing */
-            2,
-            /* unknown */ 0,
-            "TechCrunch",
-            "funding",
-            "Industry roundup",
-            "");
+    SummaryInputs in = withProminence("Acme", 3, 1, 0, 0, 1, 2, 0, "TechCrunch", "funding", "", "");
     assertThat(in.hasNoSubstantiveCoverage()).isFalse();
   }
 
   @Test
   void hasNoSubstantiveCoverage_falseWhenAnyMention() {
     SummaryInputs in =
-        new SummaryInputs(
-            "Acme",
-            LocalDate.of(2026, 1, 1),
-            LocalDate.of(2026, 1, 31),
-            3,
-            0,
-            2,
-            1,
-            0,
-            3,
-            0,
-            0,
-            /* feature */ 0, /* mention */
-            1, /* passing */
-            0, /* missing */
-            2,
-            /* unknown */ 0,
-            "TechCrunch",
-            "funding",
-            "Acme funded",
-            "");
+        withProminence("Acme", 3, 1, 0, 1, 0, 2, 0, "TechCrunch", "funding", "Acme funded", "");
     assertThat(in.hasNoSubstantiveCoverage()).isFalse();
   }
 
   @Test
   void hasNoSubstantiveCoverage_falseWhenZeroItems() {
-    SummaryInputs in =
-        new SummaryInputs(
-            "Acme",
-            LocalDate.of(2026, 1, 1),
-            LocalDate.of(2026, 1, 31),
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            "",
-            "",
-            "",
-            "");
+    SummaryInputs in = withProminence("Acme", 0, 0, 0, 0, 0, 0, 0, "", "", "", "");
     assertThat(in.hasNoSubstantiveCoverage()).isFalse();
   }
 
@@ -275,50 +234,22 @@ class SummaryInputsTest {
     // 'missing'. The new logic treats this as substantive and routes to the LLM. Documented
     // trade-off — the alternative would be re-extracting old reports, which docs/05 forbids.
     SummaryInputs in =
-        new SummaryInputs(
-            "Franklin BBQ",
-            LocalDate.of(2026, 4, 1),
-            LocalDate.of(2026, 4, 30),
-            3,
-            0,
-            2,
-            1,
-            0,
-            3,
-            0,
-            0,
-            /* feature */ 0, /* mention */
-            0, /* passing */
-            3, /* missing */
-            0,
-            /* unknown */ 0,
-            "TechCrunch",
-            "funding",
-            "...",
-            "");
+        withProminence("Franklin BBQ", 3, 3, 0, 0, 3, 0, 0, "TechCrunch", "funding", "...", "");
     assertThat(in.hasNoSubstantiveCoverage()).isFalse();
   }
 
   @Test
   void coverageItemsSummaryV12_includesProminenceBreakdownAndPerItem() {
     SummaryInputs in =
-        new SummaryInputs(
+        withProminence(
             "Acme",
-            LocalDate.of(2026, 1, 1),
-            LocalDate.of(2026, 1, 31),
             3,
-            0,
             2,
+            0,
+            1,
+            1,
             1,
             0,
-            3,
-            0,
-            0,
-            /* feature */ 0, /* mention */
-            1, /* passing */
-            1, /* missing */
-            1,
-            /* unknown */ 0,
             "TechCrunch",
             "funding",
             "Acme funded",
@@ -327,5 +258,27 @@ class SummaryInputsTest {
     assertThat(s).contains("Subject prominence — feature: 0, mention: 1, passing: 1, missing: 1");
     assertThat(s).contains("Per-item detail");
     assertThat(s).contains("Item 1: Acme funded");
+  }
+
+  @Test
+  void coverageItemsSummary_usesSubstantiveCountAndAddsDisclosure() {
+    // 3 items total, 1 substantive (mention), 2 missing.
+    SummaryInputs in =
+        withProminence("Acme", 3, 1, 0, 1, 0, 2, 0, "TechCrunch", "funding", "Acme funded", "");
+    String s = in.coverageItemsSummary();
+    // Headline number is the substantive count, not the total.
+    assertThat(s).contains("Total coverage items: 1").doesNotContain("Total coverage items: 3");
+    // Disclosure footnote acknowledges the 2 off-topic additions.
+    assertThat(s).contains("2 additional items");
+    assertThat(s).contains("did not mention the subject");
+  }
+
+  @Test
+  void coverageItemsSummary_omitsDisclosureWhenNoMissing() {
+    SummaryInputs in =
+        withProminence("Acme", 3, 3, 0, 1, 2, 0, 0, "TechCrunch", "funding", "Acme funded", "");
+    String s = in.coverageItemsSummary();
+    assertThat(s).contains("Total coverage items: 3");
+    assertThat(s).doesNotContain("additional item");
   }
 }

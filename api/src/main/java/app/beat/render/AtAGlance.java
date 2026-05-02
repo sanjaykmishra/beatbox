@@ -13,7 +13,14 @@ public final class AtAGlance {
 
   private AtAGlance() {}
 
-  public static RenderPayload.Glance compute(List<CoverageItem> items, Map<UUID, Outlet> outlets) {
+  /**
+   * Compute the at-a-glance row from already-filtered substantive items (extraction status 'done'
+   * AND prominence != 'missing'). The {@code missingCount} parameter is the number of off-topic
+   * items the caller filtered out — surfaced to the template so it can render the disclosure
+   * footnote.
+   */
+  public static RenderPayload.Glance compute(
+      List<CoverageItem> items, Map<UUID, Outlet> outlets, int missingCount) {
     int total = items.size();
     int tier1 = 0;
     long reach = 0;
@@ -23,7 +30,8 @@ public final class AtAGlance {
       if (c.estimatedReach() != null) reach += c.estimatedReach();
       if (c.outletId() != null) outletIds.add(c.outletId());
     }
-    return new RenderPayload.Glance(total, tier1, outletIds.size(), reach, formatReach(reach));
+    return new RenderPayload.Glance(
+        total, tier1, outletIds.size(), reach, formatReach(reach), missingCount);
   }
 
   static String formatReach(long n) {

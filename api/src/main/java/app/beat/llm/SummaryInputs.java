@@ -12,12 +12,27 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/** Structured stats fed into prompts/executive-summary-v1.md. Pure function over coverage items. */
+/**
+ * Structured stats fed into the executive-summary prompts. Pure function over coverage items.
+ *
+ * <p><b>Two-pass build.</b> {@code missing} items (subject not in the article body) are excluded
+ * from the {@code substantive} aggregations the LLM uses to write the summary — tier counts,
+ * sentiment counts, outlet reach, topic mix, top headlines, per-item detail. Including them causes
+ * Sonnet/Opus to write about outlets and topics that came from off-topic articles. The prominence
+ * breakdown ({@code featureCount} / {@code mentionCount} / {@code passingCount} / {@code
+ * missingCount}) is collected over ALL items so the LLM sees the full off-topic context and so the
+ * runtime guard ({@link #hasNoSubstantiveCoverage}) has the data it needs.
+ *
+ * <p>{@code count} is total items (drives the deterministic {@link
+ * SummaryService#noSubstantiveCoverageText} text). {@code substantiveCount} is the filtered count
+ * (drives the LLM-facing "Total coverage items" line).
+ */
 public record SummaryInputs(
     String clientName,
     LocalDate periodStart,
     LocalDate periodEnd,
     int count,
+    int substantiveCount,
     int tier1,
     int tier2,
     int tier3,
@@ -35,8 +50,8 @@ public record SummaryInputs(
     String headlines,
     /**
      * Per-item lines for v1.2 prompt — headline, outlet, prominence, and the extraction-side
-     * summary (which contains "client not mentioned in this article" when applicable). Kept out of
-     * the v1/v1.1 path because those prompts weren't designed for per-item context.
+     * summary. Substantive items only (missing items are excluded since the LLM shouldn't be shown
+     * headlines and summaries for articles that don't mention the subject).
      */
     String perItemBlock) {
 
@@ -46,14 +61,36 @@ public record SummaryInputs(
       LocalDate periodEnd,
       List<CoverageItem> items,
       Map<UUID, Outlet> outlets) {
+    // Pass 1 — prominence counters over ALL items (drives the runtime guard + the prominence
+    // breakdown in the LLM input, which intentionally surfaces missing items for transparency).
+    int featureN = 0, mentionN = 0, passingN = 0, missingN = 0, unknownN = 0;
+    for (CoverageItem c : items) {
+      String p = c.subjectProminence();
+      if (p == null) {
+        unknownN++;
+      } else {
+        switch (p) {
+          case "feature" -> featureN++;
+          case "mention" -> mentionN++;
+          case "passing" -> passingN++;
+          case "missing" -> missingN++;
+          default -> unknownN++;
+        }
+      }
+    }
+
+    // Pass 2 — every other aggregate is computed over substantive items only. An article
+    // tagged 'missing' is one the user added but that doesn't actually mention the subject;
+    // its tier / sentiment / outlet / topics / headline are not "coverage of the client" and
+    // would mislead the LLM about what the client was actually in.
+    List<CoverageItem> substantive =
+        items.stream().filter(c -> !"missing".equals(c.subjectProminence())).toList();
+
     int t1 = 0, t2 = 0, t3 = 0;
     int pos = 0, neu = 0, mix = 0, neg = 0;
-    int featureN = 0, mentionN = 0, passingN = 0, missingN = 0, unknownN = 0;
     Map<UUID, Long> outletReach = new HashMap<>();
     Map<String, Integer> topicCounts = new LinkedHashMap<>();
-    List<CoverageItem> ranked = items.stream().filter(c -> c.headline() != null).toList();
-
-    for (CoverageItem c : items) {
+    for (CoverageItem c : substantive) {
       Integer t = c.tierAtExtraction();
       if (t != null) {
         if (t == 1) t1++;
@@ -68,17 +105,6 @@ public record SummaryInputs(
           case "negative" -> neg++;
           default -> {}
         }
-      }
-      if (c.subjectProminence() != null) {
-        switch (c.subjectProminence()) {
-          case "feature" -> featureN++;
-          case "mention" -> mentionN++;
-          case "passing" -> passingN++;
-          case "missing" -> missingN++;
-          default -> unknownN++;
-        }
-      } else {
-        unknownN++;
       }
       if (c.outletId() != null) {
         long add = c.estimatedReach() == null ? 1 : Math.max(c.estimatedReach(), 1);
@@ -106,8 +132,10 @@ public record SummaryInputs(
             .map(Map.Entry::getKey)
             .collect(Collectors.joining(", "));
 
+    List<CoverageItem> rankedSubstantive =
+        substantive.stream().filter(c -> c.headline() != null).toList();
     String headlines =
-        ranked.stream()
+        rankedSubstantive.stream()
             .sorted(
                 Comparator.comparing((CoverageItem c) -> tierWeight(c.tierAtExtraction()))
                     .reversed())
@@ -115,13 +143,14 @@ public record SummaryInputs(
             .map(CoverageItem::headline)
             .collect(Collectors.joining("\n"));
 
-    String perItemBlock = renderPerItem(ranked, outlets);
+    String perItemBlock = renderPerItem(rankedSubstantive, outlets);
 
     return new SummaryInputs(
         clientName,
         periodStart,
         periodEnd,
         items.size(),
+        substantive.size(),
         t1,
         t2,
         t3,
@@ -205,7 +234,11 @@ public record SummaryInputs(
     m.put("client_name", clientName == null ? "the client" : clientName);
     m.put("period_start", periodStart == null ? "" : periodStart.toString());
     m.put("period_end", periodEnd == null ? "" : periodEnd.toString());
-    m.put("count", Integer.toString(count));
+    // Substantive count is what the LLM should treat as the headline number; total count is
+    // available for templates that want to surface "N additional off-topic items".
+    m.put("count", Integer.toString(substantiveCount));
+    m.put("total_count", Integer.toString(count));
+    m.put("missing_count", Integer.toString(missingCount));
     m.put("tier_1_n", Integer.toString(tier1));
     m.put("tier_2_n", Integer.toString(tier2));
     m.put("tier_3_n", Integer.toString(tier3));
@@ -244,7 +277,19 @@ public record SummaryInputs(
    */
   public String coverageItemsSummary() {
     StringBuilder b = new StringBuilder();
-    b.append("Total coverage items: ").append(count).append('\n');
+    // 'Total coverage items' is the substantive count (excludes 'missing' items); the LLM uses
+    // it as the headline number for the report. The off-topic context lives in the prominence
+    // breakdown below (added by coverageItemsSummaryV12) and in the deterministic guard text
+    // when all items are missing.
+    b.append("Total coverage items: ").append(substantiveCount).append('\n');
+    if (missingCount > 0) {
+      b.append("(Plus ")
+          .append(missingCount)
+          .append(" additional item")
+          .append(missingCount == 1 ? "" : "s")
+          .append(" added to this report that did not mention the subject")
+          .append(" — excluded from the counts above.)\n");
+    }
     b.append("Tier breakdown — Tier 1: ")
         .append(tier1)
         .append(", Tier 2: ")

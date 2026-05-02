@@ -199,6 +199,12 @@
         <div class="value">{{glance.reach_human}}</div>
       </div>
     </div>
+    {{#if glance.missing_count}}
+      <p class="muted" style="margin-top:10px">
+        {{glance.missing_count}} additional item(s) added to this report did not mention
+        {{client.name}}; excluded from the counts above.
+      </p>
+    {{/if}}
   </section>
 
   <!-- HIGHLIGHTS -->
