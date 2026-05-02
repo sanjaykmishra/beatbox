@@ -34,6 +34,7 @@ services:
       context: .
       dockerfile: infra/api/Dockerfile
     environment:
+      BEAT_PROMPTS_SUMMARY_VERSION: v1_2
       DATABASE_URL: jdbc:postgresql://postgres:5432/beat
       DATABASE_USERNAME: beat
       DATABASE_PASSWORD: beat
