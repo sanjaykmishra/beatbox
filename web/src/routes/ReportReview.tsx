@@ -273,6 +273,14 @@ export function ReportReview() {
                         /* swallow */
                       }
                     }}
+                    onCancel={async () => {
+                      try {
+                        await api.cancelCoverage(r.id, it.data.id);
+                        qc.invalidateQueries({ queryKey: ['report', r.id] });
+                      } catch {
+                        /* swallow */
+                      }
+                    }}
                     onRemove={async () => {
                       const ok = await confirm({
                         title: 'Remove this coverage item?',
@@ -297,6 +305,14 @@ export function ReportReview() {
                     onRetry={async () => {
                       try {
                         await api.retrySocialMention(r.id, it.data.id);
+                        qc.invalidateQueries({ queryKey: ['report', r.id] });
+                      } catch {
+                        /* swallow */
+                      }
+                    }}
+                    onCancel={async () => {
+                      try {
+                        await api.cancelSocialMention(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });
                       } catch {
                         /* swallow */
@@ -462,15 +478,17 @@ function CoverageCard({
   item,
   onEdit,
   onRetry,
+  onCancel,
   onRemove,
 }: {
   item: CoverageItemView;
   onEdit: () => void;
   onRetry: () => void;
+  onCancel: () => void;
   onRemove: () => void;
 }) {
   if (item.extraction_status === 'queued' || item.extraction_status === 'running') {
-    return <ExtractingPanel sourceUrl={item.source_url} />;
+    return <ExtractingPanel sourceUrl={item.source_url} onCancel={onCancel} />;
   }
   if (item.extraction_status === 'failed') {
     return (
@@ -560,15 +578,17 @@ function SocialCard({
   item,
   onEdit,
   onRetry,
+  onCancel,
   onRemove,
 }: {
   item: SocialMentionView;
   onEdit: () => void;
   onRetry: () => void;
+  onCancel: () => void;
   onRemove: () => void;
 }) {
   if (item.extraction_status === 'queued' || item.extraction_status === 'running') {
-    return <ExtractingPanel sourceUrl={item.source_url} />;
+    return <ExtractingPanel sourceUrl={item.source_url} onCancel={onCancel} />;
   }
   if (item.extraction_status === 'failed') {
     return (
@@ -762,7 +782,13 @@ function isLikelyValidImageUrl(s: string | null): boolean {
 
 // --------------------- Shared panel states ---------------------
 
-function ExtractingPanel({ sourceUrl }: { sourceUrl: string }) {
+function ExtractingPanel({
+  sourceUrl,
+  onCancel,
+}: {
+  sourceUrl: string;
+  onCancel?: () => void;
+}) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg px-5 py-4 flex items-center gap-4">
       <div className="h-16 w-[86px] bg-gray-50 border border-gray-100 rounded flex-none animate-pulse" />
@@ -773,10 +799,22 @@ function ExtractingPanel({ sourceUrl }: { sourceUrl: string }) {
         <div className="mt-2 h-2 w-2/3 bg-gray-100 rounded animate-pulse" />
         <div className="mt-1.5 h-2 w-2/5 bg-gray-100 rounded animate-pulse" />
       </div>
-      <span className="text-xs text-blue-700 flex-none font-medium inline-flex items-center gap-1.5">
-        <Spinner />
-        Extracting…
-      </span>
+      <div className="flex items-center gap-3 flex-none text-sm">
+        <span className="text-blue-700 font-medium inline-flex items-center gap-1.5">
+          <Spinner />
+          Extracting…
+        </span>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-gray-500 hover:text-gray-800 hover:underline"
+            title="Cancel this extraction"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </div>
   );
 }
