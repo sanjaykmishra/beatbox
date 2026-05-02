@@ -173,4 +173,38 @@ public class SocialMentionController {
         Map.of("platform", existing.platform()));
     return ResponseEntity.accepted().build();
   }
+
+  /** Cancel an in-flight social extraction — see CoverageController.cancel for the rationale. */
+  @PostMapping("/v1/reports/{reportId}/social-mentions/{itemId}/cancel")
+  public ResponseEntity<Void> cancel(
+      @PathVariable UUID reportId, @PathVariable UUID itemId, HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    Report report =
+        reports
+            .findInWorkspace(ctx.workspaceId(), reportId)
+            .orElseThrow(() -> AppException.notFound("Report"));
+    SocialMention existing =
+        mentions
+            .findInWorkspace(ctx.workspaceId(), itemId)
+            .orElseThrow(() -> AppException.notFound("Social mention"));
+    if (!existing.reportId().equals(report.id())) {
+      throw AppException.notFound("Social mention");
+    }
+    String s = existing.extractionStatus();
+    if (!"queued".equals(s) && !"running".equals(s)) {
+      throw AppException.badRequest(
+          "/errors/not-cancellable",
+          "Mention not in flight",
+          "Only queued or running mentions can be cancelled; this one is " + s + ".");
+    }
+    mentions.markFailed(existing.id(), "cancelled by user");
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.SOCIAL_MENTION_CANCELLED,
+        "social_mention",
+        existing.id(),
+        Map.of("platform", existing.platform(), "prior_status", s));
+    return ResponseEntity.accepted().build();
+  }
 }

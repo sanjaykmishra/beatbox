@@ -41,19 +41,23 @@ public class RenderPayloadBuilder {
             periodLabel(report),
             report.executiveSummary(),
             paragraphs(report.executiveSummary()));
-    var glance = AtAGlance.compute(items, outletCache);
-    var highlights =
-        Highlights.pickTop(items, outletCache, 4).stream()
-            .map(c -> toHighlight(c, outletCache))
-            .toList();
-    // Only render items the LLM actually finished extracting. Failed / queued / running items
-    // would otherwise render as empty rows in the rendered HTML and PDF (no headline, no lede),
-    // which looks like a bug to the share-link recipient.
-    var itemDtos =
+    // Substantive set: extraction finished AND the subject is actually in the article. Items
+    // tagged 'missing' are URLs the user added that turned out to be off-topic; they're kept on
+    // the builder UI for source-list cleanup but excluded from the rendered report (PDF + share
+    // view) — counting an article that doesn't mention the client toward "Total coverage" is
+    // misleading, and putting one in Highlights is straight-up wrong. Failed / queued / running
+    // are also excluded so they don't render as empty rows.
+    var substantive =
         items.stream()
             .filter(c -> "done".equals(c.extractionStatus()))
-            .map(c -> toItem(c, outletCache))
+            .filter(c -> !"missing".equals(c.subjectProminence()))
             .toList();
+    var glance = AtAGlance.compute(substantive, outletCache);
+    var highlights =
+        Highlights.pickTop(substantive, outletCache, 4).stream()
+            .map(c -> toHighlight(c, outletCache))
+            .toList();
+    var itemDtos = substantive.stream().map(c -> toItem(c, outletCache)).toList();
     String baseUrl = internalApiUrl.isBlank() ? null : internalApiUrl;
     return new RenderPayload(branding, clientDto, reportDto, glance, highlights, itemDtos, baseUrl);
   }

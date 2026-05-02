@@ -179,7 +179,7 @@ export function ReportPreview() {
       rightSlot={rightSlot}
     >
       <div className="space-y-6">
-        <div>
+        <div className="bg-white border border-gray-200 rounded-xl p-6">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold tracking-tightish text-ink">{r.title}</h1>
             <StatusPill status={r.status} />

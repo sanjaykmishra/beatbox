@@ -232,6 +232,8 @@ export const api = {
     request<EditedCoverage>('PATCH', `/v1/reports/${reportId}/coverage/${itemId}`, edits),
   retryCoverage: (reportId: string, itemId: string) =>
     request<void>('POST', `/v1/reports/${reportId}/coverage/${itemId}/retry`),
+  cancelCoverage: (reportId: string, itemId: string) =>
+    request<void>('POST', `/v1/reports/${reportId}/coverage/${itemId}/cancel`),
   deleteCoverage: (reportId: string, itemId: string) =>
     request<void>('DELETE', `/v1/reports/${reportId}/coverage/${itemId}`),
   patchSocialMention: (
@@ -257,6 +259,8 @@ export const api = {
     }>('PATCH', `/v1/reports/${reportId}/social-mentions/${itemId}`, edits),
   retrySocialMention: (reportId: string, itemId: string) =>
     request<void>('POST', `/v1/reports/${reportId}/social-mentions/${itemId}/retry`),
+  cancelSocialMention: (reportId: string, itemId: string) =>
+    request<void>('POST', `/v1/reports/${reportId}/social-mentions/${itemId}/cancel`),
   deleteSocialMention: (reportId: string, itemId: string) =>
     request<void>('DELETE', `/v1/reports/${reportId}/social-mentions/${itemId}`),
 
