@@ -517,7 +517,8 @@ public class ReportController {
             .findInWorkspace(r.workspaceId(), r.clientId())
             .orElseThrow(() -> AppException.notFound("Client"));
     var items = coverage.listByReport(r.id());
-    var payload = renderPayloads.build(ws, client, r, items);
+    var mentions = socialMentions.listByReport(r.workspaceId(), r.id());
+    var payload = renderPayloads.build(ws, client, r, items, mentions);
     String html = renderClient.renderHtml(payload);
     return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
   }
