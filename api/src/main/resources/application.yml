@@ -62,6 +62,10 @@ beat:
     social-extraction:
       # v1_0 (legacy 3-value enum) | v1_1 (adds 'missing'). Default v1_1.
       version: ${BEAT_PROMPTS_SOCIAL_EXTRACTION_VERSION:v1_1}
+    post-variant:
+      # v1_0 (no caching) | v1_1 (cost-engineered: brand-voice + instructions cached per
+      # docs/18-cost-engineering.md §"Social post-variant generation"). Default v1_1.
+      version: ${BEAT_PROMPTS_POST_VARIANT_VERSION:v1_1}
   admin:
     # Comma-separated list of user emails allowed to view /v1/admin/*. Empty = nobody.
     emails: ${ADMIN_EMAILS:}
