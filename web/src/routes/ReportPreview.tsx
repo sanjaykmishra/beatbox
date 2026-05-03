@@ -6,12 +6,13 @@ import { useToast } from '../components/Toast';
 import { Alert, Pill, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import { api, ApiError, type Report } from '../lib/api';
+import { reportPolicy } from '../lib/reportPolicy';
 
 export function ReportPreview() {
   const { id = '' } = useParams();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { workspace } = useAuth();
+  const { workspace, user } = useAuth();
   const slug = workspace?.slug ?? 'workspace';
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -29,7 +30,7 @@ export function ReportPreview() {
   const previewHtml = useQuery({
     queryKey: ['report-preview', id],
     queryFn: () => api.fetchReportPreviewHtml(id),
-    enabled: report.data?.status === 'ready',
+    enabled: report.data?.status === 'ready' || report.data?.status === 'published',
     staleTime: 60_000,
   });
 
@@ -40,6 +41,16 @@ export function ReportPreview() {
       setCopied(false);
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Share failed'),
+  });
+
+  const publish = useMutation({
+    mutationFn: () => api.publishReport(id),
+    onSuccess: () => {
+      toast.success('Report published.');
+      qc.invalidateQueries({ queryKey: ['report', id] });
+      qc.invalidateQueries({ queryKey: ['client-reports'] });
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'Publish failed'),
   });
 
   const revoke = useMutation({
@@ -111,6 +122,9 @@ export function ReportPreview() {
   }
   const r = report.data;
   const ready = r.status === 'ready';
+  const isPublished = r.status === 'published';
+  const renderable = ready || isPublished;
+  const policy = reportPolicy(r, user?.id ?? null, workspace?.active_member_count ?? 1);
   const generatedSecs =
     r.generated_at && r.created_at
       ? Math.max(
@@ -123,15 +137,27 @@ export function ReportPreview() {
 
   const rightSlot = (
     <>
+      {ready && (
+        <button
+          type="button"
+          disabled={!policy.canPublish || publish.isPending}
+          onClick={() => publish.mutate()}
+          title={policy.publishDisabledReason ?? 'Publish this report'}
+          className="rounded-md border border-gray-300 bg-white px-3 py-1 text-[12px] font-medium text-gray-700 hover:border-gray-400 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {publish.isPending ? 'Publishing…' : 'Publish report'}
+        </button>
+      )}
       <button
-        disabled={!ready}
+        disabled={!isPublished}
+        title={isPublished ? undefined : 'Publish the report before sharing it.'}
         onClick={() => share.mutate()}
         className="rounded-md border border-gray-300 bg-white px-3 py-1 text-[12px] font-medium text-gray-700 hover:border-gray-400 hover:bg-white disabled:opacity-50 transition-colors"
       >
         {share.isPending ? 'Sharing…' : 'Share link'}
       </button>
       <button
-        disabled={!ready}
+        disabled={!renderable}
         onClick={async () => {
           try {
             const blob = await api.fetchReportPdfBlob(r.id);
@@ -152,18 +178,20 @@ export function ReportPreview() {
     </>
   );
 
-  const chromeLabel: Crumb = ready
-    ? {
-        label:
-          generatedSecs !== null
-            ? `Report ready · generated in ${generatedSecs}s`
-            : 'Report ready',
-      }
-    : r.status === 'processing'
-      ? { label: 'Generating…' }
-      : r.status === 'failed'
-        ? { label: 'Generation failed' }
-        : { label: r.title };
+  const chromeLabel: Crumb = isPublished
+    ? { label: 'Published' }
+    : ready
+      ? {
+          label:
+            generatedSecs !== null
+              ? `Report ready · generated in ${generatedSecs}s`
+              : 'Report ready',
+        }
+      : r.status === 'processing'
+        ? { label: 'Generating…' }
+        : r.status === 'failed'
+          ? { label: 'Generation failed' }
+          : { label: r.title };
 
   return (
     <BrowserFrame
@@ -240,17 +268,24 @@ export function ReportPreview() {
             onTryAgain={() => navigate(`/reports/${r.id}`)}
           />
         )}
-        {r.status === 'ready' && (
+        {renderable && (
           <div className="space-y-4">
-            <SummaryEditor
-              reportId={r.id}
-              initial={r.executive_summary ?? ''}
-              edited={!!r.executive_summary_edited}
-              onSaved={() => {
-                qc.invalidateQueries({ queryKey: ['report', r.id] });
-                qc.invalidateQueries({ queryKey: ['report-preview', r.id] });
-              }}
-            />
+            {isPublished ? (
+              <PublishedSummary
+                summary={r.executive_summary ?? ''}
+                publishedAt={r.published_at}
+              />
+            ) : (
+              <SummaryEditor
+                reportId={r.id}
+                initial={r.executive_summary ?? ''}
+                edited={!!r.executive_summary_edited}
+                onSaved={() => {
+                  qc.invalidateQueries({ queryKey: ['report', r.id] });
+                  qc.invalidateQueries({ queryKey: ['report-preview', r.id] });
+                }}
+              />
+            )}
             {previewHtml.isLoading ? (
               <ProcessingSkeleton />
             ) : previewHtml.error ? (
@@ -283,11 +318,38 @@ function StatusPill({ status }: { status: Report['status'] }) {
   const map: Record<Report['status'], { tone: PillTone; label: string }> = {
     draft: { tone: 'gray', label: 'draft' },
     processing: { tone: 'amber', label: 'processing' },
-    ready: { tone: 'green', label: 'ready' },
+    ready: { tone: 'amber', label: 'ready' },
     failed: { tone: 'red', label: 'failed' },
+    published: { tone: 'green', label: 'published' },
   };
   const { tone, label } = map[status];
   return <Pill tone={tone}>{label}</Pill>;
+}
+
+function PublishedSummary({
+  summary,
+  publishedAt,
+}: {
+  summary: string;
+  publishedAt: string | null;
+}) {
+  return (
+    <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-2">
+      <div className="eyebrow flex items-center gap-2">
+        Executive summary
+        {publishedAt && (
+          <span className="text-[11px] text-gray-500 font-normal">
+            · published {new Date(publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+          </span>
+        )}
+      </div>
+      {summary ? (
+        <p className="text-sm text-gray-700 whitespace-pre-wrap">{summary}</p>
+      ) : (
+        <p className="text-sm text-gray-500 italic">No summary.</p>
+      )}
+    </section>
+  );
 }
 
 function ProcessingSkeleton() {

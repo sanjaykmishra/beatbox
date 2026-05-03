@@ -5,6 +5,7 @@ import app.beat.activity.EventKinds;
 import app.beat.infra.AppException;
 import app.beat.infra.RequestContext;
 import app.beat.report.Report;
+import app.beat.report.ReportMutationGuard;
 import app.beat.report.ReportRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -88,10 +89,7 @@ public class SocialMentionController {
         reports
             .findInWorkspace(ctx.workspaceId(), reportId)
             .orElseThrow(() -> AppException.notFound("Report"));
-    if (!"draft".equals(report.status())) {
-      throw AppException.badRequest(
-          "/errors/report-not-draft", "Report not editable", "Only draft reports accept edits.");
-    }
+    ReportMutationGuard.assertEditable(report, "edit this mention");
     SocialMention existing =
         mentions
             .findInWorkspace(ctx.workspaceId(), itemId)
@@ -128,6 +126,7 @@ public class SocialMentionController {
         reports
             .findInWorkspace(ctx.workspaceId(), reportId)
             .orElseThrow(() -> AppException.notFound("Report"));
+    ReportMutationGuard.assertEditable(report, "remove this mention");
     SocialMention existing =
         mentions
             .findInWorkspace(ctx.workspaceId(), itemId)
@@ -154,6 +153,7 @@ public class SocialMentionController {
         reports
             .findInWorkspace(ctx.workspaceId(), reportId)
             .orElseThrow(() -> AppException.notFound("Report"));
+    ReportMutationGuard.assertEditable(report, "retry this mention");
     SocialMention existing =
         mentions
             .findInWorkspace(ctx.workspaceId(), itemId)
@@ -164,11 +164,6 @@ public class SocialMentionController {
     mentions.requeue(existing.id());
     // Idempotent enqueue — if a queued job already exists this is a no-op.
     jobs.enqueue(existing.id());
-    // Re-extracting invalidates the rendered PDF (see CoverageController.retry rationale).
-    // Reset report to 'draft' so the user can Generate again.
-    if ("ready".equals(report.status()) || "failed".equals(report.status())) {
-      reports.setStatus(report.id(), "draft");
-    }
     activity.recordUser(
         ctx.workspaceId(),
         ctx.userId(),
@@ -188,6 +183,7 @@ public class SocialMentionController {
         reports
             .findInWorkspace(ctx.workspaceId(), reportId)
             .orElseThrow(() -> AppException.notFound("Report"));
+    ReportMutationGuard.assertEditable(report, "cancel this extraction");
     SocialMention existing =
         mentions
             .findInWorkspace(ctx.workspaceId(), itemId)

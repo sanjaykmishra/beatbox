@@ -176,7 +176,7 @@ Add coverage URLs. Creates `coverage_items` and dispatches extraction jobs. Retu
 
 Duplicates within the same report are silently ignored (URL uniqueness enforced by index).
 
-Accepts adds while the report is in `draft`, `ready`, or `failed` status. When new items are added to a `ready` or `failed` report, the report is flipped back to `draft` so the user can regenerate (mirrors the `retry` endpoint). The previous PDF stays accessible at its `pdf_url` until the next `markReady` overwrites it. Returns `400` when the report is `processing` — adding URLs mid-render would race the worker.
+Accepts adds while the report is in `draft`, `ready`, or `failed` status — status is **not** flipped (V013 lifecycle). The user re-runs `POST /v1/reports/:id/generate` when ready to refresh the PDF. Returns `400` when the report is `processing` (adds would race the renderer) and `409` when the report is `published` (immutable).
 
 ### `GET /v1/reports/:id`
 Full report with all coverage items. Frontend polls every 2 seconds while any item is `queued` or `running`. (Phase 2: replace polling with SSE on `GET /v1/reports/:id/events`.)
@@ -238,7 +238,7 @@ Remove an item from the report.
 Re-queue extraction for a failed item.
 
 ### `POST /v1/reports/:id/generate`
-Finalize: lock items, generate executive summary, render PDF.
+Generate (or re-generate) the PDF: compute executive summary, render via Puppeteer, store.
 
 ```json
 // Response 202
@@ -248,15 +248,39 @@ Finalize: lock items, generate executive summary, render PDF.
 ```
 
 Constraints:
-- Report must be in `draft` status.
+- Report status must be `draft`, `ready` (re-generate), or `failed` (retry).
+- Rejects `processing` (already in flight) with 400 and `published` (immutable) with 409.
 - All coverage items must be `done` or `failed` (no `queued`/`running`).
 - Must have at least 1 successful coverage item.
+
+### `POST /v1/reports/:id/publish`
+Lock the report. Transitions `ready → published`; sets `published_at` and `published_by_user_id`.
+Once published, every mutation endpoint (POST coverage, PATCH coverage, retry, cancel,
+generate, summary edit, delete) returns 409.
+
+```json
+// Response 200
+{ "id": "...", "status": "published", "published_at": "2026-05-03T12:34:56Z" }
+```
+
+Approval gate:
+- Single-person workspaces: the report's creator may publish.
+- Multi-person workspaces (≥2 active members — owners + members, viewers don't count): the
+  creator gets 403; another active member must publish. Enforces a four-eyes review.
+
+### `DELETE /v1/reports/:id`
+Soft-delete a report. Allowed only when status is `ready` or `failed`. Drafts are pre-generation
+work-in-progress (finish or abandon in place); `processing` reports are mid-render; `published`
+reports are immutable. Returns 409 with a clear error in any of those states.
+
+Returns 204 on success.
 
 ### `GET /v1/reports/:id/pdf`
 Returns a 302 redirect to a signed R2 URL. Available once `status = 'ready'`.
 
 ### `POST /v1/reports/:id/share`
-Create a public share link.
+Create a public share link. Requires `status = 'published'` — the whole point of publishing is
+"this is the locked, client-ready version." Returns 400 on any other status.
 
 ```json
 // Request

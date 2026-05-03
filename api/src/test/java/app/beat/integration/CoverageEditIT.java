@@ -21,14 +21,13 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 /**
  * Covers the "+ Add URLs" flow on the coverage view, which reuses POST /v1/reports/:id/coverage.
- * Three behaviors that are easy to break and easy to miss without an IT:
+ * Per the V013 lifecycle:
  *
  * <ul>
- *   <li>Adding to a 'draft' report keeps it 'draft' (regression of the original behavior).
- *   <li>Adding to a 'ready' or 'failed' report flips status back to 'draft' so the user can
- *       regenerate. Mirrors the retry path; without this, the user is stuck once they generate a
- *       PDF and notice they forgot a URL.
+ *   <li>Adding to a 'draft' / 'ready' / 'failed' report leaves status unchanged. The previous PDF
+ *       (when present) stays valid until the user re-Generates.
  *   <li>Adding to a 'processing' report is rejected — we don't let the user race the renderer.
+ *   <li>Adding to a 'published' report is rejected with 409 — published reports are locked.
  * </ul>
  */
 @SpringBootTest
@@ -41,7 +40,7 @@ class CoverageEditIT extends IntegrationTestBase {
   private final ObjectMapper json = new ObjectMapper();
 
   @Test
-  void addUrlsAfterGenerationFlipsStatusBackToDraft() throws Exception {
+  void addUrlsKeepsStatusForDraftReadyFailed() throws Exception {
     Workspace ws = signUp();
 
     String clientId = createClient(ws.token, "Acme Corp");
@@ -53,18 +52,17 @@ class CoverageEditIT extends IntegrationTestBase {
         .andExpect(MockMvcResultMatchers.jsonPath("$.items.length()").value(1));
     assertThat(getStatus(ws.token, reportId)).isEqualTo("draft");
 
-    // Force the report to 'ready' as if generation succeeded, then add another URL. The endpoint
-    // should accept it and flip status back to 'draft' (mirrors CoverageController.retry).
+    // 'ready' stays 'ready' — adds don't auto-flip back to draft any more (V013 lifecycle).
     reports.setStatus(UUID.fromString(reportId), "ready");
     addUrls(ws.token, reportId, List.of("https://example.com/b"))
         .andExpect(MockMvcResultMatchers.status().isAccepted());
-    assertThat(getStatus(ws.token, reportId)).isEqualTo("draft");
+    assertThat(getStatus(ws.token, reportId)).isEqualTo("ready");
 
-    // 'failed' should behave the same way.
+    // Same for 'failed'.
     reports.setStatus(UUID.fromString(reportId), "failed");
     addUrls(ws.token, reportId, List.of("https://example.com/c"))
         .andExpect(MockMvcResultMatchers.status().isAccepted());
-    assertThat(getStatus(ws.token, reportId)).isEqualTo("draft");
+    assertThat(getStatus(ws.token, reportId)).isEqualTo("failed");
   }
 
   @Test
@@ -77,6 +75,18 @@ class CoverageEditIT extends IntegrationTestBase {
     addUrls(ws.token, reportId, List.of("https://example.com/x"))
         .andExpect(MockMvcResultMatchers.status().isBadRequest())
         .andExpect(MockMvcResultMatchers.jsonPath("$.title").value("Report is generating"));
+  }
+
+  @Test
+  void addUrlsRejectedWhenPublished() throws Exception {
+    Workspace ws = signUp();
+    String clientId = createClient(ws.token, "Gamma Co");
+    String reportId = createReport(ws.token, clientId);
+
+    reports.setStatus(UUID.fromString(reportId), "published");
+    addUrls(ws.token, reportId, List.of("https://example.com/y"))
+        .andExpect(MockMvcResultMatchers.status().isConflict())
+        .andExpect(MockMvcResultMatchers.jsonPath("$.title").value("Report is published"));
   }
 
   // ---- helpers ----

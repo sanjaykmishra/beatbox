@@ -35,6 +35,8 @@ public class ReportRepository {
               rs.getString("share_token"),
               ts(rs, "share_token_expires_at"),
               ts(rs, "generated_at"),
+              ts(rs, "published_at"),
+              rs.getObject("published_by_user_id", UUID.class),
               rs.getString("failure_reason"),
               rs.getObject("created_by_user_id", UUID.class),
               ts(rs, "created_at"),
@@ -141,6 +143,44 @@ public class ReportRepository {
         .update();
   }
 
+  /**
+   * Publish a report. Atomic: only flips status if the row is currently 'ready'. Returns true when
+   * the row was published, false otherwise (already published, in flight, etc.) so the caller can
+   * decide whether to 409.
+   */
+  public boolean publish(UUID id, UUID publishedByUserId) {
+    int rows =
+        jdbc.sql(
+                """
+                UPDATE reports
+                SET status = 'published',
+                    published_at = now(),
+                    published_by_user_id = :u
+                WHERE id = :id AND status = 'ready'
+                """)
+            .param("id", id)
+            .param("u", publishedByUserId)
+            .update();
+    return rows == 1;
+  }
+
+  /**
+   * Soft-delete a report. Allowed only when the row is in 'ready' or 'failed' (per the lifecycle
+   * spec: drafts are pre-generation work-in-progress; processing reports are mid-render; published
+   * reports are immutable). Atomic check-and-flip; returns true when actually deleted.
+   */
+  public boolean softDeleteIfDeletable(UUID id) {
+    int rows =
+        jdbc.sql(
+                """
+                UPDATE reports SET deleted_at = now()
+                WHERE id = :id AND deleted_at IS NULL AND status IN ('ready','failed')
+                """)
+            .param("id", id)
+            .update();
+    return rows == 1;
+  }
+
   public void setShareToken(UUID id, String tokenHash, java.time.Instant expiresAt) {
     jdbc.sql("UPDATE reports SET share_token=:t, share_token_expires_at=:e WHERE id=:id")
         .param("id", id)
@@ -166,12 +206,15 @@ public class ReportRepository {
   }
 
   public Optional<Report> findActiveByShareToken(String tokenHash) {
+    // 'published' (post-V013) is the only state that can be publicly shared; sharing on 'ready'
+    // is rejected upstream by the share endpoint, but keep the SELECT defensive in case a
+    // share token from a pre-V013 'ready' report is still floating around.
     return jdbc.sql(
             """
             SELECT * FROM reports
             WHERE share_token = :t AND deleted_at IS NULL
               AND (share_token_expires_at IS NULL OR share_token_expires_at > now())
-              AND status = 'ready'
+              AND status IN ('ready','published')
             """)
         .param("t", tokenHash)
         .query(MAPPER)

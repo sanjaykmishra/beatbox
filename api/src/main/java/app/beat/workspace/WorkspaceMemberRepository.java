@@ -81,6 +81,25 @@ public class WorkspaceMemberRepository {
         .list();
   }
 
+  /**
+   * Number of members eligible to act on workspace content. Viewers are excluded — they can read
+   * but can't review or publish, so they don't satisfy the "another team member" half of the 4-eyes
+   * publish gate. Used by ReportController.publish to decide whether the creator may self-publish.
+   */
+  public int countActiveMembers(UUID workspaceId) {
+    Integer n =
+        jdbc.sql(
+                """
+                SELECT count(*) FROM workspace_members wm
+                JOIN users u ON u.id = wm.user_id AND u.deleted_at IS NULL
+                WHERE wm.workspace_id = :w AND wm.role IN ('owner','member')
+                """)
+            .param("w", workspaceId)
+            .query(Integer.class)
+            .single();
+    return n == null ? 0 : n;
+  }
+
   public Optional<Membership> findCurrentForUser(UUID userId) {
     return jdbc.sql(
             """

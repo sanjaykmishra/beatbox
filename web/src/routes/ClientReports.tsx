@@ -1,10 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { BrowserFrame } from '../components/BrowserFrame';
+import { useConfirm } from '../components/ConfirmDialog';
+import { useToast } from '../components/Toast';
 import { Alert, Eyebrow, Pill, PrimaryLink, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
-import { api, ApiError, type ReportSummary } from '../lib/api';
+import { api, ApiError, type ReportStatus, type ReportSummary } from '../lib/api';
+import { reportPolicy } from '../lib/reportPolicy';
 
 /**
  * Past-reports browser. Left rail (25%) lists all of the client's reports newest-first; right
@@ -14,15 +17,38 @@ import { api, ApiError, type ReportSummary } from '../lib/api';
  */
 export function ClientReports() {
   const { id = '' } = useParams();
-  const { workspace } = useAuth();
+  const { workspace, user } = useAuth();
   const slug = workspace?.slug ?? 'workspace';
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFromQuery = searchParams.get('selected');
+  const qc = useQueryClient();
+  const confirm = useConfirm();
+  const toast = useToast();
 
   const reports = useQuery({
     queryKey: ['client-reports', id],
     queryFn: () => api.listClientReports(id),
   });
+
+  const deleteReport = useMutation({
+    mutationFn: (reportId: string) => api.deleteReport(reportId),
+    onSuccess: () => {
+      toast.success('Report deleted.');
+      void qc.invalidateQueries({ queryKey: ['client-reports', id] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : 'Could not delete.'),
+  });
+
+  async function onDelete(r: ReportSummary) {
+    const ok = await confirm({
+      title: 'Delete this report?',
+      body: 'This cannot be undone. The PDF and any share links will stop working.',
+      tone: 'danger',
+      confirmLabel: 'Delete report',
+    });
+    if (!ok) return;
+    deleteReport.mutate(r.id);
+  }
   const client = useQuery({
     queryKey: ['client', id],
     queryFn: () => api.getClient(id),
@@ -83,6 +109,9 @@ export function ClientReports() {
           isLoading={reports.isLoading}
           selectedId={selected?.id ?? null}
           onSelect={(rid) => setSearchParams({ selected: rid })}
+          onDelete={onDelete}
+          currentUserId={user?.id ?? null}
+          activeMemberCount={workspace?.active_member_count ?? 1}
         />
         <ReportPane report={selected ?? null} loading={reports.isLoading} />
       </div>
@@ -96,12 +125,18 @@ function ReportList({
   isLoading,
   selectedId,
   onSelect,
+  onDelete,
+  currentUserId,
+  activeMemberCount,
 }: {
   clientId: string;
   reports: ReportSummary[];
   isLoading: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onDelete: (r: ReportSummary) => void;
+  currentUserId: string | null;
+  activeMemberCount: number;
 }) {
   return (
     <aside className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
@@ -119,15 +154,20 @@ function ReportList({
           </p>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {reports.map((r) => (
-              <li key={r.id}>
-                <ReportRow
-                  report={r}
-                  selected={selectedId === r.id}
-                  onSelect={() => onSelect(r.id)}
-                />
-              </li>
-            ))}
+            {reports.map((r) => {
+              const policy = reportPolicy(r, currentUserId, activeMemberCount);
+              return (
+                <li key={r.id}>
+                  <ReportRow
+                    report={r}
+                    selected={selectedId === r.id}
+                    onSelect={() => onSelect(r.id)}
+                    onDelete={() => onDelete(r)}
+                    canDelete={policy.canDelete}
+                  />
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
@@ -135,34 +175,44 @@ function ReportList({
   );
 }
 
+const STATUS_TONE: Record<ReportStatus, PillTone> = {
+  draft: 'gray',
+  processing: 'amber',
+  ready: 'amber',
+  failed: 'red',
+  published: 'green',
+};
+
 function ReportRow({
   report,
   selected,
   onSelect,
+  onDelete,
+  canDelete,
 }: {
   report: ReportSummary;
   selected: boolean;
   onSelect: () => void;
+  onDelete: () => void;
+  canDelete: boolean;
 }) {
-  const tone: Record<ReportSummary['status'], PillTone> = {
-    draft: 'gray',
-    processing: 'amber',
-    ready: 'green',
-    failed: 'red',
-  };
-  const when = report.generated_at
-    ? `generated ${relativeTime(report.generated_at)}`
-    : `created ${relativeTime(report.created_at)}`;
+  const when = report.published_at
+    ? `published ${relativeTime(report.published_at)}`
+    : report.generated_at
+      ? `generated ${relativeTime(report.generated_at)}`
+      : `created ${relativeTime(report.created_at)}`;
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-current={selected}
-      className={`w-full text-left px-4 py-3 transition-colors flex items-start gap-3 ${
+    <div
+      className={`group relative w-full transition-colors flex items-start gap-3 ${
         selected ? 'bg-gray-50 border-l-2 border-l-ink pl-[14px]' : 'hover:bg-gray-50'
       }`}
     >
-      <div className="min-w-0 flex-1">
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-current={selected}
+        className="flex-1 text-left px-4 py-3 min-w-0"
+      >
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-ink truncate">{report.title}</span>
         </div>
@@ -170,11 +220,25 @@ function ReportRow({
           {formatPeriod(report.period_start, report.period_end)}
         </div>
         <div className="mt-1.5 flex items-center gap-2">
-          <Pill tone={tone[report.status]}>{report.status}</Pill>
+          <Pill tone={STATUS_TONE[report.status]}>{report.status}</Pill>
           <span className="text-[11px] text-gray-400 truncate">{when}</span>
         </div>
-      </div>
-    </button>
+      </button>
+      {canDelete && (
+        <button
+          type="button"
+          aria-label="Delete report"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-xs text-gray-400 hover:text-red-600 px-2 py-1 self-center mr-2 transition-opacity"
+          title="Delete report"
+        >
+          ×
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -193,8 +257,10 @@ function ReportPane({ report, loading }: { report: ReportSummary | null; loading
       </div>
     );
   }
-  if (report.status === 'ready') {
-    return <ReadyReportPreview report={report} />;
+  // Published reports also have a rendered preview to embed; everything else (draft / processing
+  // / failed) renders a placeholder pointing at the builder.
+  if (report.status === 'ready' || report.status === 'published') {
+    return <RenderedReportPreview report={report} />;
   }
   return <NonReadyPlaceholder report={report} />;
 }
@@ -210,7 +276,7 @@ function ReportPane({ report, loading }: { report: ReportSummary | null; loading
  * the SPA origin. Browsers honor base inside srcDoc; resources then load from the same origin
  * that proxies {@code /v1/*} to the API.
  */
-function ReadyReportPreview({ report }: { report: ReportSummary }) {
+function RenderedReportPreview({ report }: { report: ReportSummary }) {
   const previewHtml = useQuery({
     queryKey: ['report-preview', report.id],
     queryFn: () => api.fetchReportPreviewHtml(report.id),
@@ -271,9 +337,10 @@ function injectBase(html: string, baseUrl: string): string {
 }
 
 function NonReadyPlaceholder({ report }: { report: ReportSummary }) {
-  // Drafts / failed / in-flight reports don't have a rendered preview to embed. Send the user
-  // to the builder where draft editing and retry actually happen.
-  const copy: Record<Exclude<ReportSummary['status'], 'ready'>, { title: string; body: string }> = {
+  // Drafts / processing / failed reports don't have a rendered preview to embed. Send the user
+  // to the builder where editing and retry actually happen. (ready and published are routed
+  // to RenderedReportPreview by ReportPane, so they never land here.)
+  const copy: Record<'draft' | 'processing' | 'failed', { title: string; body: string }> = {
     draft: {
       title: 'This report is still a draft.',
       body: 'Open it in the builder to add coverage and generate the PDF.',
@@ -287,7 +354,7 @@ function NonReadyPlaceholder({ report }: { report: ReportSummary }) {
       body: 'Open it in the builder to see the failure reason and retry.',
     },
   };
-  const c = copy[report.status as Exclude<ReportSummary['status'], 'ready'>];
+  const c = copy[report.status as 'draft' | 'processing' | 'failed'];
   return (
     <div className="bg-white border border-gray-200 rounded-xl flex items-center justify-center p-12">
       <div className="text-center max-w-sm">
@@ -297,7 +364,7 @@ function NonReadyPlaceholder({ report }: { report: ReportSummary }) {
           to={`/reports/${report.id}`}
           className="mt-5 ink-btn rounded-lg text-white px-4 py-2 text-sm font-medium inline-block"
         >
-          Open in builder →
+          Edit report →
         </Link>
       </div>
     </div>

@@ -41,9 +41,10 @@ public class WorkspaceController {
       String plan,
       int plan_limit_clients,
       int plan_limit_reports_monthly,
+      int active_member_count,
       Instant trial_ends_at,
       UUID default_template_id) {
-    public static WorkspaceDto from(Workspace w) {
+    public static WorkspaceDto from(Workspace w, int activeMemberCount) {
       return new WorkspaceDto(
           w.id(),
           w.name(),
@@ -53,6 +54,7 @@ public class WorkspaceController {
           w.plan(),
           w.planLimitClients(),
           w.planLimitReportsMonthly(),
+          activeMemberCount,
           w.trialEndsAt(),
           w.defaultTemplateId());
     }
@@ -68,10 +70,11 @@ public class WorkspaceController {
   @GetMapping
   public WorkspaceDto get(HttpServletRequest req) {
     RequestContext ctx = RequestContext.require(req);
-    return WorkspaceDto.from(
+    Workspace w =
         workspaces
             .findById(ctx.workspaceId())
-            .orElseThrow(() -> AppException.notFound("Workspace")));
+            .orElseThrow(() -> AppException.notFound("Workspace"));
+    return WorkspaceDto.from(w, members.countActiveMembers(ctx.workspaceId()));
   }
 
   public record MemberDto(
@@ -112,6 +115,6 @@ public class WorkspaceController {
         ctx.workspaceId(),
         Map.of(),
         req);
-    return WorkspaceDto.from(updated);
+    return WorkspaceDto.from(updated, members.countActiveMembers(ctx.workspaceId()));
   }
 }

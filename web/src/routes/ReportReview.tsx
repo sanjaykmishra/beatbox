@@ -14,6 +14,7 @@ import {
   type SocialMentionView,
   type SocialPlatformId,
 } from '../lib/api';
+import { reportPolicy } from '../lib/reportPolicy';
 import { parseUrls } from '../lib/urls';
 
 type FilterKey = 'all' | 'articles' | 'social' | 'tier1' | 'high_engagement' | 'failed';
@@ -27,14 +28,16 @@ export function ReportReview() {
   const { id = '' } = useParams();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { workspace } = useAuth();
+  const { workspace, user } = useAuth();
   const slug = workspace?.slug ?? 'workspace';
   const [editingArticle, setEditingArticle] = useState<CoverageItemView | null>(null);
   const [editingSocial, setEditingSocial] = useState<SocialMentionView | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>('all');
   const [addingUrls, setAddingUrls] = useState(false);
   const confirm = useConfirm();
+  const toast = useToast();
 
   const report = useQuery({
     queryKey: ['report', id],
@@ -65,13 +68,31 @@ export function ReportReview() {
     onError: (e) => setGenerateError(e instanceof ApiError ? e.message : 'Generate failed'),
   });
 
+  const publish = useMutation({
+    mutationFn: () => api.publishReport(id),
+    onSuccess: () => {
+      toast.success('Report published.');
+      void qc.invalidateQueries({ queryKey: ['report', id] });
+      void qc.invalidateQueries({ queryKey: ['client-reports'] });
+    },
+    onError: (e) => setPublishError(e instanceof ApiError ? e.message : 'Publish failed'),
+  });
+
   const r = report.data;
   const counts = r?.status_counts ?? null;
   const unified = useMemo(() => buildUnified(r), [r]);
   const filtered = useMemo(() => unified.filter((it) => matchesFilter(it, filter)), [unified, filter]);
 
+  const policy = r
+    ? reportPolicy(r, user?.id ?? null, workspace?.active_member_count ?? 1)
+    : null;
   const canGenerate =
-    !!r && (counts?.total ?? 0) > 0 && (counts?.extracting ?? 0) === 0 && (counts?.done ?? 0) > 0;
+    !!r
+    && !!policy
+    && policy.canGenerate
+    && (counts?.total ?? 0) > 0
+    && (counts?.extracting ?? 0) === 0
+    && (counts?.done ?? 0) > 0;
 
   if (report.isLoading) {
     return (
@@ -146,31 +167,55 @@ export function ReportReview() {
                 )}
               </div>
             )}
-            <button
-              type="button"
-              disabled={r.status === 'processing'}
-              onClick={() => setAddingUrls(true)}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title={
-                r.status === 'processing'
-                  ? "Wait for the current generation to finish."
-                  : "Add more coverage URLs to this report."
-              }
-            >
-              + Add URLs
-            </button>
-            <button
-              disabled={!canGenerate || generate.isPending}
-              onClick={() => generate.mutate()}
-              className="ink-btn rounded-lg text-white px-5 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title={
-                canGenerate
-                  ? 'Generate report'
-                  : 'Wait for all extractions to finish; need at least one done item.'
-              }
-            >
-              {generate.isPending ? 'Generating…' : 'Generate report →'}
-            </button>
+            {policy?.canEdit && (
+              <button
+                type="button"
+                onClick={() => setAddingUrls(true)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
+                title="Add more coverage URLs to this report."
+              >
+                + Add URLs
+              </button>
+            )}
+            {r.status === 'ready' && policy && (
+              <button
+                type="button"
+                disabled={!policy.canPublish || publish.isPending}
+                onClick={() => publish.mutate()}
+                className="ink-btn rounded-lg text-white px-5 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title={policy.publishDisabledReason ?? 'Publish this report'}
+              >
+                {publish.isPending ? 'Publishing…' : 'Publish report →'}
+              </button>
+            )}
+            {(r.status === 'draft' || r.status === 'failed' || r.status === 'ready') && (
+              <button
+                disabled={!canGenerate || generate.isPending}
+                onClick={() => generate.mutate()}
+                className={
+                  r.status === 'ready'
+                    ? 'rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                    : 'ink-btn rounded-lg text-white px-5 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                }
+                title={
+                  canGenerate
+                    ? r.status === 'ready'
+                      ? 'Re-generate the PDF after edits'
+                      : r.status === 'failed'
+                        ? 'Try again'
+                        : 'Generate report'
+                    : 'Wait for all extractions to finish; need at least one done item.'
+                }
+              >
+                {generate.isPending
+                  ? 'Generating…'
+                  : r.status === 'ready'
+                    ? 'Re-generate'
+                    : r.status === 'failed'
+                      ? 'Try again →'
+                      : 'Generate report →'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -199,8 +244,18 @@ export function ReportReview() {
               onClick: () => navigate(`/reports/${r.id}/preview`),
             }}
           >
-            The PDF is ready. Edit the executive summary inline on the preview, or download to
-            send to your client.
+            The PDF is ready. Edit the executive summary inline on the preview, then publish to
+            lock it in and share with your client.
+          </Alert>
+        )}
+        {r.status === 'published' && (
+          <Alert tone="success" title="Published">
+            This report is locked. Open the preview to copy the share link or download the PDF.
+          </Alert>
+        )}
+        {publishError && (
+          <Alert tone="danger" title="Couldn't publish" onDismiss={() => setPublishError(null)}>
+            {publishError}
           </Alert>
         )}
 
@@ -266,6 +321,13 @@ export function ReportReview() {
           </Alert>
         )}
 
+        {policy && !policy.canEdit && r.status !== 'processing' && (
+          <Alert tone="info" title="This report is locked">
+            Coverage items can't be edited on a published report. To make changes, duplicate this
+            report into a new draft.
+          </Alert>
+        )}
+
         {/* Unified items list. */}
         {unified.length === 0 ? (
           <div className="bg-white border border-dashed border-gray-300 rounded-xl p-10 text-center">
@@ -286,8 +348,12 @@ export function ReportReview() {
                 <li key={`a-${it.id}`}>
                   <CoverageCard
                     item={it.data}
-                    onEdit={() => setEditingArticle(it.data)}
+                    onEdit={() => {
+                      if (!policy?.canEdit) return;
+                      setEditingArticle(it.data);
+                    }}
                     onRetry={async () => {
+                      if (!policy?.canEdit) return;
                       try {
                         await api.retryCoverage(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });
@@ -296,6 +362,7 @@ export function ReportReview() {
                       }
                     }}
                     onCancel={async () => {
+                      if (!policy?.canEdit) return;
                       try {
                         await api.cancelCoverage(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });
@@ -304,6 +371,7 @@ export function ReportReview() {
                       }
                     }}
                     onRemove={async () => {
+                      if (!policy?.canEdit) return;
                       const ok = await confirm({
                         title: 'Remove this coverage item?',
                         tone: 'danger',
@@ -323,8 +391,12 @@ export function ReportReview() {
                 <li key={`s-${it.id}`}>
                   <SocialCard
                     item={it.data}
-                    onEdit={() => setEditingSocial(it.data)}
+                    onEdit={() => {
+                      if (!policy?.canEdit) return;
+                      setEditingSocial(it.data);
+                    }}
                     onRetry={async () => {
+                      if (!policy?.canEdit) return;
                       try {
                         await api.retrySocialMention(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });
@@ -333,6 +405,7 @@ export function ReportReview() {
                       }
                     }}
                     onCancel={async () => {
+                      if (!policy?.canEdit) return;
                       try {
                         await api.cancelSocialMention(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });
@@ -341,6 +414,7 @@ export function ReportReview() {
                       }
                     }}
                     onRemove={async () => {
+                      if (!policy?.canEdit) return;
                       const ok = await confirm({
                         title: 'Remove this social mention?',
                         tone: 'danger',
