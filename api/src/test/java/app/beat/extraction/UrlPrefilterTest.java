@@ -98,4 +98,57 @@ class UrlPrefilterTest {
                 "https://techcrunch.com/2026/04/30/anthropic-potential-900b-valuation-round/"))
         .isEmpty();
   }
+
+  @Test
+  void rejectsBinaryAssetUrls() {
+    // Direct image / PDF / archive pastes — the article fetcher would either return empty or
+    // feed the LLM raw bytes.
+    assertThat(prefilter.reject("https://example.com/image.png")).isPresent();
+    assertThat(prefilter.reject("https://example.com/photos/headshot.JPG")).isPresent();
+    assertThat(prefilter.reject("https://example.com/decks/q1-2026.pdf")).isPresent();
+    assertThat(prefilter.reject("https://cdn.example.com/icons/logo.svg")).isPresent();
+    assertThat(prefilter.reject("https://example.com/release.zip")).isPresent();
+    assertThat(prefilter.reject("https://example.com/installer.dmg")).isPresent();
+    assertThat(prefilter.reject("https://example.com/podcast.mp3")).isPresent();
+    assertThat(prefilter.reject("https://example.com/clip.mp4")).isPresent();
+    assertThat(prefilter.reject("https://example.com/data.csv")).isPresent();
+  }
+
+  @Test
+  void doesNotMisclassifySlugsContainingExtensionLetters() {
+    // 'png' / 'pdf' appear inside legitimate article slugs all the time. Make sure the regex
+    // anchors at the path's tail (with optional query/fragment) and doesn't trigger on a
+    // substring match.
+    assertThat(prefilter.reject("https://example.com/2026/png-vs-webp-explained/")).isEmpty();
+    assertThat(prefilter.reject("https://example.com/podcast-mp3-quality/")).isEmpty();
+  }
+
+  @Test
+  void rejectsEmailMarketingTrackerHosts() {
+    // The user-reported pastes plus a few other common email-platform trackers.
+    assertThat(prefilter.reject("https://list-manage.com/track/click/abc123")).isPresent();
+    assertThat(prefilter.reject("https://email.sendgrid.net/wf/click?upn=xyz")).isPresent();
+    assertThat(prefilter.reject("https://example.us2.list-manage.com/subscribe/post")).isPresent();
+    assertThat(prefilter.reject("https://r20.rs6.net/tn.jsp?abc")).isPresent();
+    assertThat(prefilter.reject("https://email.klaviyo.com/click/123")).isPresent();
+    assertThat(prefilter.reject("https://hubspotlinks.com/abc")).isPresent();
+    assertThat(prefilter.reject("https://link.example.mandrillapp.com/c/abc")).isPresent();
+  }
+
+  @Test
+  void rejectsTrackerPathShapesEvenOnUnknownHosts() {
+    // Generic tracker path patterns catch hosts we haven't enumerated.
+    assertThat(prefilter.reject("https://send.example.com/track/click/abc")).isPresent();
+    assertThat(prefilter.reject("https://t.example.com/wf/click?upn=xyz")).isPresent();
+    assertThat(prefilter.reject("https://m.example.com/ls/click?upn=zzz")).isPresent();
+  }
+
+  @Test
+  void doesNotRejectShorteners() {
+    // bit.ly / t.co etc. shorten legit article URLs constantly. The article fetcher follows
+    // redirects, so we let these through and reject (or accept) the destination on its own
+    // shape. Pinning current behavior; tighten if real misuse appears.
+    assertThat(prefilter.reject("https://bit.ly/3xyz")).isEmpty();
+    assertThat(prefilter.reject("https://t.co/abc")).isEmpty();
+  }
 }
