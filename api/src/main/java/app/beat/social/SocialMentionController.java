@@ -164,6 +164,11 @@ public class SocialMentionController {
     mentions.requeue(existing.id());
     // Idempotent enqueue — if a queued job already exists this is a no-op.
     jobs.enqueue(existing.id());
+    // Re-extracting invalidates the rendered PDF (see CoverageController.retry rationale).
+    // Reset report to 'draft' so the user can Generate again.
+    if ("ready".equals(report.status()) || "failed".equals(report.status())) {
+      reports.setStatus(report.id(), "draft");
+    }
     activity.recordUser(
         ctx.workspaceId(),
         ctx.userId(),

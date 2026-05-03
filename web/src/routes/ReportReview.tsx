@@ -15,7 +15,7 @@ import {
   type SocialPlatformId,
 } from '../lib/api';
 
-type FilterKey = 'all' | 'articles' | 'social' | 'tier1' | 'high_engagement';
+type FilterKey = 'all' | 'articles' | 'social' | 'tier1' | 'high_engagement' | 'failed';
 
 /** A unified row in the coverage list — wireframe-31 intermixes articles and social mentions. */
 type UnifiedItem =
@@ -223,6 +223,13 @@ export function ReportReview() {
             onClick={() => setFilter('high_engagement')}
             disabled={(counts?.social ?? 0) === 0}
           />
+          <FilterPill
+            label="Failed"
+            count={counts?.failed}
+            active={filter === 'failed'}
+            onClick={() => setFilter('failed')}
+            disabled={(counts?.failed ?? 0) === 0}
+          />
           <span className="ml-auto text-xs text-gray-500">Sort by</span>
           <span className="text-xs text-gray-700 border border-gray-200 rounded-md px-2 py-1">
             Date · newest first
@@ -235,7 +242,7 @@ export function ReportReview() {
             title="Can't generate this report yet"
             action={
               (counts?.failed ?? 0) > 0
-                ? { label: 'Show failed', onClick: () => setFilter('articles') }
+                ? { label: 'Show failed', onClick: () => setFilter('failed') }
                 : undefined
             }
             onDismiss={() => setGenerateError(null)}
@@ -412,6 +419,8 @@ function matchesFilter(it: UnifiedItem, f: FilterKey): boolean {
       const reposts = it.data.reposts_count ?? 0;
       return likes + reposts >= 100;
     }
+    case 'failed':
+      return it.data.extraction_status === 'failed';
   }
 }
 
