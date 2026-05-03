@@ -201,29 +201,51 @@ function ReportRow({
     : report.generated_at
       ? `generated ${relativeTime(report.generated_at)}`
       : `created ${relativeTime(report.created_at)}`;
+
+  // Per-status row CTA. Processing reports are intentionally action-less — the user can still
+  // click the row to load the latest preview, but there's no "edit" semantic while the worker
+  // is mid-flight. Everything else routes to either the builder (drafts / ready / failed are
+  // editable per the V013 lifecycle) or the locked preview (published).
+  const cta: { label: string; to: string } | null =
+    report.status === 'published'
+      ? { label: 'Open →', to: `/reports/${report.id}/preview` }
+      : report.status === 'processing'
+        ? null
+        : { label: 'Edit report →', to: `/reports/${report.id}` };
+
   return (
     <div
       className={`group relative w-full transition-colors flex items-start gap-3 ${
         selected ? 'bg-gray-50 border-l-2 border-l-ink pl-[14px]' : 'hover:bg-gray-50'
       }`}
     >
-      <button
-        type="button"
-        onClick={onSelect}
-        aria-current={selected}
-        className="flex-1 text-left px-4 py-3 min-w-0"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-ink truncate">{report.title}</span>
-        </div>
-        <div className="text-xs text-gray-500 mt-0.5 truncate">
-          {formatPeriod(report.period_start, report.period_end)}
-        </div>
-        <div className="mt-1.5 flex items-center gap-2">
-          <Pill tone={STATUS_TONE[report.status]}>{report.status}</Pill>
-          <span className="text-[11px] text-gray-400 truncate">{when}</span>
-        </div>
-      </button>
+      <div className="flex-1 min-w-0 px-4 py-3">
+        <button
+          type="button"
+          onClick={onSelect}
+          aria-current={selected}
+          className="text-left w-full"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-ink truncate">{report.title}</span>
+          </div>
+          <div className="text-xs text-gray-500 mt-0.5 truncate">
+            {formatPeriod(report.period_start, report.period_end)}
+          </div>
+          <div className="mt-1.5 flex items-center gap-2">
+            <Pill tone={STATUS_TONE[report.status]}>{report.status}</Pill>
+            <span className="text-[11px] text-gray-400 truncate">{when}</span>
+          </div>
+        </button>
+        {cta && (
+          <Link
+            to={cta.to}
+            className="mt-2 inline-block text-xs font-medium text-ink hover:underline"
+          >
+            {cta.label}
+          </Link>
+        )}
+      </div>
       {canDelete && (
         <button
           type="button"
