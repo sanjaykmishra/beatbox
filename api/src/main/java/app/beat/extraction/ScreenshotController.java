@@ -65,13 +65,16 @@ public class ScreenshotController {
       return ResponseEntity.ok()
           .contentType(MediaType.IMAGE_PNG)
           .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
-          // Without this, Chrome's Opaque Response Blocking rejects the image when puppeteer
-          // (in the render container) loads /v1/screenshots/... cross-origin from its
-          // about:blank document. The render-failed log line is "net::ERR_BLOCKED_BY_ORB".
-          // 'cross-origin' is correct for an unauthenticated public-readable image; tightening
-          // to 'same-site' would block legitimate render-container access since the API and
-          // render service run on different hostnames in compose.
+          // CORP — primary unblocker for Chrome's Opaque Response Blocking when the render
+          // container's puppeteer (origin: about:blank) loads /v1/screenshots/... cross-origin.
           .header("Cross-Origin-Resource-Policy", "cross-origin")
+          // Belt + suspenders: some Chromium versions still ORB-reject when CORP is set but
+          // there's no CORS header. * is correct for an unauthenticated public-readable image
+          // (the path is UUID-keyed and unguessable; we already accept anonymous reads).
+          .header("Access-Control-Allow-Origin", "*")
+          // Force the declared Content-Type. Without nosniff, Chrome may sniff the body and
+          // disagree with our image/png declaration on partial / weird PNGs, which trips ORB.
+          .header("X-Content-Type-Options", "nosniff")
           .body(bytes);
     } catch (IOException e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "read failed", e);
