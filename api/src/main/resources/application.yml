@@ -57,8 +57,11 @@ beat:
       tier: ${BEAT_PROMPTS_EXTRACTION_TIER:two_tier}
       version: ${BEAT_PROMPTS_EXTRACTION_VERSION:v1_3}
     summary:
-      # v1 (Opus, original) | v1_1 (Sonnet, cached) | v1_2 (grounding rules) | shadow | shadow_v12
-      version: ${BEAT_PROMPTS_SUMMARY_VERSION:v1}
+      # v1 (Opus, original) | v1_1 (Sonnet, cached — the docs/18 cost-engineering target) |
+      # v1_2 (Sonnet, cached, with grounding rules that prevent the fabricated-outlets / wrong-
+      # count hallucinations from the Franklin BBQ dogfood) | shadow | shadow_v12.
+      # Default v1_2: strict superset of v1_1 (same cost win) plus the safety guardrails.
+      version: ${BEAT_PROMPTS_SUMMARY_VERSION:v1_2}
     social-extraction:
       # v1_0 (legacy 3-value enum) | v1_1 (adds 'missing'). Default v1_1.
       version: ${BEAT_PROMPTS_SOCIAL_EXTRACTION_VERSION:v1_1}

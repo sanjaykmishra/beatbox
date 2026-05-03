@@ -65,7 +65,7 @@ public class SummaryService {
       PromptLoader prompts,
       AnthropicClient anthropic,
       @Value("${ANTHROPIC_MODEL_SUMMARY:}") String modelOverride,
-      @Value("${beat.prompts.summary.version:v1}") String mode) {
+      @Value("${beat.prompts.summary.version:v1_2}") String mode) {
     this.prompts = prompts;
     this.anthropic = anthropic;
     this.modelOverride = modelOverride;
@@ -74,11 +74,11 @@ public class SummaryService {
   }
 
   static String normalizeMode(String raw) {
-    if (raw == null) return MODE_V1;
+    if (raw == null) return MODE_V1_2;
     String m = raw.trim().toLowerCase();
     return switch (m) {
       case MODE_V1, MODE_V1_1, MODE_V1_2, MODE_SHADOW, MODE_SHADOW_V12 -> m;
-      default -> MODE_V1;
+      default -> MODE_V1_2;
     };
   }
 
