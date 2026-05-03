@@ -176,6 +176,8 @@ Add coverage URLs. Creates `coverage_items` and dispatches extraction jobs. Retu
 
 Duplicates within the same report are silently ignored (URL uniqueness enforced by index).
 
+Accepts adds while the report is in `draft`, `ready`, or `failed` status. When new items are added to a `ready` or `failed` report, the report is flipped back to `draft` so the user can regenerate (mirrors the `retry` endpoint). The previous PDF stays accessible at its `pdf_url` until the next `markReady` overwrites it. Returns `400` when the report is `processing` — adding URLs mid-render would race the worker.
+
 ### `GET /v1/reports/:id`
 Full report with all coverage items. Frontend polls every 2 seconds while any item is `queued` or `running`. (Phase 2: replace polling with SSE on `GET /v1/reports/:id/events`.)
 

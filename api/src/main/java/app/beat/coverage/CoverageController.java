@@ -91,11 +91,16 @@ public class CoverageController {
         reports
             .findInWorkspace(ctx.workspaceId(), reportId)
             .orElseThrow(() -> AppException.notFound("Report"));
-    if (!"draft".equals(report.status())) {
+    // 'processing' means the render worker is mid-flight; rejecting prevents the user from
+    // racing the renderer and ending up with a PDF that doesn't include the new URLs. 'ready'
+    // and 'failed' are fine — we flip back to 'draft' after enqueue (mirroring the retry path)
+    // so the user can re-Generate. The previous PDF stays accessible at its pdf_url until the
+    // next markReady overwrites it.
+    if ("processing".equals(report.status())) {
       throw AppException.badRequest(
           "/errors/report-not-draft",
-          "Report not editable",
-          "Only draft reports accept new coverage items.");
+          "Report is generating",
+          "Wait for the current generation to finish before adding more URLs.");
     }
     List<String> normalized = normalize(body.urls());
     if (normalized.isEmpty()) {
@@ -146,6 +151,13 @@ public class CoverageController {
           }
         }
       }
+    }
+    // Adding URLs to a previously-generated report invalidates the rendered PDF (counts,
+    // highlights, exec summary all change). Flip back to 'draft' so the user can re-Generate;
+    // matches CoverageController.retry's behavior.
+    if (!created.isEmpty()
+        && ("ready".equals(report.status()) || "failed".equals(report.status()))) {
+      reports.setStatus(report.id(), "draft");
     }
     activity.recordUser(
         ctx.workspaceId(),

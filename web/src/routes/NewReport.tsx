@@ -5,6 +5,7 @@ import { BrowserFrame } from '../components/BrowserFrame';
 import { Alert } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import { api, ApiError } from '../lib/api';
+import { parseUrls } from '../lib/urls';
 
 function defaultPeriod(): { start: string; end: string } {
   const now = new Date();
@@ -151,22 +152,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function parseUrls(raw: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const piece of raw.split(/[\s,]+/)) {
-    let u = piece.trim();
-    if (!u) continue;
-    if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
-    try {
-      new URL(u);
-    } catch {
-      continue;
-    }
-    if (!seen.has(u)) {
-      seen.add(u);
-      out.push(u);
-    }
-  }
-  return out;
-}
