@@ -144,6 +144,30 @@ class UrlPrefilterTest {
   }
 
   @Test
+  void rejectsUnsubscribeUrls() {
+    // Dedicated unsubscribe host with opaque token path — the user-reported gap. Caught by the
+    // hostname check, not the path pattern, since /u/<token> is too generic to gate on globally.
+    assertThat(prefilter.reject("https://unsubscribe.example.com/u/12345")).isPresent();
+    assertThat(prefilter.reject("https://optout.example.com/anything")).isPresent();
+    // Unsubscribe path on a normal host — caught by the path pattern.
+    assertThat(prefilter.reject("https://example.com/unsubscribe?token=abc")).isPresent();
+    assertThat(prefilter.reject("https://example.com/email-preferences")).isPresent();
+    assertThat(prefilter.reject("https://example.com/opt-out/")).isPresent();
+  }
+
+  @Test
+  void rejectsBareSocialPlatformDomains() {
+    // x.com / linkedin.com without a post-shape path are NOT classified as social by
+    // UrlClassifier (it requires the platform's path pattern), so they fall through to the
+    // article prefilter and the homepage check rejects them.
+    assertThat(prefilter.reject("https://x.com")).isPresent();
+    assertThat(prefilter.reject("https://x.com/")).isPresent();
+    assertThat(prefilter.reject("https://linkedin.com/")).isPresent();
+    // /feed isn't a LinkedIn post path either, but the article prefilter has its own /feed rule.
+    assertThat(prefilter.reject("https://linkedin.com/feed")).isPresent();
+  }
+
+  @Test
   void doesNotRejectShorteners() {
     // bit.ly / t.co etc. shorten legit article URLs constantly. The article fetcher follows
     // redirects, so we let these through and reject (or accept) the destination on its own

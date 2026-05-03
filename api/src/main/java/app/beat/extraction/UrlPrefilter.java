@@ -27,7 +27,12 @@ public final class UrlPrefilter {
           Pattern.compile("^/?(search|results)(/|$|\\?)"),
           Pattern.compile("^/?(page)/\\d+/?$"),
           Pattern.compile("^/?(feed|rss|atom)(/|$)"),
-          Pattern.compile("^/?(login|signin|signup|register|account)(/|$)"));
+          Pattern.compile("^/?(login|signin|signup|register|account)(/|$)"),
+          // Unsubscribe / opt-out / preference-center landing pages — never an article. Catches
+          // both /unsubscribe/... and /u/... (the abbreviated form used by Mailchimp / SendGrid
+          // 'manage your subscription' links the user pastes by mistake).
+          Pattern.compile("^/?(unsubscribe|opt[-_]?out|preferences|email[-_]?preferences)(/|$)"),
+          Pattern.compile("^/u/[^/]+/?$"));
 
   /**
    * Substrings that, when present anywhere in the path, indicate a continuously-updating page
@@ -124,6 +129,14 @@ public final class UrlPrefilter {
 
     String hostLower = host.toLowerCase();
     String pathLower = path.toLowerCase();
+
+    // Hosts that exist solely for unsubscribe / opt-out flows. The path-pattern check below
+    // catches /unsubscribe paths on normal hosts, but a dedicated host like
+    // unsubscribe.example.com may pair the unsubscribe semantic with an opaque path
+    // (/u/<token>) that path patterns can't reliably classify.
+    if (hostLower.startsWith("unsubscribe.") || hostLower.startsWith("optout.")) {
+      return Optional.of("unsubscribe / opt-out URL (not an article)");
+    }
 
     // Binary / non-HTML resource — rejected before any host-specific logic so a PDF on a tracked
     // host doesn't confuse the rejection reason.
