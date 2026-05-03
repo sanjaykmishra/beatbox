@@ -150,13 +150,21 @@ CREATE TABLE reports (
     title           TEXT NOT NULL,
     period_start    DATE NOT NULL,
     period_end      DATE NOT NULL,
-    status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','processing','ready','failed')),
+    status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','processing','ready','failed','published')),
+    -- Lifecycle (V013):
+    --   draft → processing → ready → published      (publish requires the 4-eyes gate in
+    --                          │                     multi-person workspaces)
+    --                          └─ failed (recoverable: → processing → ready)
+    -- Edits allowed in {draft, ready, failed}; rejected in {processing, published}.
+    -- Delete allowed only in {ready, failed}.
     executive_summary TEXT,                       -- LLM-generated, user-editable
     executive_summary_edited BOOLEAN NOT NULL DEFAULT false,
     pdf_url         TEXT,
     share_token     TEXT UNIQUE,
     share_token_expires_at TIMESTAMPTZ,
     generated_at    TIMESTAMPTZ,
+    published_at    TIMESTAMPTZ,                  -- set when status flips to 'published'
+    published_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     failure_reason  TEXT,
     created_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),

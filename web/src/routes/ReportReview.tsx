@@ -14,6 +14,8 @@ import {
   type SocialMentionView,
   type SocialPlatformId,
 } from '../lib/api';
+import { reportPolicy } from '../lib/reportPolicy';
+import { parseUrls } from '../lib/urls';
 
 type FilterKey = 'all' | 'articles' | 'social' | 'tier1' | 'high_engagement' | 'failed';
 
@@ -26,13 +28,16 @@ export function ReportReview() {
   const { id = '' } = useParams();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { workspace } = useAuth();
+  const { workspace, user } = useAuth();
   const slug = workspace?.slug ?? 'workspace';
   const [editingArticle, setEditingArticle] = useState<CoverageItemView | null>(null);
   const [editingSocial, setEditingSocial] = useState<SocialMentionView | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [addingUrls, setAddingUrls] = useState(false);
   const confirm = useConfirm();
+  const toast = useToast();
 
   const report = useQuery({
     queryKey: ['report', id],
@@ -63,13 +68,31 @@ export function ReportReview() {
     onError: (e) => setGenerateError(e instanceof ApiError ? e.message : 'Generate failed'),
   });
 
+  const publish = useMutation({
+    mutationFn: () => api.publishReport(id),
+    onSuccess: () => {
+      toast.success('Report published.');
+      void qc.invalidateQueries({ queryKey: ['report', id] });
+      void qc.invalidateQueries({ queryKey: ['client-reports'] });
+    },
+    onError: (e) => setPublishError(e instanceof ApiError ? e.message : 'Publish failed'),
+  });
+
   const r = report.data;
   const counts = r?.status_counts ?? null;
   const unified = useMemo(() => buildUnified(r), [r]);
   const filtered = useMemo(() => unified.filter((it) => matchesFilter(it, filter)), [unified, filter]);
 
+  const policy = r
+    ? reportPolicy(r, user?.id ?? null, workspace?.active_member_count ?? 1)
+    : null;
   const canGenerate =
-    !!r && (counts?.total ?? 0) > 0 && (counts?.extracting ?? 0) === 0 && (counts?.done ?? 0) > 0;
+    !!r
+    && !!policy
+    && policy.canGenerate
+    && (counts?.total ?? 0) > 0
+    && (counts?.extracting ?? 0) === 0
+    && (counts?.done ?? 0) > 0;
 
   if (report.isLoading) {
     return (
@@ -144,18 +167,55 @@ export function ReportReview() {
                 )}
               </div>
             )}
-            <button
-              disabled={!canGenerate || generate.isPending}
-              onClick={() => generate.mutate()}
-              className="ink-btn rounded-lg text-white px-5 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title={
-                canGenerate
-                  ? 'Generate report'
-                  : 'Wait for all extractions to finish; need at least one done item.'
-              }
-            >
-              {generate.isPending ? 'Generating…' : 'Generate report →'}
-            </button>
+            {policy?.canEdit && (
+              <button
+                type="button"
+                onClick={() => setAddingUrls(true)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
+                title="Add more coverage URLs to this report."
+              >
+                + Add URLs
+              </button>
+            )}
+            {r.status === 'ready' && policy && (
+              <button
+                type="button"
+                disabled={!policy.canPublish || publish.isPending}
+                onClick={() => publish.mutate()}
+                className="ink-btn rounded-lg text-white px-5 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title={policy.publishDisabledReason ?? 'Publish this report'}
+              >
+                {publish.isPending ? 'Publishing…' : 'Publish report →'}
+              </button>
+            )}
+            {(r.status === 'draft' || r.status === 'failed' || r.status === 'ready') && (
+              <button
+                disabled={!canGenerate || generate.isPending}
+                onClick={() => generate.mutate()}
+                className={
+                  r.status === 'ready'
+                    ? 'rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                    : 'ink-btn rounded-lg text-white px-5 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                }
+                title={
+                  canGenerate
+                    ? r.status === 'ready'
+                      ? 'Re-generate the PDF after edits'
+                      : r.status === 'failed'
+                        ? 'Try again'
+                        : 'Generate report'
+                    : 'Wait for all extractions to finish; need at least one done item.'
+                }
+              >
+                {generate.isPending
+                  ? 'Generating…'
+                  : r.status === 'ready'
+                    ? 'Re-generate'
+                    : r.status === 'failed'
+                      ? 'Try again →'
+                      : 'Generate report →'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -184,8 +244,18 @@ export function ReportReview() {
               onClick: () => navigate(`/reports/${r.id}/preview`),
             }}
           >
-            The PDF is ready. Edit the executive summary inline on the preview, or download to
-            send to your client.
+            The PDF is ready. Edit the executive summary inline on the preview, then publish to
+            lock it in and share with your client.
+          </Alert>
+        )}
+        {r.status === 'published' && (
+          <Alert tone="success" title="Published">
+            This report is locked. Open the preview to copy the share link or download the PDF.
+          </Alert>
+        )}
+        {publishError && (
+          <Alert tone="danger" title="Couldn't publish" onDismiss={() => setPublishError(null)}>
+            {publishError}
           </Alert>
         )}
 
@@ -251,6 +321,13 @@ export function ReportReview() {
           </Alert>
         )}
 
+        {policy && !policy.canEdit && r.status !== 'processing' && (
+          <Alert tone="info" title="This report is locked">
+            Coverage items can't be edited on a published report. To make changes, duplicate this
+            report into a new draft.
+          </Alert>
+        )}
+
         {/* Unified items list. */}
         {unified.length === 0 ? (
           <div className="bg-white border border-dashed border-gray-300 rounded-xl p-10 text-center">
@@ -271,8 +348,12 @@ export function ReportReview() {
                 <li key={`a-${it.id}`}>
                   <CoverageCard
                     item={it.data}
-                    onEdit={() => setEditingArticle(it.data)}
+                    onEdit={() => {
+                      if (!policy?.canEdit) return;
+                      setEditingArticle(it.data);
+                    }}
                     onRetry={async () => {
+                      if (!policy?.canEdit) return;
                       try {
                         await api.retryCoverage(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });
@@ -281,6 +362,7 @@ export function ReportReview() {
                       }
                     }}
                     onCancel={async () => {
+                      if (!policy?.canEdit) return;
                       try {
                         await api.cancelCoverage(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });
@@ -289,6 +371,7 @@ export function ReportReview() {
                       }
                     }}
                     onRemove={async () => {
+                      if (!policy?.canEdit) return;
                       const ok = await confirm({
                         title: 'Remove this coverage item?',
                         tone: 'danger',
@@ -308,8 +391,12 @@ export function ReportReview() {
                 <li key={`s-${it.id}`}>
                   <SocialCard
                     item={it.data}
-                    onEdit={() => setEditingSocial(it.data)}
+                    onEdit={() => {
+                      if (!policy?.canEdit) return;
+                      setEditingSocial(it.data);
+                    }}
                     onRetry={async () => {
+                      if (!policy?.canEdit) return;
                       try {
                         await api.retrySocialMention(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });
@@ -318,6 +405,7 @@ export function ReportReview() {
                       }
                     }}
                     onCancel={async () => {
+                      if (!policy?.canEdit) return;
                       try {
                         await api.cancelSocialMention(r.id, it.data.id);
                         qc.invalidateQueries({ queryKey: ['report', r.id] });
@@ -326,6 +414,7 @@ export function ReportReview() {
                       }
                     }}
                     onRemove={async () => {
+                      if (!policy?.canEdit) return;
                       const ok = await confirm({
                         title: 'Remove this social mention?',
                         tone: 'danger',
@@ -368,6 +457,14 @@ export function ReportReview() {
             reportId={r.id}
             onClose={() => setEditingSocial(null)}
             onSaved={() => qc.invalidateQueries({ queryKey: ['report', r.id] })}
+          />
+        )}
+        {addingUrls && (
+          <AddUrlsDrawer
+            reportId={r.id}
+            reportStatus={r.status}
+            onClose={() => setAddingUrls(false)}
+            onAdded={() => qc.invalidateQueries({ queryKey: ['report', r.id] })}
           />
         )}
       </div>
@@ -869,6 +966,147 @@ function FailedPanel({
 }
 
 // --------------------- Edit drawers ---------------------
+
+type QueuedItem = {
+  id: string;
+  source_url: string;
+  extraction_status: string;
+  kind: 'article' | 'social';
+  platform: SocialPlatformId | null;
+};
+
+function AddUrlsDrawer({
+  reportId,
+  reportStatus,
+  onClose,
+  onAdded,
+}: {
+  reportId: string;
+  reportStatus: Report['status'];
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [raw, setRaw] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<QueuedItem[] | null>(null);
+  const toast = useToast();
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const submit = useMutation({
+    mutationFn: async () => {
+      const list = parseUrls(raw);
+      if (list.length === 0) throw new Error('Paste at least one http(s) URL.');
+      return await api.addCoverage(reportId, list);
+    },
+    onSuccess: (res) => {
+      setResult(res.items);
+      const queued = res.items.filter((i) => i.extraction_status !== 'failed').length;
+      const failed = res.items.length - queued;
+      if (queued > 0) {
+        toast.success(
+          `${queued} URL${queued === 1 ? '' : 's'} queued${failed > 0 ? ` (${failed} rejected)` : ''}.`,
+        );
+      } else if (failed > 0) {
+        toast.error(`All ${failed} URLs were rejected by the prefilter.`);
+      } else {
+        // Backend dedup means submitted URLs were already on the report; nothing new was created.
+        toast.success('No new URLs to add (all were already on the report).');
+      }
+      setRaw('');
+      onAdded();
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : (e as Error).message),
+  });
+
+  const count = parseUrls(raw).length;
+  const willResetStatus = reportStatus === 'ready' || reportStatus === 'failed';
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <button
+        type="button"
+        aria-label="Close"
+        className="flex-1 bg-black/40"
+        onClick={onClose}
+      />
+      <div className="w-full max-w-md bg-white shadow-xl border-l border-gray-200 p-6 overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold tracking-tightish">Add coverage URLs</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-900">
+            ×
+          </button>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">
+          One URL per line, or any whitespace separator. Articles and social posts (Bluesky, X,
+          LinkedIn…) both work — Beat dispatches them automatically.
+        </p>
+        {willResetStatus && (
+          <Alert tone="warning" title="This will reset the report to draft.">
+            The current PDF stays available until you regenerate.
+          </Alert>
+        )}
+        <div className="mt-3">
+          <textarea
+            rows={10}
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-[13px] leading-6 outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
+            value={raw}
+            placeholder={`techcrunch.com/2026/01/15/acme-launches-thing\nbsky.app/profile/journalist.bsky.social/post/3l...`}
+            onChange={(e) => setRaw(e.target.value)}
+          />
+        </div>
+        {error && (
+          <div className="mt-3">
+            <Alert tone="danger" onDismiss={() => setError(null)}>
+              {error}
+            </Alert>
+          </div>
+        )}
+        {result && result.length > 0 && (
+          <ul className="mt-3 space-y-1 text-xs">
+            {result.map((it) => (
+              <li
+                key={it.id}
+                className={
+                  it.extraction_status === 'failed'
+                    ? 'text-red-700 truncate'
+                    : 'text-gray-600 truncate'
+                }
+                title={it.source_url}
+              >
+                {it.extraction_status === 'failed' ? '✗' : '✓'}{' '}
+                <span className="font-mono">{it.source_url}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-gray-100">
+          <p className="text-xs text-gray-500 tabular-nums">
+            {count} URL{count === 1 ? '' : 's'} ready
+          </p>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="px-3 py-2 text-gray-700 hover:text-gray-900 text-sm">
+              {result ? 'Done' : 'Cancel'}
+            </button>
+            <button
+              onClick={() => submit.mutate()}
+              disabled={submit.isPending || count === 0}
+              className="ink-btn rounded-lg text-white px-4 py-2 text-sm font-medium disabled:opacity-50 transition-colors"
+            >
+              {submit.isPending ? 'Adding…' : 'Add'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ArticleEditDrawer({
   item,

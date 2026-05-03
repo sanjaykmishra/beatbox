@@ -19,6 +19,8 @@ public record Report(
     String shareToken,
     Instant shareTokenExpiresAt,
     Instant generatedAt,
+    Instant publishedAt,
+    UUID publishedByUserId,
     String failureReason,
     UUID createdByUserId,
     Instant createdAt,

@@ -8,6 +8,7 @@ import app.beat.infra.AppException;
 import app.beat.infra.RequestContext;
 import app.beat.outlet.Domains;
 import app.beat.report.Report;
+import app.beat.report.ReportMutationGuard;
 import app.beat.report.ReportRepository;
 import app.beat.social.SocialExtractionJobRepository;
 import app.beat.social.SocialMentionRepository;
@@ -91,12 +92,10 @@ public class CoverageController {
         reports
             .findInWorkspace(ctx.workspaceId(), reportId)
             .orElseThrow(() -> AppException.notFound("Report"));
-    if (!"draft".equals(report.status())) {
-      throw AppException.badRequest(
-          "/errors/report-not-draft",
-          "Report not editable",
-          "Only draft reports accept new coverage items.");
-    }
+    ReportMutationGuard.assertEditable(report, "add more URLs");
+    // Status is intentionally NOT flipped on add. Per the lifecycle spec a 'ready' or 'failed'
+    // report stays in that status while the user iterates; the existing rendered PDF stays
+    // valid until the user re-Generates. Re-running Generate is what re-renders.
     List<String> normalized = normalize(body.urls());
     if (normalized.isEmpty()) {
       throw AppException.badRequest(
@@ -172,6 +171,7 @@ public class CoverageController {
     if (!item.reportId().equals(report.id())) {
       throw AppException.notFound("Coverage item");
     }
+    ReportMutationGuard.assertEditable(report, "remove this item");
     coverage.delete(item.id());
     activity.recordUser(
         ctx.workspaceId(),
@@ -258,6 +258,7 @@ public class CoverageController {
     if (!item.reportId().equals(report.id())) {
       throw AppException.notFound("Coverage item");
     }
+    ReportMutationGuard.assertEditable(report, "edit this item");
     Map<String, Object> edits = new LinkedHashMap<>();
     putIfPresent(edits, "headline", body.headline());
     putIfPresent(edits, "subheadline", body.subheadline());
@@ -318,19 +319,11 @@ public class CoverageController {
     if (!item.reportId().equals(report.id())) {
       throw AppException.notFound("Coverage item");
     }
-    // Allow retry on any status — the worker preserves cell-level edits via edited_fields per
-    // CLAUDE.md guardrail #4, so re-extracting a 'done' item is safe (the use case is forcing
-    // a refresh under a new prompt version, e.g. extraction-v1.3 added 'missing' prominence).
-    // 'queued' and 'running' are no-ops via the idempotent enqueue below.
+    ReportMutationGuard.assertEditable(report, "retry this item");
+    // Cell-level edits are preserved via edited_fields (CLAUDE.md guardrail #4), so re-extracting
+    // a 'done' item is safe. 'queued' / 'running' are no-ops via the idempotent enqueue below.
     coverage.resetForRetry(item.id());
     jobs.enqueue(item.id());
-    // Re-extracting an item invalidates the existing rendered PDF (counts, highlights, exec
-    // summary all change). Reset the report's status from 'ready' / 'failed' back to 'draft'
-    // so the user can hit Generate again instead of being told "Report already generated."
-    // The previous PDF stays accessible via its pdf_url until the next markReady overwrites it.
-    if ("ready".equals(report.status()) || "failed".equals(report.status())) {
-      reports.setStatus(report.id(), "draft");
-    }
     activity.recordUser(
         ctx.workspaceId(),
         ctx.userId(),
@@ -366,6 +359,7 @@ public class CoverageController {
     if (!item.reportId().equals(report.id())) {
       throw AppException.notFound("Coverage item");
     }
+    ReportMutationGuard.assertEditable(report, "cancel this extraction");
     String s = item.extractionStatus();
     if (!"queued".equals(s) && !"running".equals(s)) {
       throw AppException.badRequest(

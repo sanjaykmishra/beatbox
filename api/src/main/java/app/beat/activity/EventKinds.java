@@ -36,6 +36,9 @@ public final class EventKinds {
   public static final String REPORT_PDF_DOWNLOADED = "report.pdf_downloaded";
   public static final String REPORT_SHARED = "report.shared";
   public static final String REPORT_SHARE_REVOKED = "report.share_revoked";
+  public static final String REPORT_PUBLISHED = "report.published";
+  public static final String REPORT_PUBLISH_REJECTED_SELF = "report.publish_rejected_self";
+  public static final String REPORT_DELETED = "report.deleted";
 
   // Billing
   public static final String BILLING_CHECKOUT_STARTED = "billing.checkout_started";

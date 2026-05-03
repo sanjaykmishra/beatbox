@@ -38,6 +38,12 @@ export type Workspace = {
   plan: string;
   plan_limit_clients: number;
   plan_limit_reports_monthly: number;
+  /**
+   * Members eligible to act on workspace content (owners + members; viewers excluded). Drives
+   * the publish-approval gate: in a multi-person workspace the report's creator can't
+   * self-publish; only another active member can.
+   */
+  active_member_count: number;
   trial_ends_at: string | null;
   default_template_id: string | null;
 };
@@ -270,9 +276,15 @@ export const api = {
   putClientContext: (clientId: string, b: ClientContextInput) =>
     request<ClientContext>('PUT', `/v1/clients/${clientId}/context`, b),
 
-  // ----- Report generation, share, PDF (week 6) -----
+  // ----- Report generation, share, publish, delete (week 6 + V013) -----
   generateReport: (id: string) =>
     request<{ id: string; status: string }>('POST', `/v1/reports/${id}/generate`),
+  publishReport: (id: string) =>
+    request<{ id: string; status: ReportStatus; published_at: string }>(
+      'POST',
+      `/v1/reports/${id}/publish`,
+    ),
+  deleteReport: (id: string) => request<void>('DELETE', `/v1/reports/${id}`),
   shareReport: (id: string, expires_in_days?: number) =>
     request<{ share_url: string; expires_at: string }>(
       'POST',
@@ -641,13 +653,17 @@ export type ReportStatusCounts = {
   social: number;
 };
 
+export type ReportStatus = 'draft' | 'processing' | 'ready' | 'failed' | 'published';
+
 export type ReportSummary = {
   id: string;
   title: string;
   period_start: string;
   period_end: string;
-  status: 'draft' | 'processing' | 'ready' | 'failed';
+  status: ReportStatus;
   generated_at: string | null;
+  published_at: string | null;
+  created_by_user_id: string | null;
   created_at: string;
 };
 
@@ -660,13 +676,16 @@ export type Report = {
   title: string;
   period_start: string;
   period_end: string;
-  status: 'draft' | 'processing' | 'ready' | 'failed';
+  status: ReportStatus;
   executive_summary: string | null;
   executive_summary_edited?: boolean;
   pdf_url: string | null;
   share_token: string | null;
   failure_reason: string | null;
   generated_at: string | null;
+  published_at: string | null;
+  published_by_user_id: string | null;
+  created_by_user_id: string | null;
   created_at: string;
   coverage_items: CoverageItemView[];
   social_mentions: SocialMentionView[];
