@@ -32,7 +32,21 @@ public final class UrlPrefilter {
           // both /unsubscribe/... and /u/... (the abbreviated form used by Mailchimp / SendGrid
           // 'manage your subscription' links the user pastes by mistake).
           Pattern.compile("^/?(unsubscribe|opt[-_]?out|preferences|email[-_]?preferences)(/|$)"),
-          Pattern.compile("^/u/[^/]+/?$"));
+          Pattern.compile("^/u/[^/]+/?$"),
+          // Legal / privacy boilerplate — never coverage.
+          Pattern.compile(
+              "^/?(privacy(?:[-_]policy)?|terms(?:[-_]of[-_]service)?|tos|legal|"
+                  + "cookies?(?:[-_]policy)?|gdpr|ccpa|imprint|impressum|disclosure|disclaimer)(/|$)"),
+          // Funnel / commerce paths — checkout, cart, billing.
+          Pattern.compile("^/?(checkout|cart|basket|pay|buy|order|orders|billing|invoice)(/|$)"),
+          // API / programmatic endpoints. Pasting these returns JSON, not an article.
+          Pattern.compile("^/?(api|v[0-9]+|graphql|graphiql)(/|$)"),
+          // Job posting paths — LinkedIn jobs/view, Indeed viewjob, generic /careers/<role>.
+          Pattern.compile("^/?jobs/(view|search|posts)(/|$)"),
+          Pattern.compile("^/?viewjob(/|\\?|$)"),
+          // Webinar / event registration funnels (Zoom, ON24, etc.).
+          Pattern.compile("^/?webinar/register"),
+          Pattern.compile("^/?(wcc|register)/r/"));
 
   /**
    * Substrings that, when present anywhere in the path, indicate a continuously-updating page
@@ -112,6 +126,33 @@ public final class UrlPrefilter {
           Pattern.compile("(?i)^/cl[0-9]/"),
           Pattern.compile("(?i)^/e/click(\\?|$)"));
 
+  /**
+   * Hosts whose entire purpose is non-article — forms, scheduling, file shares, translation
+   * wrappers, dedicated job-board surfaces. Matched as host suffixes so subdomains ({@code
+   * applications.workable.com}) also reject. Borderline cases (Eventbrite/Luma/Meetup, Wikipedia,
+   * GitHub, press wires, Wayback Machine) deliberately omitted — they sometimes carry real
+   * coverage.
+   */
+  private static final List<String> NON_ARTICLE_HOST_SUFFIXES =
+      List.of(
+          // Scheduling
+          "calendly.com",
+          "cal.com",
+          // File / doc shares
+          "drive.google.com",
+          "docs.google.com",
+          "we.tl",
+          // Forms & surveys
+          "forms.gle",
+          "typeform.com",
+          "surveymonkey.com",
+          // Translation wrappers — paste the underlying URL instead
+          "translate.google.com",
+          // Job boards (dedicated hosts)
+          "boards.greenhouse.io",
+          "jobs.lever.co",
+          "workable.com");
+
   /** Returns the rejection reason if the URL is obviously not an article; otherwise empty. */
   public Optional<String> reject(String url) {
     if (url == null || url.isBlank()) return Optional.of("empty url");
@@ -153,6 +194,13 @@ public final class UrlPrefilter {
     for (Pattern p : TRACKER_PATHS) {
       if (p.matcher(pathLower).find()) {
         return Optional.of("tracker click URL (" + p.pattern() + ")");
+      }
+    }
+
+    // Non-article hosts: scheduling, file shares, forms, translation wrappers, job boards.
+    for (String suffix : NON_ARTICLE_HOST_SUFFIXES) {
+      if (hostLower.equals(suffix) || hostLower.endsWith("." + suffix)) {
+        return Optional.of("non-article host (" + suffix + ")");
       }
     }
 

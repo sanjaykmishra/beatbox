@@ -168,6 +168,80 @@ class UrlPrefilterTest {
   }
 
   @Test
+  void rejectsLegalAndPolicyPages() {
+    assertThat(prefilter.reject("https://example.com/privacy")).isPresent();
+    assertThat(prefilter.reject("https://example.com/privacy-policy")).isPresent();
+    assertThat(prefilter.reject("https://example.com/terms")).isPresent();
+    assertThat(prefilter.reject("https://example.com/terms-of-service")).isPresent();
+    assertThat(prefilter.reject("https://example.com/tos")).isPresent();
+    assertThat(prefilter.reject("https://example.com/legal/")).isPresent();
+    assertThat(prefilter.reject("https://example.com/cookies")).isPresent();
+    assertThat(prefilter.reject("https://example.com/cookie-policy")).isPresent();
+    assertThat(prefilter.reject("https://example.com/gdpr")).isPresent();
+    assertThat(prefilter.reject("https://example.com/imprint")).isPresent();
+  }
+
+  @Test
+  void rejectsCheckoutAndCommerceFunnelPaths() {
+    assertThat(prefilter.reject("https://example.com/checkout")).isPresent();
+    assertThat(prefilter.reject("https://example.com/cart")).isPresent();
+    assertThat(prefilter.reject("https://example.com/pay")).isPresent();
+    assertThat(prefilter.reject("https://example.com/buy/123")).isPresent();
+    assertThat(prefilter.reject("https://example.com/billing")).isPresent();
+  }
+
+  @Test
+  void rejectsApiAndProgrammaticEndpoints() {
+    assertThat(prefilter.reject("https://example.com/api/v1/posts/123")).isPresent();
+    assertThat(prefilter.reject("https://example.com/v1/things")).isPresent();
+    assertThat(prefilter.reject("https://example.com/v2/resources")).isPresent();
+    assertThat(prefilter.reject("https://example.com/graphql")).isPresent();
+  }
+
+  @Test
+  void rejectsJobPostingPaths() {
+    assertThat(prefilter.reject("https://www.linkedin.com/jobs/view/4029384756/")).isPresent();
+    assertThat(prefilter.reject("https://www.indeed.com/viewjob?jk=abc123")).isPresent();
+  }
+
+  @Test
+  void rejectsWebinarRegistrationPaths() {
+    assertThat(prefilter.reject("https://acme.zoom.us/webinar/register/abc")).isPresent();
+  }
+
+  @Test
+  void rejectsNonArticleHosts() {
+    // Scheduling
+    assertThat(prefilter.reject("https://calendly.com/aaron/30min")).isPresent();
+    assertThat(prefilter.reject("https://cal.com/aaron/intro")).isPresent();
+    // File shares
+    assertThat(prefilter.reject("https://drive.google.com/file/d/abc/view")).isPresent();
+    assertThat(prefilter.reject("https://docs.google.com/document/d/abc/edit")).isPresent();
+    assertThat(prefilter.reject("https://we.tl/t-abc123")).isPresent();
+    // Forms
+    assertThat(prefilter.reject("https://forms.gle/abc")).isPresent();
+    assertThat(prefilter.reject("https://acme.typeform.com/to/xyz")).isPresent();
+    assertThat(prefilter.reject("https://www.surveymonkey.com/r/ABC123")).isPresent();
+    // Translation wrappers — paste the underlying URL instead
+    assertThat(
+            prefilter.reject(
+                "https://translate.google.com/translate?u=https://example.com/article"))
+        .isPresent();
+    // Job boards
+    assertThat(prefilter.reject("https://boards.greenhouse.io/acme/jobs/123")).isPresent();
+    assertThat(prefilter.reject("https://jobs.lever.co/acme/abc-123")).isPresent();
+    assertThat(prefilter.reject("https://applications.workable.com/j/ABC")).isPresent();
+  }
+
+  @Test
+  void doesNotMisclassifyLegalishSlugs() {
+    // Articles can have these words in the slug without being the legal page itself.
+    assertThat(prefilter.reject("https://example.com/2026/why-privacy-matters/")).isEmpty();
+    assertThat(prefilter.reject("https://example.com/blog/api-design-tradeoffs/")).isEmpty();
+    assertThat(prefilter.reject("https://example.com/2026/tos-changes-explained/")).isEmpty();
+  }
+
+  @Test
   void doesNotRejectShorteners() {
     // bit.ly / t.co etc. shorten legit article URLs constantly. The article fetcher follows
     // redirects, so we let these through and reject (or accept) the destination on its own
