@@ -28,6 +28,7 @@ public final class EventKinds {
   public static final String REPORT_COVERAGE_EXTRACTED = "report.coverage_extracted";
   public static final String REPORT_COVERAGE_EDITED = "report.coverage_edited";
   public static final String REPORT_COVERAGE_RETRIED = "report.coverage_retried";
+  public static final String REPORT_COVERAGE_CANCELLED = "report.coverage_cancelled";
   public static final String REPORT_COVERAGE_DISMISSED = "report.coverage_dismissed";
   public static final String REPORT_SUMMARY_GENERATED = "report.summary_generated";
   public static final String REPORT_SUMMARY_EDITED = "report.summary_edited";
@@ -66,6 +67,7 @@ public final class EventKinds {
   public static final String SOCIAL_MENTION_EXTRACTED = "social_mention.extracted";
   public static final String SOCIAL_MENTION_EDITED = "social_mention.edited";
   public static final String SOCIAL_MENTION_RETRIED = "social_mention.retried";
+  public static final String SOCIAL_MENTION_CANCELLED = "social_mention.cancelled";
   public static final String SOCIAL_MENTION_DELETED = "social_mention.deleted";
   public static final String SOCIAL_EXTRACTION_FAILED = "social_extraction.failed";
 }

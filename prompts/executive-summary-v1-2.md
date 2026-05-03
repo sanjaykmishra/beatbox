@@ -131,23 +131,34 @@ Write the executive summary, observing the GROUNDING RULES literally.
 
 v1.1's eval set carries forward. New tests:
 
-**Zero-substantive-coverage scenario.**
-- Hand-built fixture: client = "Franklin BBQ", 3 articles all about other companies, all
-  prominence='passing'. Gate: summary's first paragraph contains the literal phrase "not the
-  subject" (or equivalent) and the explicit assertion that the client was not covered. No
-  invented outlets. No invented article subjects.
+**Zero-substantive-coverage scenario** (deterministic — runtime guard fires before the LLM).
+- Hand-built fixture: client = "Franklin BBQ", 3+ articles all tagged
+  `subject_prominence='missing'`. The runtime guard short-circuits and emits
+  `noSubstantiveCoverageText`. Gate (unit test, not in `summary-rubric.yaml`): the deterministic
+  output names the client, contains "not the subject" or "missing the subject", and contains
+  zero outlet names from the missing items. No LLM call should fire.
+
+**Partial-missing scenario** (`partial_missing_one_substantive` in `summary-rubric.yaml`).
+- 1 mention + 7 missing. The SummaryInputs two-pass split feeds the LLM aggregates from the 1
+  substantive item only; the prominence breakdown still surfaces the missing count for
+  transparency. Gate: the reference summary names only the substantive outlet (TechCrunch),
+  does not invent any of the 7 missing items' outlets (Anthropic, Vega, Platformer, Let's
+  Data Science, Claude Code), and does not fabricate the count ("eight pieces" must NOT
+  appear). Enforced offline via `must_include_phrases` / `must_not_include`.
 
 **Outlet-fabrication probe.**
-- 5 fixtures where the outlet list has known outlets (e.g. "TechCrunch, NYT") and the headlines
-  reference them. Gate: the LLM-as-judge confirms no outlets outside that list are named.
+- 5 additional fixtures where the outlet list has known outlets (e.g. "TechCrunch, NYT") and
+  the headlines reference them. Gate: the LLM-as-judge confirms no outlets outside that list
+  are named.
 
 **Count-fabrication probe.**
 - 5 fixtures with various item counts. Gate: every numeric claim in the output (item count, tier
   counts, sentiment counts) matches the input verbatim.
 
-**Partial-coverage scenario.**
-- 1 mention + 8 passing. Gate: the summary acknowledges low subject-prominence without softening,
-  and only references the one mention article when discussing what the client was actually in.
+**Outlet-leak regression probe.**
+- The `partial_missing_one_substantive` fixture above is the canonical regression test for the
+  SummaryInputs two-pass split. Before the split, the LLM saw tier/sentiment/outlet aggregates
+  that included missing items — the must_not_include list catches that exact regression.
 
 ## Migration plan
 

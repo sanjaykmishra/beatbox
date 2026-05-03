@@ -5,6 +5,7 @@ import app.beat.client.ClientRepository;
 import app.beat.coverage.CoverageItemRepository;
 import app.beat.render.RenderClient;
 import app.beat.render.RenderPayloadBuilder;
+import app.beat.social.SocialMentionRepository;
 import app.beat.workspace.WorkspaceRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -33,6 +34,7 @@ public class PublicReportController {
   private final WorkspaceRepository workspaces;
   private final ClientRepository clients;
   private final CoverageItemRepository coverage;
+  private final SocialMentionRepository socialMentions;
   private final RenderPayloadBuilder payloads;
   private final RenderClient renderClient;
 
@@ -41,12 +43,14 @@ public class PublicReportController {
       WorkspaceRepository workspaces,
       ClientRepository clients,
       CoverageItemRepository coverage,
+      SocialMentionRepository socialMentions,
       RenderPayloadBuilder payloads,
       RenderClient renderClient) {
     this.reports = reports;
     this.workspaces = workspaces;
     this.clients = clients;
     this.coverage = coverage;
+    this.socialMentions = socialMentions;
     this.payloads = payloads;
     this.renderClient = renderClient;
   }
@@ -61,7 +65,8 @@ public class PublicReportController {
     var client = clients.findInWorkspace(r.workspaceId(), r.clientId()).orElse(null);
     if (client == null) return notFound();
     var items = coverage.listByReport(r.id());
-    var payload = payloads.build(ws, client, r, items);
+    var mentions = socialMentions.listByReport(r.workspaceId(), r.id());
+    var payload = payloads.build(ws, client, r, items, mentions);
     String html = renderClient.renderHtml(payload);
     return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
   }

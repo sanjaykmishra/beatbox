@@ -12,6 +12,7 @@ import app.beat.outlet.Outlet;
 import app.beat.outlet.OutletRepository;
 import app.beat.report.Report;
 import app.beat.report.ReportRepository;
+import app.beat.social.SocialMentionRepository;
 import app.beat.workspace.Workspace;
 import app.beat.workspace.WorkspaceRepository;
 import jakarta.annotation.PostConstruct;
@@ -53,6 +54,7 @@ public class RenderWorker {
   private final SummaryService summary;
   private final ActivityRecorder activity;
   private final AlertService alertService;
+  private final SocialMentionRepository socialMentions;
   private final boolean enabled;
 
   private final ExecutorService pool = Executors.newFixedThreadPool(BATCH_SIZE);
@@ -71,6 +73,7 @@ public class RenderWorker {
       SummaryService summary,
       ActivityRecorder activity,
       AlertService alertService,
+      SocialMentionRepository socialMentions,
       @Value("${beat.render.enabled:true}") boolean enabled) {
     this.jobs = jobs;
     this.reports = reports;
@@ -85,6 +88,7 @@ public class RenderWorker {
     this.summary = summary;
     this.activity = activity;
     this.alertService = alertService;
+    this.socialMentions = socialMentions;
     this.enabled = enabled;
   }
 
@@ -135,6 +139,7 @@ public class RenderWorker {
               .findInWorkspace(report.workspaceId(), report.clientId())
               .orElseThrow(() -> new IllegalStateException("client missing"));
       var items = coverage.listByReport(report.id());
+      var mentions = socialMentions.listByReport(ws.id(), report.id());
 
       // Generate executive summary first (so it lands in the PDF and the preview HTML).
       // Skip if the user has pinned an edit, or if Anthropic isn't configured.
@@ -175,7 +180,7 @@ public class RenderWorker {
         }
       }
 
-      var payload = payloads.build(ws, client, report, items);
+      var payload = payloads.build(ws, client, report, items, mentions);
       byte[] pdf = render.renderPdf(payload);
       var pdfUrl = pdfs.upload(ws.id(), report.id(), pdf).orElse(null);
 

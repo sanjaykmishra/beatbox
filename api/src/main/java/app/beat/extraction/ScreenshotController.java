@@ -65,6 +65,13 @@ public class ScreenshotController {
       return ResponseEntity.ok()
           .contentType(MediaType.IMAGE_PNG)
           .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+          // Without this, Chrome's Opaque Response Blocking rejects the image when puppeteer
+          // (in the render container) loads /v1/screenshots/... cross-origin from its
+          // about:blank document. The render-failed log line is "net::ERR_BLOCKED_BY_ORB".
+          // 'cross-origin' is correct for an unauthenticated public-readable image; tightening
+          // to 'same-site' would block legitimate render-container access since the API and
+          // render service run on different hostnames in compose.
+          .header("Cross-Origin-Resource-Policy", "cross-origin")
           .body(bytes);
     } catch (IOException e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "read failed", e);

@@ -98,6 +98,25 @@
     .badge.sentiment-mixed { background: #fef3c7; color: #92400e; }
     .badge.sentiment-negative { background: #fee2e2; color: #991b1b; }
 
+    /* ----- Social mentions ----- */
+    .social-list { list-style: none; padding: 0; margin: 0; }
+    .social-item { padding: 12px 0; border-bottom: 1px solid var(--line); display: flex; gap: 12px; }
+    .social-item:last-child { border-bottom: none; }
+    .social-item .avatar {
+      width: 40px; height: 40px; flex: none; background: var(--bg-soft);
+      border-radius: 50%; object-fit: cover;
+    }
+    .social-item .info { flex: 1; min-width: 0; }
+    .social-item .info .meta { color: var(--ink-soft); font-size: 8.5pt; display: flex; gap: 8px; flex-wrap: wrap; }
+    .social-item .info .author { font-weight: 600; color: var(--ink); }
+    .social-item .info .body { font-size: 10pt; margin-top: 4px; white-space: pre-wrap; }
+    .social-item .info .summary { color: var(--ink-soft); font-size: 9pt; margin-top: 4px; font-style: italic; }
+    .social-item .info .engagement { color: var(--ink-soft); font-size: 8.5pt; margin-top: 6px; }
+    .platform-badge {
+      display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 8pt;
+      background: var(--bg-soft); color: var(--ink); border: 1px solid var(--line);
+    }
+
     /* ----- Screen-only styling -----
        The template above is PDF-first (Letter page size, half-inch @page margins).
        /render emulates print media via puppeteer so this @media screen block doesn't
@@ -124,11 +143,13 @@
         line-height: 1.5;
       }
       .cover {
-        /* Inherit horizontal padding from `body > section` (32px) so the title doesn't run to
-           the card edge. The PDF-mode .cover { padding: 0.4in 0 } only applies in print media. */
+        /* Base PDF rule sets min-height: 9.2in (whole-page cover) and padding: 0.4in 0 (zero
+           horizontal). For screen mode we want the cover card to look like the other section
+           cards — same vertical breathing room as the Executive Summary card below. Reset
+           min-height to 0 and inherit padding from `body > section { padding: 24px 32px }`
+           by clearing the base shorthand. */
         min-height: 0;
-        padding-top: 8px;
-        padding-bottom: 4px;
+        padding: 24px 32px;
       }
       .cover-title { font-size: 32px; }
       .cover-period { font-size: 14px; margin-top: 8px; }
@@ -198,9 +219,17 @@
         <div class="value">{{glance.reach_human}}</div>
       </div>
     </div>
+    {{#if glance.missing_count}}
+      <p class="muted" style="margin-top:10px">
+        {{glance.missing_count}} additional item(s) added to this report did not mention
+        {{client.name}}; excluded from the counts above.
+      </p>
+    {{/if}}
   </section>
 
-  <!-- HIGHLIGHTS -->
+  <!-- HIGHLIGHTS — unified across articles + social posts. Each highlight carries `kind`
+       ("article" | "social") and the template branches on it for the per-card chrome
+       (article: tier badge + outlet; social: platform label + author handle). -->
   {{#if highlights.length}}
   <section>
     <h2>Highlights</h2>
@@ -215,6 +244,7 @@
           <div>
             <div class="meta">
               {{#if outlet_name}}{{outlet_name}}{{/if}}
+              {{#if author_handle}} · {{author_handle}}{{/if}}
               {{#if publish_date}} · {{publish_date}}{{/if}}
               {{#if tier}} · <span class="badge tier-{{tier}}">Tier {{tier}}</span>{{/if}}
             </div>
@@ -227,7 +257,11 @@
   </section>
   {{/if}}
 
-  <!-- COVERAGE LIST -->
+  <!-- COVERAGE LIST — hidden entirely when there are no substantive items, since an empty list
+       under the "Coverage" heading reads like a render bug to the share-link recipient. The
+       'N additional items did not mention …' footnote on at-a-glance already explains where
+       any off-topic URLs went. -->
+  {{#if coverage_items.length}}
   <section>
     <h2>Coverage</h2>
     <ul class="coverage-list">
@@ -256,6 +290,45 @@
       {{/each}}
     </ul>
   </section>
+  {{/if}}
+
+  <!-- SOCIAL MENTIONS — separate from Coverage because the visual treatment differs (avatar +
+       handle + engagement counts + post body) and mixing both into one list reads poorly per
+       wireframe-31. Hidden when there are no substantive social mentions. -->
+  {{#if social_mentions.length}}
+  <section>
+    <h2>Social mentions</h2>
+    <ul class="social-list">
+      {{#each social_mentions}}
+        <li class="social-item">
+          {{#if author_avatar_url}}
+            <img class="avatar" src="{{author_avatar_url}}" alt="" />
+          {{else}}
+            <div class="avatar"></div>
+          {{/if}}
+          <div class="info">
+            <div class="meta">
+              {{#if author_display_name}}<span class="author">{{author_display_name}}</span>{{/if}}
+              {{#if author_handle}}<span>{{author_handle}}</span>{{/if}}
+              {{#if platform}}<span class="platform-badge">{{platform}}</span>{{/if}}
+              {{#if posted_date}}<span>{{posted_date}}</span>{{/if}}
+              {{#if sentiment}}<span class="badge sentiment-{{sentiment}}">{{sentiment}}</span>{{/if}}
+            </div>
+            {{#if content_text}}
+              <div class="body">{{content_text}}</div>
+            {{/if}}
+            {{#if summary}}
+              <div class="summary">{{summary}}</div>
+            {{/if}}
+            <div class="engagement">
+              {{likes_human}} likes · {{reposts_human}} reposts · {{replies_human}} replies
+            </div>
+          </div>
+        </li>
+      {{/each}}
+    </ul>
+  </section>
+  {{/if}}
 
 </body>
 </html>

@@ -334,6 +334,49 @@ public class CoverageController {
     return ResponseEntity.accepted().build();
   }
 
+  /**
+   * Cancel an in-flight extraction. Marks the coverage item as failed with reason 'cancelled by
+   * user' so the user-facing UI can surface Retry/Edit/Remove. Only meaningful for queued/running
+   * items; cancelling a 'done' or already-'failed' row is rejected as a no-op.
+   *
+   * <p>Race note: a worker that's already mid-fetch may finish and write back 'done'/'failed' after
+   * this point. Last-write-wins is acceptable for now — the user can hit Cancel again or Retry. A
+   * stricter solution (cancelled_at timestamp checked by the worker before writeback) is deferred
+   * until we see real misuse.
+   */
+  @PostMapping("/v1/reports/{reportId}/coverage/{itemId}/cancel")
+  public ResponseEntity<Void> cancel(
+      @PathVariable UUID reportId, @PathVariable UUID itemId, HttpServletRequest req) {
+    RequestContext ctx = RequestContext.require(req);
+    Report report =
+        reports
+            .findInWorkspace(ctx.workspaceId(), reportId)
+            .orElseThrow(() -> AppException.notFound("Report"));
+    var item =
+        coverage
+            .findInWorkspace(ctx.workspaceId(), itemId)
+            .orElseThrow(() -> AppException.notFound("Coverage item"));
+    if (!item.reportId().equals(report.id())) {
+      throw AppException.notFound("Coverage item");
+    }
+    String s = item.extractionStatus();
+    if (!"queued".equals(s) && !"running".equals(s)) {
+      throw AppException.badRequest(
+          "/errors/not-cancellable",
+          "Item not in flight",
+          "Only queued or running items can be cancelled; this one is " + s + ".");
+    }
+    coverage.markFailed(item.id(), "cancelled by user");
+    activity.recordUser(
+        ctx.workspaceId(),
+        ctx.userId(),
+        EventKinds.REPORT_COVERAGE_CANCELLED,
+        "coverage_item",
+        item.id(),
+        Map.of("prior_status", s));
+    return ResponseEntity.accepted().build();
+  }
+
   static List<String> normalize(List<String> raw) {
     List<String> out = new ArrayList<>();
     java.util.Set<String> seen = new java.util.LinkedHashSet<>();
