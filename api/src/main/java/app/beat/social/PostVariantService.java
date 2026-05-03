@@ -33,18 +33,36 @@ public class PostVariantService {
   private final ClientContextRepository contexts;
   private final ObjectMapper json;
   private final String modelOverride;
+  private final String promptStem;
 
   public PostVariantService(
       PromptLoader prompts,
       AnthropicClient anthropic,
       ClientContextRepository contexts,
       ObjectMapper json,
-      @Value("${ANTHROPIC_MODEL_VARIANT:}") String modelOverride) {
+      @Value("${ANTHROPIC_MODEL_VARIANT:}") String modelOverride,
+      @Value("${beat.prompts.post-variant.version:v1_1}") String version) {
     this.prompts = prompts;
     this.anthropic = anthropic;
     this.contexts = contexts;
     this.json = json;
     this.modelOverride = modelOverride;
+    this.promptStem = resolvePromptStem(version);
+    log.info("PostVariantService prompt = {}", this.promptStem);
+  }
+
+  /**
+   * {@code v1_0} → legacy single-pass prompt without caching markers; {@code v1_1} →
+   * cost-engineered variant with brand-voice + instructions blocks marked for prompt caching (per
+   * docs/18-cost-engineering.md §"Social post-variant generation"). Default v1_1.
+   */
+  private static String resolvePromptStem(String configured) {
+    if (configured == null) return "post-variant-v1-1";
+    return switch (configured.trim().toLowerCase()) {
+      case "v1_0", "post-variant-v1", "post_variant_v1.0" -> "post-variant-v1";
+      case "v1_1", "post-variant-v1-1", "post_variant_v1.1" -> "post-variant-v1-1";
+      default -> "post-variant-v1-1";
+    };
   }
 
   public boolean isEnabled() {
@@ -67,7 +85,7 @@ public class PostVariantService {
       throw new IllegalArgumentException("target_platforms is empty");
     }
 
-    PromptTemplate t = prompts.get("post-variant-v1");
+    PromptTemplate t = prompts.get(promptStem);
     String styleNotes =
         contexts
             .findByClient(client.id())

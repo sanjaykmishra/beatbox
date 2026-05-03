@@ -7,13 +7,17 @@ import org.junit.jupiter.api.Test;
 class SummaryServiceTest {
 
   @Test
-  void normalizeMode_acceptsKnownAndDefaultsToV1() {
+  void normalizeMode_acceptsKnownAndDefaultsToV12() {
+    // Default flipped from v1 (Opus, no grounding rules) to v1_2 (Sonnet + cached + grounding
+    // rules) per docs/18-cost-engineering.md migration sequencing item 8.
     assertThat(SummaryService.normalizeMode("v1")).isEqualTo("v1");
     assertThat(SummaryService.normalizeMode("v1_1")).isEqualTo("v1_1");
+    assertThat(SummaryService.normalizeMode("v1_2")).isEqualTo("v1_2");
     assertThat(SummaryService.normalizeMode("shadow")).isEqualTo("shadow");
-    assertThat(SummaryService.normalizeMode("V1_1")).isEqualTo("v1_1");
-    assertThat(SummaryService.normalizeMode(null)).isEqualTo("v1");
-    assertThat(SummaryService.normalizeMode("nonsense")).isEqualTo("v1");
+    assertThat(SummaryService.normalizeMode("shadow_v12")).isEqualTo("shadow_v12");
+    assertThat(SummaryService.normalizeMode("V1_2")).isEqualTo("v1_2");
+    assertThat(SummaryService.normalizeMode(null)).isEqualTo("v1_2");
+    assertThat(SummaryService.normalizeMode("nonsense")).isEqualTo("v1_2");
   }
 
   @Test

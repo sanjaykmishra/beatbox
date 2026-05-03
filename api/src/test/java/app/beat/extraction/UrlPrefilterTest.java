@@ -98,4 +98,155 @@ class UrlPrefilterTest {
                 "https://techcrunch.com/2026/04/30/anthropic-potential-900b-valuation-round/"))
         .isEmpty();
   }
+
+  @Test
+  void rejectsBinaryAssetUrls() {
+    // Direct image / PDF / archive pastes — the article fetcher would either return empty or
+    // feed the LLM raw bytes.
+    assertThat(prefilter.reject("https://example.com/image.png")).isPresent();
+    assertThat(prefilter.reject("https://example.com/photos/headshot.JPG")).isPresent();
+    assertThat(prefilter.reject("https://example.com/decks/q1-2026.pdf")).isPresent();
+    assertThat(prefilter.reject("https://cdn.example.com/icons/logo.svg")).isPresent();
+    assertThat(prefilter.reject("https://example.com/release.zip")).isPresent();
+    assertThat(prefilter.reject("https://example.com/installer.dmg")).isPresent();
+    assertThat(prefilter.reject("https://example.com/podcast.mp3")).isPresent();
+    assertThat(prefilter.reject("https://example.com/clip.mp4")).isPresent();
+    assertThat(prefilter.reject("https://example.com/data.csv")).isPresent();
+  }
+
+  @Test
+  void doesNotMisclassifySlugsContainingExtensionLetters() {
+    // 'png' / 'pdf' appear inside legitimate article slugs all the time. Make sure the regex
+    // anchors at the path's tail (with optional query/fragment) and doesn't trigger on a
+    // substring match.
+    assertThat(prefilter.reject("https://example.com/2026/png-vs-webp-explained/")).isEmpty();
+    assertThat(prefilter.reject("https://example.com/podcast-mp3-quality/")).isEmpty();
+  }
+
+  @Test
+  void rejectsEmailMarketingTrackerHosts() {
+    // The user-reported pastes plus a few other common email-platform trackers.
+    assertThat(prefilter.reject("https://list-manage.com/track/click/abc123")).isPresent();
+    assertThat(prefilter.reject("https://email.sendgrid.net/wf/click?upn=xyz")).isPresent();
+    assertThat(prefilter.reject("https://example.us2.list-manage.com/subscribe/post")).isPresent();
+    assertThat(prefilter.reject("https://r20.rs6.net/tn.jsp?abc")).isPresent();
+    assertThat(prefilter.reject("https://email.klaviyo.com/click/123")).isPresent();
+    assertThat(prefilter.reject("https://hubspotlinks.com/abc")).isPresent();
+    assertThat(prefilter.reject("https://link.example.mandrillapp.com/c/abc")).isPresent();
+  }
+
+  @Test
+  void rejectsTrackerPathShapesEvenOnUnknownHosts() {
+    // Generic tracker path patterns catch hosts we haven't enumerated.
+    assertThat(prefilter.reject("https://send.example.com/track/click/abc")).isPresent();
+    assertThat(prefilter.reject("https://t.example.com/wf/click?upn=xyz")).isPresent();
+    assertThat(prefilter.reject("https://m.example.com/ls/click?upn=zzz")).isPresent();
+  }
+
+  @Test
+  void rejectsUnsubscribeUrls() {
+    // Dedicated unsubscribe host with opaque token path — the user-reported gap. Caught by the
+    // hostname check, not the path pattern, since /u/<token> is too generic to gate on globally.
+    assertThat(prefilter.reject("https://unsubscribe.example.com/u/12345")).isPresent();
+    assertThat(prefilter.reject("https://optout.example.com/anything")).isPresent();
+    // Unsubscribe path on a normal host — caught by the path pattern.
+    assertThat(prefilter.reject("https://example.com/unsubscribe?token=abc")).isPresent();
+    assertThat(prefilter.reject("https://example.com/email-preferences")).isPresent();
+    assertThat(prefilter.reject("https://example.com/opt-out/")).isPresent();
+  }
+
+  @Test
+  void rejectsBareSocialPlatformDomains() {
+    // x.com / linkedin.com without a post-shape path are NOT classified as social by
+    // UrlClassifier (it requires the platform's path pattern), so they fall through to the
+    // article prefilter and the homepage check rejects them.
+    assertThat(prefilter.reject("https://x.com")).isPresent();
+    assertThat(prefilter.reject("https://x.com/")).isPresent();
+    assertThat(prefilter.reject("https://linkedin.com/")).isPresent();
+    // /feed isn't a LinkedIn post path either, but the article prefilter has its own /feed rule.
+    assertThat(prefilter.reject("https://linkedin.com/feed")).isPresent();
+  }
+
+  @Test
+  void rejectsLegalAndPolicyPages() {
+    assertThat(prefilter.reject("https://example.com/privacy")).isPresent();
+    assertThat(prefilter.reject("https://example.com/privacy-policy")).isPresent();
+    assertThat(prefilter.reject("https://example.com/terms")).isPresent();
+    assertThat(prefilter.reject("https://example.com/terms-of-service")).isPresent();
+    assertThat(prefilter.reject("https://example.com/tos")).isPresent();
+    assertThat(prefilter.reject("https://example.com/legal/")).isPresent();
+    assertThat(prefilter.reject("https://example.com/cookies")).isPresent();
+    assertThat(prefilter.reject("https://example.com/cookie-policy")).isPresent();
+    assertThat(prefilter.reject("https://example.com/gdpr")).isPresent();
+    assertThat(prefilter.reject("https://example.com/imprint")).isPresent();
+  }
+
+  @Test
+  void rejectsCheckoutAndCommerceFunnelPaths() {
+    assertThat(prefilter.reject("https://example.com/checkout")).isPresent();
+    assertThat(prefilter.reject("https://example.com/cart")).isPresent();
+    assertThat(prefilter.reject("https://example.com/pay")).isPresent();
+    assertThat(prefilter.reject("https://example.com/buy/123")).isPresent();
+    assertThat(prefilter.reject("https://example.com/billing")).isPresent();
+  }
+
+  @Test
+  void rejectsApiAndProgrammaticEndpoints() {
+    assertThat(prefilter.reject("https://example.com/api/v1/posts/123")).isPresent();
+    assertThat(prefilter.reject("https://example.com/v1/things")).isPresent();
+    assertThat(prefilter.reject("https://example.com/v2/resources")).isPresent();
+    assertThat(prefilter.reject("https://example.com/graphql")).isPresent();
+  }
+
+  @Test
+  void rejectsJobPostingPaths() {
+    assertThat(prefilter.reject("https://www.linkedin.com/jobs/view/4029384756/")).isPresent();
+    assertThat(prefilter.reject("https://www.indeed.com/viewjob?jk=abc123")).isPresent();
+  }
+
+  @Test
+  void rejectsWebinarRegistrationPaths() {
+    assertThat(prefilter.reject("https://acme.zoom.us/webinar/register/abc")).isPresent();
+  }
+
+  @Test
+  void rejectsNonArticleHosts() {
+    // Scheduling
+    assertThat(prefilter.reject("https://calendly.com/aaron/30min")).isPresent();
+    assertThat(prefilter.reject("https://cal.com/aaron/intro")).isPresent();
+    // File shares
+    assertThat(prefilter.reject("https://drive.google.com/file/d/abc/view")).isPresent();
+    assertThat(prefilter.reject("https://docs.google.com/document/d/abc/edit")).isPresent();
+    assertThat(prefilter.reject("https://we.tl/t-abc123")).isPresent();
+    // Forms
+    assertThat(prefilter.reject("https://forms.gle/abc")).isPresent();
+    assertThat(prefilter.reject("https://acme.typeform.com/to/xyz")).isPresent();
+    assertThat(prefilter.reject("https://www.surveymonkey.com/r/ABC123")).isPresent();
+    // Translation wrappers — paste the underlying URL instead
+    assertThat(
+            prefilter.reject(
+                "https://translate.google.com/translate?u=https://example.com/article"))
+        .isPresent();
+    // Job boards
+    assertThat(prefilter.reject("https://boards.greenhouse.io/acme/jobs/123")).isPresent();
+    assertThat(prefilter.reject("https://jobs.lever.co/acme/abc-123")).isPresent();
+    assertThat(prefilter.reject("https://applications.workable.com/j/ABC")).isPresent();
+  }
+
+  @Test
+  void doesNotMisclassifyLegalishSlugs() {
+    // Articles can have these words in the slug without being the legal page itself.
+    assertThat(prefilter.reject("https://example.com/2026/why-privacy-matters/")).isEmpty();
+    assertThat(prefilter.reject("https://example.com/blog/api-design-tradeoffs/")).isEmpty();
+    assertThat(prefilter.reject("https://example.com/2026/tos-changes-explained/")).isEmpty();
+  }
+
+  @Test
+  void doesNotRejectShorteners() {
+    // bit.ly / t.co etc. shorten legit article URLs constantly. The article fetcher follows
+    // redirects, so we let these through and reject (or accept) the destination on its own
+    // shape. Pinning current behavior; tighten if real misuse appears.
+    assertThat(prefilter.reject("https://bit.ly/3xyz")).isEmpty();
+    assertThat(prefilter.reject("https://t.co/abc")).isEmpty();
+  }
 }

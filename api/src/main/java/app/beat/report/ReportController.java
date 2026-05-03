@@ -422,8 +422,8 @@ public class ReportController {
       throw AppException.badRequest(
           "/errors/report-already-generated",
           "Report already generated",
-          "Edit the executive summary inline on the preview, or duplicate this report to start"
-              + " a fresh draft.");
+          "Edit the executive summary inline on the preview, or hit Re-extract on any item to"
+              + " reset this report to draft and regenerate.");
     }
     if (!"draft".equals(r.status()) && !"failed".equals(r.status())) {
       throw AppException.badRequest(

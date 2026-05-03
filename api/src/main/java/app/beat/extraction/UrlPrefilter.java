@@ -27,7 +27,26 @@ public final class UrlPrefilter {
           Pattern.compile("^/?(search|results)(/|$|\\?)"),
           Pattern.compile("^/?(page)/\\d+/?$"),
           Pattern.compile("^/?(feed|rss|atom)(/|$)"),
-          Pattern.compile("^/?(login|signin|signup|register|account)(/|$)"));
+          Pattern.compile("^/?(login|signin|signup|register|account)(/|$)"),
+          // Unsubscribe / opt-out / preference-center landing pages — never an article. Catches
+          // both /unsubscribe/... and /u/... (the abbreviated form used by Mailchimp / SendGrid
+          // 'manage your subscription' links the user pastes by mistake).
+          Pattern.compile("^/?(unsubscribe|opt[-_]?out|preferences|email[-_]?preferences)(/|$)"),
+          Pattern.compile("^/u/[^/]+/?$"),
+          // Legal / privacy boilerplate — never coverage.
+          Pattern.compile(
+              "^/?(privacy(?:[-_]policy)?|terms(?:[-_]of[-_]service)?|tos|legal|"
+                  + "cookies?(?:[-_]policy)?|gdpr|ccpa|imprint|impressum|disclosure|disclaimer)(/|$)"),
+          // Funnel / commerce paths — checkout, cart, billing.
+          Pattern.compile("^/?(checkout|cart|basket|pay|buy|order|orders|billing|invoice)(/|$)"),
+          // API / programmatic endpoints. Pasting these returns JSON, not an article.
+          Pattern.compile("^/?(api|v[0-9]+|graphql|graphiql)(/|$)"),
+          // Job posting paths — LinkedIn jobs/view, Indeed viewjob, generic /careers/<role>.
+          Pattern.compile("^/?jobs/(view|search|posts)(/|$)"),
+          Pattern.compile("^/?viewjob(/|\\?|$)"),
+          // Webinar / event registration funnels (Zoom, ON24, etc.).
+          Pattern.compile("^/?webinar/register"),
+          Pattern.compile("^/?(wcc|register)/r/"));
 
   /**
    * Substrings that, when present anywhere in the path, indicate a continuously-updating page
@@ -49,6 +68,91 @@ public final class UrlPrefilter {
   private static final Pattern REDDIT_POST_PATH =
       Pattern.compile("^/r/[^/]+/comments/[^/]+(?:/.*)?$");
 
+  /**
+   * Direct downloads / non-HTML resources. Pasting an image, PDF, or zip URL into the URL field
+   * should fail at the door — the article fetcher would either return empty or feed the LLM raw
+   * bytes / a binary preview. Matched against the path's last segment to avoid false- positives on
+   * legit slugs that happen to contain the substring (e.g. "/ai-png-explainer/").
+   */
+  private static final Pattern BINARY_EXTENSION =
+      Pattern.compile(
+          "(?i)\\.(?:png|jpe?g|gif|svg|webp|ico|bmp|tiff?|"
+              + "pdf|epub|mobi|"
+              + "zip|tar|gz|tgz|bz2|7z|rar|"
+              + "exe|dmg|pkg|deb|rpm|msi|"
+              + "mp3|wav|flac|aac|ogg|opus|m4a|"
+              + "mp4|mov|avi|mkv|webm|wmv|"
+              + "css|js|map|woff2?|ttf|otf|eot|"
+              + "csv|xml|json|yaml|yml|"
+              + "doc|docx|xls|xlsx|ppt|pptx|odt|ods|odp"
+              + ")(?:[?#].*)?$");
+
+  /**
+   * Email / marketing tracker hosts. These domains exist to redirect a click out to the real
+   * article — the URL the prefilter sees is a tracker URL, not the destination, and fetching it
+   * either returns a redirect-stub HTML or a 302 the article fetcher won't follow into useful
+   * content. Matched as host suffixes so subdomains like {@code email.sendgrid.net} also reject.
+   *
+   * <p>Curated from the trackers we've seen most often pasted by accident: Mailchimp, SendGrid,
+   * Constant Contact, Klaviyo, HubSpot, Marketo, Salesforce Marketing Cloud, Mandrill, Mailgun. URL
+   * shorteners (bit.ly, t.co, etc.) are deliberately NOT in this list — they often shorten
+   * legitimate article URLs and fetching them follows redirects to the real destination, which the
+   * article pipeline handles fine.
+   */
+  private static final List<String> TRACKER_HOST_SUFFIXES =
+      List.of(
+          "list-manage.com",
+          "sendgrid.net",
+          "mailchi.mp",
+          "rs6.net",
+          "marketo.com",
+          "marketo.net",
+          "klaviyo.com",
+          "hubspotlinks.com",
+          "hubspotemail.net",
+          "exct.net",
+          "mandrillapp.com",
+          "mailgun.org");
+
+  /**
+   * Tracker path shapes that show up across multiple platforms — caught here so a tracker host we
+   * haven't enumerated yet still gets rejected if it follows the conventional shape.
+   */
+  private static final List<Pattern> TRACKER_PATHS =
+      List.of(
+          Pattern.compile("(?i)^/track/click(/|$)"),
+          Pattern.compile("(?i)^/wf/click(\\?|$)"),
+          Pattern.compile("(?i)^/ls/click(/|$|\\?)"),
+          Pattern.compile("(?i)^/cl[0-9]/"),
+          Pattern.compile("(?i)^/e/click(\\?|$)"));
+
+  /**
+   * Hosts whose entire purpose is non-article — forms, scheduling, file shares, translation
+   * wrappers, dedicated job-board surfaces. Matched as host suffixes so subdomains ({@code
+   * applications.workable.com}) also reject. Borderline cases (Eventbrite/Luma/Meetup, Wikipedia,
+   * GitHub, press wires, Wayback Machine) deliberately omitted — they sometimes carry real
+   * coverage.
+   */
+  private static final List<String> NON_ARTICLE_HOST_SUFFIXES =
+      List.of(
+          // Scheduling
+          "calendly.com",
+          "cal.com",
+          // File / doc shares
+          "drive.google.com",
+          "docs.google.com",
+          "we.tl",
+          // Forms & surveys
+          "forms.gle",
+          "typeform.com",
+          "surveymonkey.com",
+          // Translation wrappers — paste the underlying URL instead
+          "translate.google.com",
+          // Job boards (dedicated hosts)
+          "boards.greenhouse.io",
+          "jobs.lever.co",
+          "workable.com");
+
   /** Returns the rejection reason if the URL is obviously not an article; otherwise empty. */
   public Optional<String> reject(String url) {
     if (url == null || url.isBlank()) return Optional.of("empty url");
@@ -66,6 +170,39 @@ public final class UrlPrefilter {
 
     String hostLower = host.toLowerCase();
     String pathLower = path.toLowerCase();
+
+    // Hosts that exist solely for unsubscribe / opt-out flows. The path-pattern check below
+    // catches /unsubscribe paths on normal hosts, but a dedicated host like
+    // unsubscribe.example.com may pair the unsubscribe semantic with an opaque path
+    // (/u/<token>) that path patterns can't reliably classify.
+    if (hostLower.startsWith("unsubscribe.") || hostLower.startsWith("optout.")) {
+      return Optional.of("unsubscribe / opt-out URL (not an article)");
+    }
+
+    // Binary / non-HTML resource — rejected before any host-specific logic so a PDF on a tracked
+    // host doesn't confuse the rejection reason.
+    if (BINARY_EXTENSION.matcher(pathLower).find()) {
+      return Optional.of("non-article file (image / PDF / archive / asset)");
+    }
+
+    // Email / marketing tracker hosts (Mailchimp, SendGrid, Klaviyo, HubSpot, etc.).
+    for (String suffix : TRACKER_HOST_SUFFIXES) {
+      if (hostLower.equals(suffix) || hostLower.endsWith("." + suffix)) {
+        return Optional.of("email/marketing tracker URL (" + suffix + ")");
+      }
+    }
+    for (Pattern p : TRACKER_PATHS) {
+      if (p.matcher(pathLower).find()) {
+        return Optional.of("tracker click URL (" + p.pattern() + ")");
+      }
+    }
+
+    // Non-article hosts: scheduling, file shares, forms, translation wrappers, job boards.
+    for (String suffix : NON_ARTICLE_HOST_SUFFIXES) {
+      if (hostLower.equals(suffix) || hostLower.endsWith("." + suffix)) {
+        return Optional.of("non-article host (" + suffix + ")");
+      }
+    }
 
     // Reddit special case — the article extractor doesn't know what to do with subreddit
     // listings, sort tabs, or user pages. Catch them here with a helpful message that points

@@ -324,6 +324,13 @@ public class CoverageController {
     // 'queued' and 'running' are no-ops via the idempotent enqueue below.
     coverage.resetForRetry(item.id());
     jobs.enqueue(item.id());
+    // Re-extracting an item invalidates the existing rendered PDF (counts, highlights, exec
+    // summary all change). Reset the report's status from 'ready' / 'failed' back to 'draft'
+    // so the user can hit Generate again instead of being told "Report already generated."
+    // The previous PDF stays accessible via its pdf_url until the next markReady overwrites it.
+    if ("ready".equals(report.status()) || "failed".equals(report.status())) {
+      reports.setStatus(report.id(), "draft");
+    }
     activity.recordUser(
         ctx.workspaceId(),
         ctx.userId(),
