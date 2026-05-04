@@ -2,7 +2,6 @@ package app.beat.render;
 
 import java.util.List;
 import java.util.UUID;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -17,14 +16,31 @@ public class RenderJobRepository {
 
   public record QueuedJob(UUID id, UUID reportId, int attemptCount) {}
 
-  /** Enqueue (one job per report; second enqueue while a job exists is a no-op). */
+  /**
+   * Enqueue or re-queue a render job for the given report. There's at most one row per report
+   * (UNIQUE on report_id from V005), so this is an UPSERT: if no row exists, insert a fresh
+   * 'queued' job; if a row exists from a previous generation cycle, flip it back to 'queued' and
+   * clear its terminal fields so the worker picks it up again. Returns true in both cases.
+   *
+   * <p>Without the upsert, re-Generate (after a successful first run) would silently no-op: the old
+   * 'done' row from the previous cycle would block the new INSERT, the worker would never see
+   * anything new, and the report would hang in 'processing' forever.
+   */
   public boolean enqueue(UUID reportId) {
-    try {
-      jdbc.sql("INSERT INTO render_jobs (report_id) VALUES (:r)").param("r", reportId).update();
-      return true;
-    } catch (DuplicateKeyException e) {
-      return false;
-    }
+    int rows =
+        jdbc.sql(
+                """
+                INSERT INTO render_jobs (report_id) VALUES (:r)
+                ON CONFLICT (report_id) DO UPDATE SET
+                  status = 'queued',
+                  started_at = NULL,
+                  completed_at = NULL,
+                  last_error = NULL,
+                  attempt_count = 0
+                """)
+            .param("r", reportId)
+            .update();
+    return rows > 0;
   }
 
   public List<QueuedJob> claimBatch(int n) {
