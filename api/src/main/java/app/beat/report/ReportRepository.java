@@ -165,16 +165,24 @@ public class ReportRepository {
   }
 
   /**
-   * Soft-delete a report. Allowed only when the row is in 'ready' or 'failed' (per the lifecycle
-   * spec: drafts are pre-generation work-in-progress; processing reports are mid-render; published
-   * reports are immutable). Atomic check-and-flip; returns true when actually deleted.
+   * Soft-delete a report. Allowed on {@code ready}, {@code failed}, and {@code processing} — the
+   * last to give the user an escape hatch when a render worker dies mid-job and leaves the report
+   * stuck. Drafts can't be deleted (they're pre-generation work-in-progress); published reports are
+   * immutable. Atomic check-and-flip; returns true when actually deleted.
+   *
+   * <p>Race note: deleting a {@code processing} row while a worker is mid-flight means the worker
+   * will eventually call {@link #markReady}, which writes back {@code status='ready'} on the
+   * soft-deleted row — but {@code findInWorkspace} filters {@code deleted_at IS NULL}, so the
+   * resurrection is invisible to the user. Acceptable because the alternative (interlocking with
+   * the worker) is more complexity for a recovery path.
    */
   public boolean softDeleteIfDeletable(UUID id) {
     int rows =
         jdbc.sql(
                 """
                 UPDATE reports SET deleted_at = now()
-                WHERE id = :id AND deleted_at IS NULL AND status IN ('ready','failed')
+                WHERE id = :id AND deleted_at IS NULL
+                  AND status IN ('ready','failed','processing')
                 """)
             .param("id", id)
             .update();

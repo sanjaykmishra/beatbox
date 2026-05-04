@@ -188,12 +188,15 @@ export function ReportReview() {
                 {publish.isPending ? 'Publishing…' : 'Publish report →'}
               </button>
             )}
-            {(r.status === 'draft' || r.status === 'failed' || r.status === 'ready') && (
+            {(r.status === 'draft'
+              || r.status === 'failed'
+              || r.status === 'ready'
+              || r.status === 'processing') && (
               <button
                 disabled={!canGenerate || generate.isPending}
                 onClick={() => generate.mutate()}
                 className={
-                  r.status === 'ready'
+                  r.status === 'ready' || r.status === 'processing'
                     ? 'rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                     : 'ink-btn rounded-lg text-white px-5 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                 }
@@ -203,7 +206,9 @@ export function ReportReview() {
                       ? 'Re-generate the PDF after edits'
                       : r.status === 'failed'
                         ? 'Try again'
-                        : 'Generate report'
+                        : r.status === 'processing'
+                          ? 'Re-queue the render job (use if the report is stuck and the worker has stopped responding).'
+                          : 'Generate report'
                     : 'Wait for all extractions to finish; need at least one done item.'
                 }
               >
@@ -213,7 +218,9 @@ export function ReportReview() {
                     ? 'Re-generate'
                     : r.status === 'failed'
                       ? 'Try again →'
-                      : 'Generate report →'}
+                      : r.status === 'processing'
+                        ? 'Re-generate'
+                        : 'Generate report →'}
               </button>
             )}
           </div>

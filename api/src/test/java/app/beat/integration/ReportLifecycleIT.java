@@ -154,22 +154,48 @@ class ReportLifecycleIT extends IntegrationTestBase {
   }
 
   @Test
-  void deleteRejectedOnDraftAndProcessing() throws Exception {
+  void deleteRejectedOnDraft() throws Exception {
+    // Drafts are pre-generation work-in-progress — no delete affordance. (Processing IS
+    // deletable now as a stuck-report escape hatch; covered separately.)
     Workspace ws = signUp();
     String clientId = createClient(ws.token, "Echo");
-
     String draft = createReport(ws.token, clientId);
     mvc.perform(
             MockMvcRequestBuilders.delete("/v1/reports/" + draft)
                 .header("Authorization", "Bearer " + ws.token))
         .andExpect(MockMvcResultMatchers.status().isConflict());
+  }
 
+  @Test
+  void deleteAllowedOnProcessingAsRecovery() throws Exception {
+    // Stuck-render escape hatch: when the worker dies mid-job and leaves the report at
+    // 'processing' indefinitely, the user can still delete it without admin intervention.
+    Workspace ws = signUp();
+    String clientId = createClient(ws.token, "EchoStuck");
     String processing = createReport(ws.token, clientId);
     reports.setStatus(UUID.fromString(processing), "processing");
     mvc.perform(
             MockMvcRequestBuilders.delete("/v1/reports/" + processing)
                 .header("Authorization", "Bearer " + ws.token))
-        .andExpect(MockMvcResultMatchers.status().isConflict());
+        .andExpect(MockMvcResultMatchers.status().isNoContent());
+  }
+
+  @Test
+  void generateAllowedOnProcessingAsRecovery() throws Exception {
+    // Same escape hatch on the generate side: re-queue the render job to recover from a stuck
+    // worker. The render-jobs row gets upserted back to 'queued' (RenderJobRepository.enqueue).
+    Workspace ws = signUp();
+    String reportId = readyReport(ws);
+    reports.setStatus(UUID.fromString(reportId), "processing");
+    // Generate on processing returns 202 — note that the actual extraction-pending /
+    // no-done-items checks fire after this point, so the test ensures we get past the status
+    // gate. With a freshly-created report there are no items yet, so we expect 400 from the
+    // no-done-items check rather than the report-in-flight check we used to throw.
+    authedPost("/v1/reports/" + reportId + "/generate", ws.token)
+        .andExpect(MockMvcResultMatchers.status().isBadRequest())
+        .andExpect(
+            MockMvcResultMatchers.jsonPath("$.title")
+                .value(org.hamcrest.Matchers.not("Report is already generating")));
   }
 
   // ---- Generate ----
