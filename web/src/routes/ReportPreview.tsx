@@ -7,6 +7,7 @@ import { Alert, Pill, type PillTone } from '../components/ui';
 import { useAuth } from '../lib/useAuth';
 import { api, ApiError, type Report } from '../lib/api';
 import { reportPolicy } from '../lib/reportPolicy';
+import { injectBase } from '../lib/srcdocBase';
 
 export function ReportPreview() {
   const { id = '' } = useParams();
@@ -300,7 +301,10 @@ export function ReportPreview() {
             ) : (
               <iframe
                 title="Report preview"
-                srcDoc={previewHtml.data ?? ''}
+                // Inject <base href> so the rendered HTML's relative /v1/screenshots/... URLs
+                // resolve to the SPA origin instead of about:srcdoc (which makes the images
+                // render as broken). Same helper ClientReports past-reports preview uses.
+                srcDoc={injectBase(previewHtml.data ?? '', window.location.origin)}
                 sandbox="allow-same-origin"
                 className="w-full h-[80vh] border border-gray-200 rounded-xl bg-white"
               />

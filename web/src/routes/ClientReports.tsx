@@ -8,6 +8,7 @@ import { Alert, Eyebrow, Pill, PrimaryLink, type PillTone } from '../components/
 import { useAuth } from '../lib/useAuth';
 import { api, ApiError, type ReportStatus, type ReportSummary } from '../lib/api';
 import { reportPolicy } from '../lib/reportPolicy';
+import { injectBase } from '../lib/srcdocBase';
 
 /**
  * Past-reports browser. Left rail (25%) lists all of the client's reports newest-first; right
@@ -373,20 +374,6 @@ function RenderedReportPreview({ report }: { report: ReportSummary }) {
   );
 }
 
-/**
- * Inject a {@code <base href>} into rendered HTML so relative URLs ({@code /v1/screenshots/...})
- * resolve to the SPA origin instead of {@code about:srcdoc}. Inserts immediately after the
- * opening {@code <head>} tag if present; otherwise prepends.
- */
-function injectBase(html: string, baseUrl: string): string {
-  const tag = `<base href="${baseUrl.replace(/"/g, '&quot;')}/">`;
-  const headOpen = /<head\b[^>]*>/i.exec(html);
-  if (headOpen) {
-    const at = headOpen.index + headOpen[0].length;
-    return html.slice(0, at) + tag + html.slice(at);
-  }
-  return tag + html;
-}
 
 function NonReadyPlaceholder({ report }: { report: ReportSummary }) {
   // Drafts / processing / failed reports don't have a rendered preview to embed. The status
