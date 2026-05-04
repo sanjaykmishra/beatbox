@@ -248,8 +248,8 @@ Generate (or re-generate) the PDF: compute executive summary, render via Puppete
 ```
 
 Constraints:
-- Report status must be `draft`, `ready` (re-generate), or `failed` (retry).
-- Rejects `processing` (already in flight) with 400 and `published` (immutable) with 409.
+- Report status must be `draft`, `ready` (re-generate), `failed` (retry), or `processing` (recovery from a stuck render — re-queues the render job).
+- Rejects `published` (immutable) with 409.
 - All coverage items must be `done` or `failed` (no `queued`/`running`).
 - Must have at least 1 successful coverage item.
 
@@ -269,9 +269,12 @@ Approval gate:
   creator gets 403; another active member must publish. Enforces a four-eyes review.
 
 ### `DELETE /v1/reports/:id`
-Soft-delete a report. Allowed only when status is `ready` or `failed`. Drafts are pre-generation
-work-in-progress (finish or abandon in place); `processing` reports are mid-render; `published`
-reports are immutable. Returns 409 with a clear error in any of those states.
+Soft-delete a report. Allowed when status is `ready`, `failed`, or `processing`. The
+`processing` allowance is the escape hatch for a stuck render (worker died mid-job); deleting
+a row that's currently being rendered is safe — the worker's eventual `markReady` writes back
+on the soft-deleted row, which `findInWorkspace` filters out. Drafts are pre-generation
+work-in-progress (finish or abandon in place); `published` reports are immutable. Returns 409
+in either of those cases.
 
 Returns 204 on success.
 

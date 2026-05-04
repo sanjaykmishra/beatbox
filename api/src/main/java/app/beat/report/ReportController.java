@@ -423,15 +423,15 @@ public class ReportController {
         reports
             .findInWorkspace(ctx.workspaceId(), id)
             .orElseThrow(() -> AppException.notFound("Report"));
-    // Generate is allowed from 'draft' (first run), 'ready' (re-run after edits — replaces the
-    // previous PDF), and 'failed' (retry after a render-pipeline failure). Rejects 'processing'
-    // (already in flight) and 'published' (immutable — duplicate the report instead).
-    if ("processing".equals(r.status())) {
-      throw AppException.badRequest(
-          "/errors/report-in-flight",
-          "Report is already generating",
-          "Wait for the current generation to finish.");
-    }
+    // Generate is allowed from every non-terminal status:
+    //   draft     — first run.
+    //   ready     — re-run after edits (replaces the previous PDF).
+    //   failed    — retry after a render-pipeline failure.
+    //   processing — explicit recovery from a stuck render. The render-jobs row is upserted
+    //                back to 'queued' so a fresh worker pick-up replaces whatever (if anything)
+    //                is still half-running. Last-write-wins on markReady; acceptable because
+    //                the alternative is leaving the user with no escape.
+    // Rejects 'published' (immutable — duplicate the report instead).
     if ("published".equals(r.status())) {
       throw AppException.conflict(
           "/errors/report-published",
@@ -440,7 +440,8 @@ public class ReportController {
     }
     if (!"draft".equals(r.status())
         && !"ready".equals(r.status())
-        && !"failed".equals(r.status())) {
+        && !"failed".equals(r.status())
+        && !"processing".equals(r.status())) {
       throw AppException.badRequest(
           "/errors/report-not-generatable",
           "Report can't be generated",
@@ -680,9 +681,10 @@ public class ReportController {
   // ---------- DELETE /v1/reports/:id ----------
 
   /**
-   * Soft-delete a report. Allowed only on {@code ready} or {@code failed}. Drafts can't be deleted
-   * (they're pre-generation work-in-progress that should be finished or abandoned in place);
-   * processing reports are mid-render; published reports are immutable.
+   * Soft-delete a report. Allowed on {@code ready}, {@code failed}, and {@code processing} — the
+   * last is the escape hatch for the case where a render worker dies mid-job and leaves the report
+   * stuck. Drafts can't be deleted (they're pre-generation work-in-progress that should be finished
+   * or abandoned in place); published reports are immutable.
    */
   @DeleteMapping("/v1/reports/{id}")
   public ResponseEntity<Void> deleteReport(@PathVariable UUID id, HttpServletRequest req) {
@@ -691,11 +693,15 @@ public class ReportController {
         reports
             .findInWorkspace(ctx.workspaceId(), id)
             .orElseThrow(() -> AppException.notFound("Report"));
-    if (!"ready".equals(r.status()) && !"failed".equals(r.status())) {
+    if (!"ready".equals(r.status())
+        && !"failed".equals(r.status())
+        && !"processing".equals(r.status())) {
       throw AppException.conflict(
           "/errors/report-not-deletable",
           "Report can't be deleted",
-          "Only ready or failed reports can be deleted; this one is " + r.status() + ".");
+          "Only ready, failed, or processing reports can be deleted; this one is "
+              + r.status()
+              + ".");
     }
     boolean deleted = reports.softDeleteIfDeletable(r.id());
     if (!deleted) {

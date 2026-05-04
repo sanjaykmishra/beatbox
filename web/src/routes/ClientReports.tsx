@@ -202,15 +202,14 @@ function ReportRow({
       ? `generated ${relativeTime(report.generated_at)}`
       : `created ${relativeTime(report.created_at)}`;
 
-  // Per-status row CTA. Processing reports are intentionally action-less — the user can still
-  // click the row to load the latest preview, but there's no "edit" semantic while the worker
-  // is mid-flight. Everything else routes to either the builder (drafts / ready / failed are
-  // editable per the V013 lifecycle) or the locked preview (published).
+  // Per-status row CTA. published opens the locked preview; processing routes to the builder
+  // too so the user can hit Re-generate (recovery for a stuck worker) or Delete; everything
+  // else (draft / ready / failed) opens the builder for editing.
   const cta: { label: string; to: string } | null =
     report.status === 'published'
       ? { label: 'Open →', to: `/reports/${report.id}/preview` }
       : report.status === 'processing'
-        ? null
+        ? { label: 'Open →', to: `/reports/${report.id}` }
         : { label: 'Edit report →', to: `/reports/${report.id}` };
 
   return (

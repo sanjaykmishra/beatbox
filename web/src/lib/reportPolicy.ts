@@ -58,8 +58,12 @@ export function reportPolicy(
 
   return {
     canEdit: editableStatus,
-    canDelete: status === 'ready' || status === 'failed',
-    canGenerate: editableStatus,
+    // Delete + generate include 'processing' as the escape hatch when a render worker dies
+    // mid-job and leaves the report stuck. Other mutations (Add URLs, Patch coverage, etc.)
+    // still reject 'processing' to avoid racing a worker that might actually be alive.
+    canDelete:
+      status === 'ready' || status === 'failed' || status === 'processing',
+    canGenerate: editableStatus || status === 'processing',
     canPublish,
     canShare: status === 'published',
     publishDisabledReason,
