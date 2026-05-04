@@ -215,52 +215,112 @@ function ReportRow({
 
   return (
     <div
-      className={`group relative w-full transition-colors flex items-start gap-3 ${
+      className={`group relative w-full transition-colors ${
         selected ? 'bg-gray-50 border-l-2 border-l-ink pl-[14px]' : 'hover:bg-gray-50'
       }`}
     >
-      <div className="flex-1 min-w-0 px-4 py-3">
-        <button
-          type="button"
-          onClick={onSelect}
-          aria-current={selected}
-          className="text-left w-full"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-ink truncate">{report.title}</span>
-          </div>
-          <div className="text-xs text-gray-500 mt-0.5 truncate">
-            {formatPeriod(report.period_start, report.period_end)}
-          </div>
-          <div className="mt-1.5 flex items-center gap-2">
-            <Pill tone={STATUS_TONE[report.status]}>{report.status}</Pill>
-            <span className="text-[11px] text-gray-400 truncate">{when}</span>
-          </div>
-        </button>
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-current={selected}
+        className="text-left w-full px-4 py-3 pr-16"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-ink truncate">{report.title}</span>
+        </div>
+        <div className="text-xs text-gray-500 mt-0.5 truncate">
+          {formatPeriod(report.period_start, report.period_end)}
+        </div>
+        <div className="mt-1.5 flex items-center gap-2">
+          <Pill tone={STATUS_TONE[report.status]}>{report.status}</Pill>
+          <span className="text-[11px] text-gray-400 truncate">{when}</span>
+        </div>
+      </button>
+      <div className="absolute top-2 right-2 flex items-center gap-1">
         {cta && (
           <Link
             to={cta.to}
-            className="mt-2 inline-block text-xs font-medium text-ink hover:underline"
+            aria-label={cta.label === 'Open →' ? 'Open report' : 'Edit report'}
+            title={cta.label === 'Open →' ? 'Open report' : 'Edit report'}
+            className="p-1.5 text-gray-400 hover:text-ink hover:bg-gray-100 rounded transition-colors"
           >
-            {cta.label}
+            {cta.label === 'Open →' ? <OpenIcon /> : <EditIcon />}
           </Link>
         )}
+        {canDelete && (
+          <button
+            type="button"
+            aria-label="Delete report"
+            title="Delete report"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded transition-colors"
+          >
+            <TrashIcon />
+          </button>
+        )}
       </div>
-      {canDelete && (
-        <button
-          type="button"
-          aria-label="Delete report"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-xs text-gray-400 hover:text-red-600 px-2 py-1 self-center mr-2 transition-opacity"
-          title="Delete report"
-        >
-          ×
-        </button>
-      )}
     </div>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+    </svg>
+  );
+}
+
+function OpenIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M14 3h7v7" />
+      <path d="M10 14L21 3" />
+      <path d="M21 14v7H3V3h7" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    </svg>
   );
 }
 
