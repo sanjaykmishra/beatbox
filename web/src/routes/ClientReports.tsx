@@ -266,60 +266,31 @@ function ReportRow({
   );
 }
 
+// Flat (filled) icons. fill="currentColor" + no stroke so the parent's text color drives them.
+// Heroicons-solid-style paths.
+
 function EditIcon() {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path d="M14.69 2.66a2.25 2.25 0 1 1 3.18 3.18l-1.06 1.06-3.18-3.18 1.06-1.06zM12.57 4.78L3 14.36V17.5h3.14l9.57-9.57-3.14-3.15z" />
     </svg>
   );
 }
 
 function OpenIcon() {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M14 3h7v7" />
-      <path d="M10 14L21 3" />
-      <path d="M21 14v7H3V3h7" />
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path d="M11 3a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V5.41l-6.29 6.3a1 1 0 1 1-1.42-1.42L13.59 4H12a1 1 0 0 1-1-1z" />
+      <path d="M5 5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3a1 1 0 1 0-2 0v3H5V7h3a1 1 0 1 0 0-2H5z" />
     </svg>
   );
 }
 
 function TrashIcon() {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 6h18" />
-      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path d="M8 1a1 1 0 0 0-.8.4L6.5 2.5H3.5a1 1 0 1 0 0 2h13a1 1 0 1 0 0-2h-3l-.7-1.1A1 1 0 0 0 12 1H8z" />
+      <path d="M5 6.5h10l-.7 10.4A2 2 0 0 1 12.3 19H7.7a2 2 0 0 1-2-1.9L5 6.5zm3.5 2a.75.75 0 0 0-.75.75v6.5a.75.75 0 0 0 1.5 0v-6.5a.75.75 0 0 0-.75-.75zm3 0a.75.75 0 0 0-.75.75v6.5a.75.75 0 0 0 1.5 0v-6.5a.75.75 0 0 0-.75-.75z" />
     </svg>
   );
 }
@@ -419,9 +390,11 @@ function injectBase(html: string, baseUrl: string): string {
 }
 
 function NonReadyPlaceholder({ report }: { report: ReportSummary }) {
-  // Drafts / processing / failed reports don't have a rendered preview to embed. Send the user
-  // to the builder where editing and retry actually happen. (ready and published are routed
-  // to RenderedReportPreview by ReportPane, so they never land here.)
+  // Drafts / processing / failed reports don't have a rendered preview to embed. The status
+  // banner is anchored at the top of the right pane so the user immediately sees what state
+  // the report is in (rather than scanning a blank center). The CTA back to the builder sits
+  // inline on the right edge. (ready and published are routed to RenderedReportPreview by
+  // ReportPane, so they never land here.)
   const copy: Record<'draft' | 'processing' | 'failed', { title: string; body: string }> = {
     draft: {
       title: 'This report is still a draft.',
@@ -438,13 +411,15 @@ function NonReadyPlaceholder({ report }: { report: ReportSummary }) {
   };
   const c = copy[report.status as 'draft' | 'processing' | 'failed'];
   return (
-    <div className="bg-white border border-gray-200 rounded-xl flex items-center justify-center p-12">
-      <div className="text-center max-w-sm">
-        <h2 className="text-base font-semibold text-ink">{c.title}</h2>
-        <p className="mt-1 text-sm text-gray-600">{c.body}</p>
+    <div className="bg-white border border-gray-200 rounded-xl">
+      <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-gray-100">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-ink">{c.title}</h2>
+          <p className="mt-0.5 text-sm text-gray-600">{c.body}</p>
+        </div>
         <Link
           to={`/reports/${report.id}`}
-          className="mt-5 ink-btn rounded-lg text-white px-4 py-2 text-sm font-medium inline-block"
+          className="shrink-0 ink-btn rounded-lg text-white px-4 py-2 text-sm font-medium"
         >
           Edit report →
         </Link>
